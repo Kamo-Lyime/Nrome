@@ -1805,55 +1805,83 @@
         
         async function getHuggingFaceResponse(message) {
             try {
-                // Note: Direct API calls from local files are blocked by CORS
-                // Using a text completion endpoint that's more permissive
-                const API_URL = 'https://api-inference.huggingface.co/models/gpt2';
+                // Check if Vercel proxy is configured
+                const VERCEL_API_URL = window.LOCAL_CONFIG?.VERCEL_API_URL || 
+                                       window.VERCEL_API_URL || '';
                 
-                // Simple approach that works better with CORS
-                const response = await fetch(API_URL, {
-                    method: 'POST',
-                    headers: {
-                        'Authorization': `Bearer ${AI_CONFIG.HUGGING_FACE_API_KEY}`,
-                        'Content-Type': 'application/json'
-                    },
-                    body: JSON.stringify({
-                        inputs: `Medical Assistant: How can I help with your health question about ${message}? Here's my advice:`,
-                        parameters: {
-                            max_new_tokens: 100,
-                            temperature: 0.7,
-                            return_full_text: false
+                const prompt = `Medical Assistant: How can I help with your health question about ${message}? Here's my advice:`;
+                
+                if (VERCEL_API_URL) {
+                    // Use Vercel serverless proxy (no CORS issues)
+                    const response = await fetch(`${VERCEL_API_URL}/api/huggingface`, {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json'
+                        },
+                        body: JSON.stringify({
+                            prompt: prompt,
+                            max_tokens: 100
+                        })
+                    });
+                    
+                    if (!response.ok) {
+                        throw new Error(`Vercel API error: ${response.status}`);
+                    }
+                    
+                    const data = await response.json();
+                    if (data[0]?.generated_text) {
+                        return data[0].generated_text.trim();
+                    }
+                    return null;
+                } else {
+                    // Fallback: Try direct API call (will fail with CORS on GitHub Pages)
+                    const API_URL = 'https://api-inference.huggingface.co/models/gpt2';
+                    
+                    const response = await fetch(API_URL, {
+                        method: 'POST',
+                        headers: {
+                            'Authorization': `Bearer ${AI_CONFIG.HUGGING_FACE_API_KEY}`,
+                            'Content-Type': 'application/json'
+                        },
+                        body: JSON.stringify({
+                            inputs: prompt,
+                            parameters: {
+                                max_new_tokens: 100,
+                                temperature: 0.7,
+                                return_full_text: false
+                            }
+                        })
+                    });
+                
+                    if (!response.ok) {
+                        // Handle specific CORS error
+                        if (response.status === 0) {
+                            throw new Error('CORS_BLOCKED');
                         }
-                    })
-                });
-                
-                if (!response.ok) {
-                    // Handle specific CORS error
-                    if (response.status === 0) {
-                        throw new Error('CORS_BLOCKED');
+                        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
                     }
-                    throw new Error(`HTTP ${response.status}: ${response.statusText}`);
-                }
-                
-                const data = await response.json();
-                
-                if (data.error) {
-                    if (data.error.includes('CORS') || data.error.includes('origin')) {
-                        throw new Error('CORS_BLOCKED');
+                    
+                    const data = await response.json();
+                    
+                    if (data.error) {
+                        if (data.error.includes('CORS') || data.error.includes('origin')) {
+                            throw new Error('CORS_BLOCKED');
+                        }
+                        throw new Error(data.error);
                     }
-                    throw new Error(data.error);
+                    
+                    if (data[0]?.generated_text) {
+                        return data[0].generated_text.trim();
+                    }
+                    
+                    return null;
                 }
-                
-                if (data[0]?.generated_text) {
-                    return data[0].generated_text.trim();
-                }
-                
-                return null;
             } catch (error) {
                 console.error('Hugging Face API error:', error);
                 
                 // Provide user-friendly error message for CORS issues
                 if (error.message.includes('CORS') || error.message.includes('Failed to fetch')) {
-                    console.log('🌐 Hugging Face API blocked by CORS - this is normal for local files. Using enhanced local AI.');
+                    console.log('🌐 Hugging Face API blocked by CORS - this is normal. Using enhanced local AI.');
                 }
                 
                 throw error;

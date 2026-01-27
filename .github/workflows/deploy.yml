@@ -37,6 +37,12 @@ jobs:
           # Replace Hugging Face placeholder with actual secret
           sed -i "s/your_huggingface_token_here/${{ secrets.HUGGING_FACE_API_KEY }}/g" nurse.html
           
+          # Inject Vercel API URL if configured (optional)
+          if [ -n "${{ secrets.VERCEL_API_URL }}" ]; then
+            echo "window.VERCEL_API_URL = '${{ secrets.VERCEL_API_URL }}';" > vercel-config.js
+            sed -i 's|<script src="config.local.js"></script>|<script>window.VERCEL_API_URL = "${{ secrets.VERCEL_API_URL }}";</script>|g' nurse.html
+          fi
+          
       - name: Setup Pages
         uses: actions/configure-pages@v4
 
