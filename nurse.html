@@ -1365,36 +1365,112 @@
             return durations[type] || '30 minutes';
         }
 
-        function getAIRecommendations() {
+        async function getAIRecommendations() {
             const patientName = document.getElementById('patientName').value;
             const reason = document.getElementById('appointmentReason').value;
+            const selectedDate = document.getElementById('appointmentDate').value;
             const suggestionBox = document.getElementById('aiSchedulingSuggestions');
             
-            if (!patientName) {
+            if (!patientName || !reason) {
                 suggestionBox.innerHTML = `
                     <div class="alert alert-warning">
-                        <small>Please fill in patient information to get personalized AI recommendations.</small>
+                        <small>Please fill in patient name and appointment reason to get personalized AI recommendations.</small>
                     </div>
                 `;
                 return;
             }
             
-            // Simulate AI analysis
-            setTimeout(() => {
-                const recommendations = generateAIRecommendations(reason);
+            // Show loading state
+            suggestionBox.innerHTML = `
+                <div class="text-center">
+                    <div class="spinner-border spinner-border-sm text-primary" role="status"></div>
+                    <small class="ms-2">AI analyzing appointment details...</small>
+                </div>
+            `;
+            
+            try {
+                // Get AI-powered recommendations
+                const aiRecommendations = await getAISchedulingRecommendations(patientName, reason, selectedDate);
+                
                 suggestionBox.innerHTML = `
                     <h6>🤖 AI Scheduling Recommendations</h6>
+                    <div class="alert alert-light border mb-2">
+                        <p class="mb-0" style="white-space: pre-wrap;">${aiRecommendations.analysis}</p>
+                    </div>
+                    ${aiRecommendations.recommendations.map(rec => `
+                        <div class="recommendation-item p-2 mb-2 border-start border-primary border-3">
+                            <strong>${rec.title}:</strong> ${rec.description}
+                        </div>
+                    `).join('')}
+                    <small class="text-muted">✅ Recommendations powered by AI (Groq Llama 3.3)</small>
+                `;
+            } catch (error) {
+                console.error('AI recommendations error:', error);
+                // Fallback to basic recommendations
+                const recommendations = generateBasicRecommendations(reason);
+                suggestionBox.innerHTML = `
+                    <h6>📋 Scheduling Recommendations</h6>
                     ${recommendations.map(rec => `
                         <div class="recommendation-item p-2 mb-2 border-start border-primary border-3">
                             <strong>${rec.title}:</strong> ${rec.description}
                         </div>
                     `).join('')}
-                    <small class="text-muted">Recommendations based on symptom analysis and practitioner expertise.</small>
+                    <small class="text-muted">⚠️ AI unavailable, showing basic recommendations</small>
                 `;
-            }, 1000);
+            }
+        }
+        
+        async function getAISchedulingRecommendations(patientName, reason, selectedDate) {
+            const prompt = `You are a medical appointment scheduling assistant. Provide scheduling recommendations for the following appointment request:
+
+Patient: ${patientName}
+Reason for Visit: ${reason}
+${selectedDate ? `Preferred Date: ${selectedDate}` : 'Date: Not specified'}
+
+Provide:
+1. Brief analysis of urgency and appropriate specialty
+2. Optimal appointment timing suggestions
+3. Any special considerations
+
+Keep your response concise (3-4 sentences) and actionable.`;
+
+            try {
+                const aiResponse = await getAIResponse(prompt);
+                
+                // Parse response and extract recommendations
+                const recommendations = [];
+                const lowerReason = reason.toLowerCase();
+                
+                // Add urgency recommendation based on AI response
+                if (aiResponse.toLowerCase().includes('urgent') || aiResponse.toLowerCase().includes('emergency')) {
+                    recommendations.push({
+                        title: "⚡ Urgent Priority",
+                        description: "Schedule within next 24 hours based on symptoms"
+                    });
+                } else if (aiResponse.toLowerCase().includes('soon') || aiResponse.toLowerCase().includes('timely')) {
+                    recommendations.push({
+                        title: "⏰ Moderate Priority",
+                        description: "Schedule within 3-5 days for best outcomes"
+                    });
+                }
+                
+                // Add time slot recommendation
+                recommendations.push({
+                    title: "📅 Optimal Time",
+                    description: "Morning slots (8-11 AM) typically have shorter wait times"
+                });
+                
+                return {
+                    analysis: aiResponse,
+                    recommendations: recommendations
+                };
+            } catch (error) {
+                console.error('Failed to get AI scheduling recommendations:', error);
+                throw error;
+            }
         }
 
-        function generateAIRecommendations(reason) {
+        function generateBasicRecommendations(reason) {
             const lowerReason = reason.toLowerCase();
             const recommendations = [];
             
