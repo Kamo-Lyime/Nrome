@@ -2258,12 +2258,19 @@ Keep it professional, concise, and medically accurate.`;
 
         function exportNotes() {
             const notesElement = document.getElementById('clinicalNotes');
-            const notes = notesElement.innerText;
+            let notes = notesElement.innerText;
             
             if (notes.includes('appear here')) {
                 alert('Please generate notes first.');
                 return;
             }
+            
+            // Clean the text - remove emojis and fix encoding issues
+            notes = notes
+                .replace(/[\u{1F300}-\u{1F9FF}]/gu, '') // Remove emojis
+                .replace(/[📋🤖⚠️]/g, '') // Remove specific emojis
+                .replace(/\s+/g, ' ') // Normalize whitespace
+                .trim();
             
             // Create PDF using jsPDF
             const { jsPDF } = window.jspdf;
@@ -2283,7 +2290,7 @@ Keep it professional, concise, and medically accurate.`;
                 // Add header text below logo
                 doc.setFontSize(18);
                 doc.setFont(undefined, 'bold');
-                doc.text('Nrome Clinical Documentation', 105, 48, { align: 'center' });
+                doc.text('Nrome AI-Clinical Documentation', 105, 48, { align: 'center' });
                 
                 // Add date
                 doc.setFontSize(10);
@@ -2293,7 +2300,7 @@ Keep it professional, concise, and medically accurate.`;
                     month: 'long', 
                     day: 'numeric' 
                 });
-                doc.text(`Generated: ${date}`, 105, 55, { align: 'center' });
+                doc.text('Generated: ' + date, 105, 55, { align: 'center' });
                 
                 // Add separator line
                 doc.setLineWidth(0.5);
@@ -2329,7 +2336,7 @@ Keep it professional, concise, and medically accurate.`;
                     doc.setPage(i);
                     doc.setFontSize(8);
                     doc.setTextColor(128);
-                    doc.text(`Nrome Healthcare - Page ${i} of ${pageCount}`, 105, pageHeight - 10, { align: 'center' });
+                    doc.text('Nrome Healthcare - Page ' + i + ' of ' + pageCount, 105, pageHeight - 10, { align: 'center' });
                 }
                 
                 // Save the PDF
@@ -2343,7 +2350,7 @@ Keep it professional, concise, and medically accurate.`;
                 // Fallback: generate without logo
                 doc.setFontSize(18);
                 doc.setFont(undefined, 'bold');
-                doc.text('Nrome Clinical Documentation', 105, 15, { align: 'center' });
+                doc.text('Nrome AI-Clinical Documentation', 105, 15, { align: 'center' });
                 
                 const date = new Date().toLocaleDateString('en-US', { 
                     year: 'numeric', 
@@ -2352,7 +2359,7 @@ Keep it professional, concise, and medically accurate.`;
                 });
                 doc.setFontSize(10);
                 doc.setFont(undefined, 'normal');
-                doc.text(`Generated: ${date}`, 105, 22, { align: 'center' });
+                doc.text('Generated: ' + date, 105, 22, { align: 'center' });
                 
                 doc.setLineWidth(0.5);
                 doc.line(20, 25, 190, 25);
@@ -2381,7 +2388,7 @@ Keep it professional, concise, and medically accurate.`;
                     doc.setPage(i);
                     doc.setFontSize(8);
                     doc.setTextColor(128);
-                    doc.text(`Nrome Healthcare - Page ${i} of ${pageCount}`, 105, pageHeight - 10, { align: 'center' });
+                    doc.text('Nrome Healthcare - Page ' + i + ' of ' + pageCount, 105, pageHeight - 10, { align: 'center' });
                 }
                 
                 const filename = 'nrome-clinical-notes-' + new Date().toISOString().slice(0,10) + '.pdf';
