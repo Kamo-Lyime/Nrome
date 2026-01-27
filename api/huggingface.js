@@ -21,24 +21,24 @@ export default async function handler(req, res) {
       return res.status(400).json({ error: 'Prompt is required' });
     }
 
-    // Use HuggingFace text-generation API with Zephyr model (free and works well)
-    const response = await fetch('https://api-inference.huggingface.co/models/HuggingFaceH4/zephyr-7b-beta', {
+    // Use free Hugging Face Inference Endpoints (serverless)
+    // Format prompt for medical assistance
+    const medicalPrompt = `You are a helpful medical assistant. Answer this health question: ${prompt}`;
+
+    const response = await fetch('https://huggingface.co/api/inference', {
       method: 'POST',
       headers: {
         'Authorization': `Bearer ${process.env.HUGGING_FACE_API_KEY}`,
         'Content-Type': 'application/json',
+        'x-wait-for-model': 'true'
       },
       body: JSON.stringify({ 
-        inputs: `<|system|>You are a helpful medical assistant providing health advice.</s><|user|>${prompt}</s><|assistant|>`,
+        model: 'microsoft/Phi-3-mini-4k-instruct',
+        inputs: medicalPrompt,
         parameters: {
           max_new_tokens: max_tokens,
           temperature: 0.7,
-          return_full_text: false,
-          do_sample: true
-        },
-        options: {
-          wait_for_model: true,
-          use_cache: false
+          return_full_text: false
         }
       }),
     });
