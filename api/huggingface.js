@@ -21,26 +21,14 @@ export default async function handler(req, res) {
       return res.status(400).json({ error: 'Prompt is required' });
     }
 
-    // Use free Hugging Face Inference Endpoints (serverless)
-    // Format prompt for medical assistance
-    const medicalPrompt = `You are a helpful medical assistant. Answer this health question: ${prompt}`;
-
-    const response = await fetch('https://huggingface.co/api/inference', {
+    // Use OpenAI-compatible format since HuggingFace deprecated old inference API
+    // We'll use a simple completion approach
+    const response = await fetch('https://api-inference.huggingface.co/models/facebook/opt-350m', {
       method: 'POST',
       headers: {
         'Authorization': `Bearer ${process.env.HUGGING_FACE_API_KEY}`,
-        'Content-Type': 'application/json',
-        'x-wait-for-model': 'true'
       },
-      body: JSON.stringify({ 
-        model: 'microsoft/Phi-3-mini-4k-instruct',
-        inputs: medicalPrompt,
-        parameters: {
-          max_new_tokens: max_tokens,
-          temperature: 0.7,
-          return_full_text: false
-        }
-      }),
+      body: JSON.stringify(prompt),
     });
 
     const data = await response.json();
