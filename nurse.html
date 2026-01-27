@@ -236,7 +236,7 @@
         
         <div id="serviceList" class="mt-5">
  <div class="text-center mb-4">
-                <img src="images/nrome-chatbot-logo.png" alt="Nrome Chatbot" class="img-fluid" style="max-height: 100px; border-radius: 10px;">
+                <img src="Images/nrome-chatbot-logo.png" alt="Nrome Chatbot" class="img-fluid" style="max-height: 100px; border-radius: 10px;">
             </div>
             <h2 class="fas fa-user-md me-2">All Available Registered Medical Practitioners</h2>
             <p class="text-muted">Browse verified healthcare professionals across the African continent</p>
@@ -333,7 +333,11 @@
         // Initialize Supabase (shared with auth.js)
         if (!window.supabaseClient) {
             try {
-                window.supabaseClient = supabase.createClient(LOCAL_SUPABASE_URL, LOCAL_SUPABASE_ANON_KEY);
+                // Use LOCAL_CONFIG if available (local dev), otherwise use injected values (production)
+                const supabaseUrl = (typeof LOCAL_CONFIG !== 'undefined' && LOCAL_CONFIG.SUPABASE_URL) || 'your_supabase_url_here';
+                const supabaseKey = (typeof LOCAL_CONFIG !== 'undefined' && LOCAL_CONFIG.SUPABASE_ANON_KEY) || 'your_supabase_anon_key_here';
+                
+                window.supabaseClient = supabase.createClient(supabaseUrl, supabaseKey);
                 console.log('✅ Supabase initialized successfully');
             } catch (error) {
                 console.warn('⚠️ Supabase initialization failed, using localStorage fallback:', error);
