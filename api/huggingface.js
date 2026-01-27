@@ -21,8 +21,8 @@ export default async function handler(req, res) {
       return res.status(400).json({ error: 'Prompt is required' });
     }
 
-    // Updated to use the new HuggingFace router endpoint
-    const response = await fetch('https://api-inference.huggingface.co/models/facebook/blenderbot-400M-distill', {
+    // Use HuggingFace Inference API with a conversational model
+    const response = await fetch('https://api-inference.huggingface.co/models/microsoft/DialoGPT-medium', {
       method: 'POST',
       headers: {
         'Authorization': `Bearer ${process.env.HUGGING_FACE_API_KEY}`,
@@ -30,9 +30,8 @@ export default async function handler(req, res) {
       },
       body: JSON.stringify({ 
         inputs: prompt,
-        parameters: {
-          max_length: max_tokens,
-          temperature: 0.7
+        options: {
+          wait_for_model: true
         }
       }),
     });
