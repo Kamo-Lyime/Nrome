@@ -26,23 +26,15 @@ jobs:
 
       - name: Inject API Keys into files
         run: |
-          # Create a production config script to replace config.local.js
-          cat > config.production.js << 'CONFIGEOF'
-          window.LOCAL_CONFIG = {
-            SUPABASE_URL: '${{ secrets.SUPABASE_URL }}',
-            SUPABASE_ANON_KEY: '${{ secrets.SUPABASE_ANON_KEY }}',
-            VERCEL_API_URL: '${{ secrets.VERCEL_API_URL }}'
-          };
-          // Also set as global variable for compatibility
-          window.VERCEL_API_URL = '${{ secrets.VERCEL_API_URL }}';
-          CONFIGEOF
+          # Create inline production config script
+          PROD_CONFIG="<script>window.LOCAL_CONFIG={SUPABASE_URL:'${{ secrets.SUPABASE_URL }}',SUPABASE_ANON_KEY:'${{ secrets.SUPABASE_ANON_KEY }}',VERCEL_API_URL:'${{ secrets.VERCEL_API_URL }}'};window.VERCEL_API_URL='${{ secrets.VERCEL_API_URL }}';</script>"
           
-          # Replace config.local.js references with config.production.js in all HTML files
-          find . -name "*.html" -type f -exec sed -i 's|config.local.js|config.production.js|g' {} +
+          # Replace placeholder with inline config in all HTML files
+          find . -name "*.html" -type f -exec sed -i "s|<!-- PRODUCTION_CONFIG_PLACEHOLDER -->|${PROD_CONFIG}|g" {} +
           
-          # Verify the config file was created
-          echo "Production config created:"
-          cat config.production.js
+          # Verify injection (first file only)
+          echo "Config injected into HTML files:"
+          grep -m 1 "window.LOCAL_CONFIG" nurse.html || echo "Warning: Config not found in nurse.html"
           
       - name: Setup Pages
         uses: actions/configure-pages@v4

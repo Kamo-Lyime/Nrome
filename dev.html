@@ -1,0 +1,34 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Nrome - Local Development</title>
+    <script>
+        // Local development config loader
+        // Automatically loads config.local.js for development
+        const script = document.createElement('script');
+        script.src = 'config.local.js';
+        script.onerror = function() {
+            console.warn('⚠️ config.local.js not found. Copy config.local.template.js to config.local.js and add your keys.');
+            // Set empty config as fallback
+            window.LOCAL_CONFIG = {};
+        };
+        document.head.appendChild(script);
+    </script>
+    <script>
+        // Redirect to nurse.html after config loads
+        window.addEventListener('DOMContentLoaded', () => {
+            setTimeout(() => {
+                window.location.href = 'nurse.html';
+            }, 100);
+        });
+    </script>
+</head>
+<body>
+    <div style="text-align: center; padding: 50px;">
+        <h2>Loading Nrome Development Environment...</h2>
+        <p>If you see this for more than 2 seconds, check your config.local.js file.</p>
+    </div>
+</body>
+</html>
