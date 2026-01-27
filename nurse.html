@@ -305,30 +305,22 @@
 
         // AI API Configuration - Browser Compatible
         const AI_CONFIG = {
-            // Replace these with your actual API keys
-            HUGGING_FACE_API_KEY: window.LOCAL_CONFIG?.HUGGING_FACE_API_KEY || 'your_huggingface_token_here', // Your actual token
-            COHERE_API_KEY: 'your_cohere_key_here', // Optional: Add your Cohere key
+            // Vercel API proxy for Groq (main AI provider)
+            VERCEL_API_URL: window.LOCAL_CONFIG?.VERCEL_API_URL || window.VERCEL_API_URL || '',
             
-            // Feature flags - Set to true when you have valid keys
-            USE_HUGGING_FACE: true, // Currently enabled with your key
-            USE_COHERE: false, // Set to true when you add Cohere key
+            // Feature flags
+            USE_VERCEL_API: true, // Groq API via Vercel proxy (recommended)
             USE_ENHANCED_RULES: true // Always available, no API key needed
         };
 
-        // Validate API keys
-        const hasValidHuggingFaceKey = AI_CONFIG.HUGGING_FACE_API_KEY && 
-                                      AI_CONFIG.HUGGING_FACE_API_KEY.startsWith('hf_') && 
-                                      AI_CONFIG.HUGGING_FACE_API_KEY !== 'hf_your_token_here';
-        
-        const hasValidCohereKey = AI_CONFIG.COHERE_API_KEY && 
-                                 AI_CONFIG.COHERE_API_KEY !== 'your_cohere_key_here';
+        // Validate Vercel API availability
+        const hasVercelAPI = AI_CONFIG.VERCEL_API_URL && 
+                            AI_CONFIG.VERCEL_API_URL.includes('vercel.app');
 
-        // Pick an active AI provider based on available keys
-        let currentAIProvider = hasValidHuggingFaceKey && AI_CONFIG.USE_HUGGING_FACE
-            ? 'huggingface'
-            : hasValidCohereKey && AI_CONFIG.USE_COHERE
-                ? 'cohere'
-                : 'local';
+        // Pick an active AI provider based on available configuration
+        let currentAIProvider = hasVercelAPI && AI_CONFIG.USE_VERCEL_API
+            ? 'groq'
+            : 'local';
 
         // Initialize Supabase (shared with auth.js)
         if (!window.supabaseClient) {
@@ -1795,28 +1787,16 @@
         async function getAIResponse(message) {
             console.log('Getting AI response, current provider:', currentAIProvider);
             
-            // Try configured API providers first
+            // Try Vercel API (Groq) first if configured
             try {
-                // Option 1: Use Hugging Face if configured
-                if (hasValidHuggingFaceKey && AI_CONFIG.USE_HUGGING_FACE) {
-                    console.log('Using Hugging Face API...');
-                    const response = await getHuggingFaceResponse(message);
+                if (hasVercelAPI && AI_CONFIG.USE_VERCEL_API) {
+                    console.log('Using Groq API via Vercel proxy...');
+                    const response = await getHuggingFaceResponse(message); // Reuses existing function for Vercel proxy
                     if (response) {
-                        console.log('Hugging Face response received');
+                        console.log('Groq API response received');
                         return response;
                     }
                 }
-                
-                // Option 2: Use Cohere if configured
-                if (hasValidCohereKey && AI_CONFIG.USE_COHERE) {
-                    console.log('Using Cohere API...');
-                    const cohereResponse = await getCohereResponse(message);
-                    if (cohereResponse) {
-                        console.log('Cohere response received');
-                        return cohereResponse;
-                    }
-                }
-                
             } catch (error) {
                 console.log('API error, falling back to enhanced local AI:', error.message);
                 
@@ -1833,21 +1813,23 @@
         
         async function getHuggingFaceResponse(message) {
             try {
-                // Check if Vercel proxy is configured
-                const VERCEL_API_URL = window.LOCAL_CONFIG?.VERCEL_API_URL || 
-                                       window.VERCEL_API_URL || '';
+                // Use Vercel proxy for Groq API
+                const VERCEL_API_URL = AI_CONFIG.VERCEL_API_URL;
+                
+                if (!VERCEL_API_URL) {
+                    throw new Error('Vercel API URL not configured');
+                }
                 
                 const prompt = `Medical Assistant: How can I help with your health question about ${message}? Here's my advice:`;
                 
-                if (VERCEL_API_URL) {
-                    // Use Vercel serverless proxy (no CORS issues)
-                    const response = await fetch(`${VERCEL_API_URL}/api/huggingface`, {
-                        method: 'POST',
-                        headers: {
-                            'Content-Type': 'application/json'
-                        },
-                        body: JSON.stringify({
-                            prompt: prompt,
+                // Use Vercel serverless proxy (no CORS issues)
+                const response = await fetch(`${VERCEL_API_URL}/api/huggingface`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        prompt: prompt,
                             max_tokens: 100
                         })
                     });

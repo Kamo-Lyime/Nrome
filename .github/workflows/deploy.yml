@@ -33,14 +33,16 @@ jobs:
             SUPABASE_ANON_KEY: '${{ secrets.SUPABASE_ANON_KEY }}',
             VERCEL_API_URL: '${{ secrets.VERCEL_API_URL }}'
           };
+          // Also set as global variable for compatibility
+          window.VERCEL_API_URL = '${{ secrets.VERCEL_API_URL }}';
           CONFIGEOF
           
           # Replace config.local.js references with config.production.js in all HTML files
           find . -name "*.html" -type f -exec sed -i 's|config.local.js|config.production.js|g' {} +
           
-          # Also inject Groq API key for nurse.html if needed (kept for backward compatibility)
-          sed -i "s|your_supabase_url_here|${{ secrets.SUPABASE_URL }}|g" nurse.html
-          sed -i "s|your_supabase_anon_key_here|${{ secrets.SUPABASE_ANON_KEY }}|g" nurse.html
+          # Verify the config file was created
+          echo "Production config created:"
+          cat config.production.js
           
       - name: Setup Pages
         uses: actions/configure-pages@v4
