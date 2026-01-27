@@ -15,23 +15,30 @@ export default async function handler(req, res) {
   }
 
   try {
-    const { prompt, max_tokens = 100 } = req.body;
+    const { prompt, max_tokens = 150 } = req.body;
     
     if (!prompt) {
       return res.status(400).json({ error: 'Prompt is required' });
     }
 
-    // Use HuggingFace Inference API with a conversational model
-    const response = await fetch('https://api-inference.huggingface.co/models/microsoft/DialoGPT-medium', {
+    // Use HuggingFace text-generation API with Zephyr model (free and works well)
+    const response = await fetch('https://api-inference.huggingface.co/models/HuggingFaceH4/zephyr-7b-beta', {
       method: 'POST',
       headers: {
         'Authorization': `Bearer ${process.env.HUGGING_FACE_API_KEY}`,
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({ 
-        inputs: prompt,
+        inputs: `<|system|>You are a helpful medical assistant providing health advice.</s><|user|>${prompt}</s><|assistant|>`,
+        parameters: {
+          max_new_tokens: max_tokens,
+          temperature: 0.7,
+          return_full_text: false,
+          do_sample: true
+        },
         options: {
-          wait_for_model: true
+          wait_for_model: true,
+          use_cache: false
         }
       }),
     });
@@ -39,12 +46,16 @@ export default async function handler(req, res) {
     const data = await response.json();
     
     if (!response.ok) {
-      return res.status(response.status).json({ error: data.error || 'HuggingFace API error' });
+      console.error('HuggingFace error:', data);
+      return res.status(response.status).json({ 
+        error: data.error || `HuggingFace API error: ${response.status}`,
+        details: data
+      });
     }
     
     return res.status(200).json(data);
   } catch (error) {
     console.error('HuggingFace API Error:', error);
-    return res.status(500).json({ error: 'Failed to get AI response' });
+    return res.status(500).json({ error: error.message || 'Failed to get AI response' });
   }
 }
