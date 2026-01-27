@@ -26,7 +26,15 @@ jobs:
 
       - name: Inject API Keys into files
         run: |
-          # Replace placeholder in nurse.html with actual secret
+          # Replace Supabase placeholders with actual secrets
+          sed -i "s|your_supabase_url_here|${{ secrets.SUPABASE_URL }}|g" js/auth.js
+          sed -i "s|your_supabase_anon_key_here|${{ secrets.SUPABASE_ANON_KEY }}|g" js/auth.js
+          sed -i "s|your_supabase_url_here|${{ secrets.SUPABASE_URL }}|g" js/medication.js
+          sed -i "s|your_supabase_anon_key_here|${{ secrets.SUPABASE_ANON_KEY }}|g" js/medication.js
+          sed -i "s|your_supabase_url_here|${{ secrets.SUPABASE_URL }}|g" nurse.html
+          sed -i "s|your_supabase_anon_key_here|${{ secrets.SUPABASE_ANON_KEY }}|g" nurse.html
+          
+          # Replace Hugging Face placeholder with actual secret
           sed -i "s/your_huggingface_token_here/${{ secrets.HUGGING_FACE_API_KEY }}/g" nurse.html
           
       - name: Setup Pages

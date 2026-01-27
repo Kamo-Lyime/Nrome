@@ -1,6 +1,6 @@
 // Supabase Configuration (reuse global client from auth.js to avoid redeclaration)
-const LOCAL_SUPABASE_URL = 'https://vpmuooztcqzrrfsvjzwl.supabase.co';
-const LOCAL_SUPABASE_ANON_KEY = 'sb_publishable_B-5KuQJXEpxkd167_iraZw_IdvsPJNx';
+const LOCAL_SUPABASE_URL = 'your_supabase_url_here';
+const LOCAL_SUPABASE_ANON_KEY = 'your_supabase_anon_key_here';
 
 // Initialize Supabase once (only set if not already defined by auth.js)
 let medSupabaseClient = window.supabaseClient;

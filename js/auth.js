@@ -1,6 +1,6 @@
 // Shared Supabase auth utilities
-const SUPABASE_URL = 'https://vpmuooztcqzrrfsvjzwl.supabase.co';
-const SUPABASE_ANON_KEY = 'sb_publishable_B-5KuQJXEpxkd167_iraZw_IdvsPJNx';
+const SUPABASE_URL = 'your_supabase_url_here';
+const SUPABASE_ANON_KEY = 'your_supabase_anon_key_here';
 
 // Initialize a single shared client
 const supabaseClient = window.supabaseClient || supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
