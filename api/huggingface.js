@@ -21,20 +21,32 @@ export default async function handler(req, res) {
       return res.status(400).json({ error: 'Prompt is required' });
     }
 
-    // Use OpenAI-compatible format since HuggingFace deprecated old inference API
-    // We'll use a simple completion approach
-    const response = await fetch('https://api-inference.huggingface.co/models/facebook/opt-350m', {
+    // Use HuggingFace Serverless Inference API (new endpoint)
+    const API_URL = 'https://api-inference.huggingface.co/models/microsoft/DialoGPT-medium';
+    
+    const response = await fetch(API_URL, {
       method: 'POST',
       headers: {
         'Authorization': `Bearer ${process.env.HUGGING_FACE_API_KEY}`,
+        'Content-Type': 'application/json',
       },
-      body: JSON.stringify(prompt),
+      body: JSON.stringify({ 
+        inputs: prompt,
+        parameters: {
+          max_length: max_tokens,
+          temperature: 0.7
+        },
+        options: {
+          wait_for_model: true,
+          use_cache: false
+        }
+      }),
     });
 
     const data = await response.json();
     
     if (!response.ok) {
-      console.error('HuggingFace error:', data);
+      console.error('HuggingFace error:', response.status, data);
       return res.status(response.status).json({ 
         error: data.error || `HuggingFace API error: ${response.status}`,
         details: data
