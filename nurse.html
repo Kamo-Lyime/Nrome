@@ -2269,61 +2269,124 @@ Keep it professional, concise, and medically accurate.`;
             const { jsPDF } = window.jspdf;
             const doc = new jsPDF();
             
-            // Add header
-            doc.setFontSize(18);
-            doc.setFont(undefined, 'bold');
-            doc.text('Clinical Documentation', 105, 15, { align: 'center' });
+            // Add Nrome logo
+            const logoImg = new Image();
+            logoImg.src = 'Images/nrome-logo.png';
             
-            // Add date
-            doc.setFontSize(10);
-            doc.setFont(undefined, 'normal');
-            const date = new Date().toLocaleDateString('en-US', { 
-                year: 'numeric', 
-                month: 'long', 
-                day: 'numeric' 
-            });
-            doc.text(`Generated: ${date}`, 105, 22, { align: 'center' });
-            
-            // Add separator line
-            doc.setLineWidth(0.5);
-            doc.line(20, 25, 190, 25);
-            
-            // Add clinical notes content
-            doc.setFontSize(11);
-            doc.setFont(undefined, 'normal');
-            
-            // Split text into lines that fit the page width
-            const pageWidth = doc.internal.pageSize.getWidth();
-            const margins = 20;
-            const maxLineWidth = pageWidth - (margins * 2);
-            const lines = doc.splitTextToSize(notes, maxLineWidth);
-            
-            // Add text with page breaks if needed
-            let yPosition = 35;
-            const lineHeight = 7;
-            const pageHeight = doc.internal.pageSize.getHeight();
-            
-            lines.forEach((line) => {
-                if (yPosition > pageHeight - 20) {
-                    doc.addPage();
-                    yPosition = 20;
+            logoImg.onload = function() {
+                // Add logo (centered, at top)
+                const logoWidth = 30;
+                const logoHeight = 30;
+                const logoX = (doc.internal.pageSize.getWidth() - logoWidth) / 2;
+                doc.addImage(logoImg, 'PNG', logoX, 10, logoWidth, logoHeight);
+                
+                // Add header text below logo
+                doc.setFontSize(18);
+                doc.setFont(undefined, 'bold');
+                doc.text('Nrome Clinical Documentation', 105, 48, { align: 'center' });
+                
+                // Add date
+                doc.setFontSize(10);
+                doc.setFont(undefined, 'normal');
+                const date = new Date().toLocaleDateString('en-US', { 
+                    year: 'numeric', 
+                    month: 'long', 
+                    day: 'numeric' 
+                });
+                doc.text(`Generated: ${date}`, 105, 55, { align: 'center' });
+                
+                // Add separator line
+                doc.setLineWidth(0.5);
+                doc.line(20, 58, 190, 58);
+                
+                // Add clinical notes content
+                doc.setFontSize(11);
+                doc.setFont(undefined, 'normal');
+                
+                // Split text into lines that fit the page width
+                const pageWidth = doc.internal.pageSize.getWidth();
+                const margins = 20;
+                const maxLineWidth = pageWidth - (margins * 2);
+                const lines = doc.splitTextToSize(notes, maxLineWidth);
+                
+                // Add text with page breaks if needed
+                let yPosition = 68;
+                const lineHeight = 7;
+                const pageHeight = doc.internal.pageSize.getHeight();
+                
+                lines.forEach((line) => {
+                    if (yPosition > pageHeight - 20) {
+                        doc.addPage();
+                        yPosition = 20;
+                    }
+                    doc.text(line, margins, yPosition);
+                    yPosition += lineHeight;
+                });
+                
+                // Add footer with branding
+                const pageCount = doc.internal.getNumberOfPages();
+                for (let i = 1; i <= pageCount; i++) {
+                    doc.setPage(i);
+                    doc.setFontSize(8);
+                    doc.setTextColor(128);
+                    doc.text(`Nrome Healthcare - Page ${i} of ${pageCount}`, 105, pageHeight - 10, { align: 'center' });
                 }
-                doc.text(line, margins, yPosition);
-                yPosition += lineHeight;
-            });
+                
+                // Save the PDF
+                const filename = 'nrome-clinical-notes-' + new Date().toISOString().slice(0,10) + '.pdf';
+                doc.save(filename);
+            };
             
-            // Add footer with branding
-            const pageCount = doc.internal.getNumberOfPages();
-            for (let i = 1; i <= pageCount; i++) {
-                doc.setPage(i);
-                doc.setFontSize(8);
-                doc.setTextColor(128);
-                doc.text(`Nrome Healthcare - Page ${i} of ${pageCount}`, 105, pageHeight - 10, { align: 'center' });
-            }
-            
-            // Save the PDF
-            const filename = 'clinical-notes-' + new Date().toISOString().slice(0,10) + '.pdf';
-            doc.save(filename);
+            // Error handling if image fails to load
+            logoImg.onerror = function() {
+                console.warn('Logo failed to load, generating PDF without logo');
+                // Fallback: generate without logo
+                doc.setFontSize(18);
+                doc.setFont(undefined, 'bold');
+                doc.text('Nrome Clinical Documentation', 105, 15, { align: 'center' });
+                
+                const date = new Date().toLocaleDateString('en-US', { 
+                    year: 'numeric', 
+                    month: 'long', 
+                    day: 'numeric' 
+                });
+                doc.setFontSize(10);
+                doc.setFont(undefined, 'normal');
+                doc.text(`Generated: ${date}`, 105, 22, { align: 'center' });
+                
+                doc.setLineWidth(0.5);
+                doc.line(20, 25, 190, 25);
+                
+                doc.setFontSize(11);
+                const pageWidth = doc.internal.pageSize.getWidth();
+                const margins = 20;
+                const maxLineWidth = pageWidth - (margins * 2);
+                const lines = doc.splitTextToSize(notes, maxLineWidth);
+                
+                let yPosition = 35;
+                const lineHeight = 7;
+                const pageHeight = doc.internal.pageSize.getHeight();
+                
+                lines.forEach((line) => {
+                    if (yPosition > pageHeight - 20) {
+                        doc.addPage();
+                        yPosition = 20;
+                    }
+                    doc.text(line, margins, yPosition);
+                    yPosition += lineHeight;
+                });
+                
+                const pageCount = doc.internal.getNumberOfPages();
+                for (let i = 1; i <= pageCount; i++) {
+                    doc.setPage(i);
+                    doc.setFontSize(8);
+                    doc.setTextColor(128);
+                    doc.text(`Nrome Healthcare - Page ${i} of ${pageCount}`, 105, pageHeight - 10, { align: 'center' });
+                }
+                
+                const filename = 'nrome-clinical-notes-' + new Date().toISOString().slice(0,10) + '.pdf';
+                doc.save(filename);
+            };
         }
 
         // Smart Triage Functions
