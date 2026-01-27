@@ -3,11 +3,28 @@
 const SUPABASE_URL = window.LOCAL_CONFIG?.SUPABASE_URL || 'your_supabase_url_here';
 const SUPABASE_ANON_KEY = window.LOCAL_CONFIG?.SUPABASE_ANON_KEY || 'your_supabase_anon_key_here';
 
-// Initialize a single shared client
-const supabaseClient = window.supabaseClient || supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
-window.supabaseClient = supabaseClient;
+// Initialize a single shared client with error handling
+let supabaseClient = null;
+try {
+    if (SUPABASE_URL && SUPABASE_URL.startsWith('http') && SUPABASE_ANON_KEY && SUPABASE_ANON_KEY !== 'your_supabase_anon_key_here') {
+        supabaseClient = window.supabaseClient || supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+        window.supabaseClient = supabaseClient;
+        console.log('✅ Supabase client initialized successfully');
+    } else {
+        console.warn('⚠️ Supabase config not available yet. Waiting for production config injection or local config.');
+        window.supabaseClient = null;
+    }
+} catch (error) {
+    console.error('❌ Supabase initialization failed:', error);
+    supabaseClient = null;
+    window.supabaseClient = null;
+}
 
 async function getSession() {
+    if (!supabaseClient) {
+        console.warn('⚠️ Supabase client not initialized');
+        return null;
+    }
     const { data, error } = await supabaseClient.auth.getSession();
     if (error) {
         console.error('Auth session error:', error);
@@ -17,6 +34,11 @@ async function getSession() {
 }
 
 async function requireAuth() {
+    if (!supabaseClient) {
+        console.error('❌ Authentication unavailable - Supabase not initialized');
+        alert('Authentication system is not available. Please refresh the page or check your connection.');
+        return null;
+    }
     const session = await getSession();
     if (!session) {
         const next = encodeURIComponent(window.location.pathname + window.location.search + window.location.hash);
@@ -27,6 +49,10 @@ async function requireAuth() {
 }
 
 function redirectIfAuthenticated(targetPath = 'dashboard.html') {
+    if (!supabaseClient) {
+        console.warn('⚠️ Cannot check authentication - Supabase not initialized');
+        return;
+    }
     getSession().then(session => {
         if (session) {
             window.location.replace(targetPath);
@@ -48,6 +74,10 @@ function authStatusListener() {
 }
 
 async function handleSignOut() {
+    if (!supabaseClient) {
+        console.warn('⚠️ Cannot sign out - Supabase not initialized');
+        return;
+    }
     await supabaseClient.auth.signOut();
 }
 
@@ -70,6 +100,12 @@ function wireLoginForm() {
         const password = document.getElementById('loginPassword').value;
         const feedback = document.getElementById('loginFeedback');
         feedback.textContent = '';
+        
+        if (!supabaseClient) {
+            feedback.textContent = 'Authentication system is loading. Please wait and try again.';
+            feedback.classList.add('text-warning');
+            return;
+        }
 
         const { error } = await supabaseClient.auth.signInWithPassword({ email, password });
         if (error) {
@@ -103,6 +139,12 @@ function wireRegisterForm() {
         const role = document.getElementById('registerRole').value;
         const feedback = document.getElementById('registerFeedback');
         feedback.textContent = '';
+        
+        if (!supabaseClient) {
+            feedback.textContent = 'Authentication system is loading. Please wait and try again.';
+            feedback.classList.add('text-warning');
+            return;
+        }
 
         const { error } = await supabaseClient.auth.signUp({
             email,
