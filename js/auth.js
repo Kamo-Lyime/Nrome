@@ -61,13 +61,18 @@ function redirectIfAuthenticated(targetPath = 'dashboard.html') {
 }
 
 function authStatusListener() {
+    if (!supabaseClient) {
+        console.warn('⚠️ Auth status listener skipped - Supabase not initialized');
+        return;
+    }
+    
     supabaseClient.auth.onAuthStateChange((_event, session) => {
         const signOutButtons = document.querySelectorAll('[data-auth="signout"]');
         signOutButtons.forEach(btn => {
             btn.disabled = !session;
         });
 
-        if (!session && !window.location.pathname.endsWith('/index.html')) {
+        if (!session && !window.location.pathname.endsWith('/index.html') && !window.location.pathname.endsWith('/nurse.html')) {
             window.location.replace('index.html');
         }
     });
@@ -177,6 +182,29 @@ function initAuthUI() {
     wireRegisterForm();
 }
 
+// Retry Supabase initialization after a delay (for production config injection)
+function retrySupabaseInit() {
+    if (!supabaseClient && window.LOCAL_CONFIG?.SUPABASE_URL) {
+        console.log('🔄 Retrying Supabase initialization with loaded config...');
+        try {
+            const url = window.LOCAL_CONFIG.SUPABASE_URL;
+            const key = window.LOCAL_CONFIG.SUPABASE_ANON_KEY;
+            
+            if (url && url.startsWith('http') && key && key !== 'your_supabase_anon_key_here') {
+                supabaseClient = supabase.createClient(url, key);
+                window.supabaseClient = supabaseClient;
+                window.authHelpers.supabaseClient = supabaseClient;
+                console.log('✅ Supabase client initialized successfully on retry');
+                
+                // Re-initialize auth UI now that we have Supabase
+                initAuthUI();
+            }
+        } catch (error) {
+            console.error('❌ Retry Supabase initialization failed:', error);
+        }
+    }
+}
+
 // Expose helpers globally for other modules
 window.authHelpers = {
     getSession,
@@ -191,3 +219,7 @@ if (document.readyState === 'loading') {
 } else {
     initAuthUI();
 }
+
+// Retry initialization after config might be loaded (for production builds)
+setTimeout(retrySupabaseInit, 500);
+setTimeout(retrySupabaseInit, 2000);
