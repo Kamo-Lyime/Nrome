@@ -944,6 +944,28 @@
             }
         }
 
+        async function saveClinicalNotes(notesData) {
+            if (!supabaseClient) return;
+            
+            try {
+                const { data, error } = await supabaseClient
+                    .from(DB_TABLES.voice_transcriptions)
+                    .update({ 
+                        clinical_notes: notesData.clinical_notes,
+                        updated_at: new Date().toISOString()
+                    })
+                    .eq('session_id', notesData.session_id)
+                    .order('created_at', { ascending: false })
+                    .limit(1);
+                
+                if (error) throw error;
+                console.log('Clinical notes saved successfully');
+                return data;
+            } catch (error) {
+                console.error('Save clinical notes error:', error);
+            }
+        }
+
         async function saveTriageAssessment(triageData) {
             if (!supabaseClient) return;
             
@@ -2172,22 +2194,64 @@
             }
         }
 
-        function generateNotes() {
+        async function generateNotes() {
             const transcription = document.getElementById('liveTranscription').innerHTML;
-            if (transcription.includes('Recording') || transcription.includes('Click')) {
+            if (transcription.includes('Recording') || transcription.includes('Click') || transcription.includes('Speak now')) {
                 alert('Please record some audio first.');
                 return;
             }
 
             const notesBox = document.getElementById('clinicalNotes');
-            notesBox.innerHTML = `
-                <h6>📋 Clinical Documentation</h6>
-                <strong>Chief Complaint:</strong> [Extracted from conversation]<br>
-                <strong>History of Present Illness:</strong> [AI analysis of symptoms]<br>
-                <strong>Assessment:</strong> [AI preliminary assessment]<br>
-                <strong>Plan:</strong> [Suggested follow-up actions]<br><br>
-                <em class="text-info">🤖 AI-generated notes based on voice transcription. Please review and edit as needed.</em>
-            `;
+            notesBox.innerHTML = '<div class="spinner-border text-primary" role="status"><span class="visually-hidden">Generating...</span></div> <em>Analyzing transcription and generating clinical documentation...</em>';
+
+            try {
+                // Use AI to generate structured clinical notes from transcription
+                const prompt = `You are a medical documentation assistant. Based on the following patient conversation transcription, generate structured clinical documentation in this exact format:
+
+Transcription: "${transcription}"
+
+Generate:
+Chief Complaint: [Extract the main reason for visit in 1-2 sentences]
+History of Present Illness: [Summarize symptoms, duration, severity, and relevant details]
+Assessment: [Preliminary assessment based on described symptoms]
+Plan: [Suggest appropriate next steps, tests, or follow-up actions]
+
+Keep it professional, concise, and medically accurate.`;
+
+                const aiResponse = await getAIResponse(prompt);
+                
+                if (aiResponse) {
+                    notesBox.innerHTML = `
+                        <h6>📋 Clinical Documentation</h6>
+                        <div style="white-space: pre-wrap;">${aiResponse}</div>
+                        <br>
+                        <em class="text-info">🤖 AI-generated notes based on voice transcription. Please review and edit as needed.</em>
+                    `;
+                    
+                    // Save clinical notes to database
+                    await saveClinicalNotes({
+                        session_id: getSessionId(),
+                        clinical_notes: aiResponse
+                    });
+                } else {
+                    throw new Error('No AI response received');
+                }
+            } catch (error) {
+                console.error('Error generating clinical notes:', error);
+                notesBox.innerHTML = `
+                    <div class="alert alert-warning">
+                        <strong>⚠️ Unable to generate AI notes</strong><br>
+                        Using basic template instead:<br><br>
+                        <h6>📋 Clinical Documentation</h6>
+                        <strong>Transcription:</strong> ${transcription}<br><br>
+                        <strong>Chief Complaint:</strong> [Please review transcription and fill in]<br>
+                        <strong>History of Present Illness:</strong> [Please review transcription and fill in]<br>
+                        <strong>Assessment:</strong> [Please review transcription and fill in]<br>
+                        <strong>Plan:</strong> [Please review transcription and fill in]<br><br>
+                        <em class="text-muted">Please manually review and complete the documentation.</em>
+                    </div>
+                `;
+            }
         }
 
         function exportNotes() {
