@@ -2436,6 +2436,19 @@ Keep it professional, concise, and medically accurate.`;
                     </div>
                 `;
 
+                // Save to dedicated triage_assessments table
+                await saveTriageAssessment({
+                    symptoms,
+                    patient_age: age,
+                    patient_gender: gender,
+                    urgency_level: aiAssessment.level,
+                    recommendation: aiAssessment.action,
+                    suggested_specialist: aiAssessment.specialist,
+                    timeframe: aiAssessment.timeframe,
+                    ai_assessment: aiAssessment.assessment
+                });
+                
+                // Also save to AI history log for general tracking
                 await addAIHistoryEntry('triage', {
                     symptoms,
                     age,
@@ -2452,6 +2465,39 @@ Keep it professional, concise, and medically accurate.`;
                         <small class="text-muted">Error: ${error.message}</small>
                     </div>
                 `;
+            }
+        }
+        
+        async function saveTriageAssessment(data) {
+            // Save to Supabase triage_assessments table
+            if (!supabaseClient) {
+                console.warn('Supabase not available, triage data saved locally only');
+                return;
+            }
+            
+            try {
+                const { error } = await supabaseClient
+                    .from('triage_assessments')
+                    .insert([{
+                        symptoms: data.symptoms,
+                        patient_age: data.patient_age ? parseInt(data.patient_age) : null,
+                        patient_gender: data.patient_gender,
+                        urgency_level: data.urgency_level,
+                        recommendation: data.recommendation,
+                        suggested_specialist: data.suggested_specialist,
+                        timeframe: data.timeframe,
+                        ai_assessment: data.ai_assessment
+                    }]);
+                
+                if (error) {
+                    console.error('Error saving triage assessment:', error);
+                    throw error;
+                }
+                
+                console.log('✅ Triage assessment saved to database');
+            } catch (error) {
+                console.error('Failed to save triage assessment:', error);
+                // Don't throw - allow the UI to still show results even if DB save fails
             }
         }
         
