@@ -5,6 +5,19 @@
 	<meta name="viewport" content="width=device-width, initial-scale=1.0">
 	<title>Nrome - Access</title>
 	<link rel="icon" href="Images/nrome-logo.png" type="image/png" />
+	<!-- Local development config loader (silent fail if file doesn't exist) -->
+	<script>
+		// Try to load config.local.js for local development
+		(function() {
+			const script = document.createElement('script');
+			script.src = 'config.local.js';
+			script.onerror = function() {
+				// Silently fail if config.local.js doesn't exist (production mode)
+				console.log('Running in production mode (config.local.js not found)');
+			};
+			document.head.appendChild(script);
+		})();
+	</script>
 	<!-- Production config will be injected here by GitHub Actions -->
 	<!-- PRODUCTION_CONFIG_PLACEHOLDER -->
 	<script src="https://unpkg.com/@supabase/supabase-js@2"></script>
