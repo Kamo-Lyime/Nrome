@@ -570,11 +570,16 @@ async function renderAIHistory() {
                 </div>`;
         }
         if (item.type === 'triage') {
+            const assessment = item.payload?.assessment || '';
             return `
                 <div class="border rounded p-2 mb-2">
                     <div class="small text-muted">${heading} — ${timestamp}</div>
                     <div><strong>Symptoms:</strong> ${item.payload?.symptoms || item.input || ''}</div>
                     <div class="mt-1"><strong>Urgency:</strong> ${item.payload?.urgency || item.output || ''}</div>
+                    ${assessment ? `<div class="mt-2 alert alert-light border-start border-primary border-3 mb-0">
+                        <small><strong>AI Assessment:</strong></small>
+                        <div class="small" style="white-space: pre-wrap;">${assessment}</div>
+                    </div>` : ''}
                 </div>`;
         }
         return `
