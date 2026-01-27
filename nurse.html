@@ -2397,23 +2397,39 @@ Keep it professional, concise, and medically accurate.`;
                 return;
             }
 
-            try {
-                const triageResult = document.getElementById('triageResult');
-                const urgencyLevel = calculateUrgency(symptoms.toLowerCase());
+            const triageResult = document.getElementById('triageResult');
+            
+            // Show loading state
+            triageResult.innerHTML = `
+                <div class="alert alert-info">
+                    <div class="d-flex align-items-center">
+                        <div class="spinner-border spinner-border-sm me-2" role="status"></div>
+                        <span>AI analyzing symptoms...</span>
+                    </div>
+                </div>
+            `;
 
+            try {
+                // Get AI-powered triage assessment
+                const aiAssessment = await getAITriageAssessment(symptoms, age, gender);
+                
                 triageResult.innerHTML = `
-                    <div class="alert ${urgencyLevel.class}">
-                        <div class="d-flex align-items-center">
-                            <span style="font-size: 2rem; margin-right: 12px;">${urgencyLevel.emoji}</span>
+                    <div class="alert ${aiAssessment.class}">
+                        <div class="d-flex align-items-center mb-3">
+                            <span style="font-size: 2rem; margin-right: 12px;">${aiAssessment.emoji}</span>
                             <div>
-                                <h5 class="mb-1">${urgencyLevel.level}</h5>
-                                <p class="mb-0">${urgencyLevel.action}</p>
-                                <small class="text-muted">Recommended timeframe: ${urgencyLevel.timeframe}</small>
+                                <h5 class="mb-1">${aiAssessment.level}</h5>
+                                <p class="mb-0">${aiAssessment.action}</p>
+                                <small class="text-muted">Recommended timeframe: ${aiAssessment.timeframe}</small>
                             </div>
                         </div>
+                        <div class="alert alert-light border mb-3">
+                            <h6><strong>AI Medical Assessment:</strong></h6>
+                            <p class="mb-0" style="white-space: pre-wrap;">${aiAssessment.assessment}</p>
+                        </div>
                         <div class="mt-3">
-                            <button class="btn btn-sm btn-primary" onclick="findSpecialists('${urgencyLevel.specialist}')">
-                                🔍 Find ${urgencyLevel.specialist}s
+                            <button class="btn btn-sm btn-primary" onclick="findSpecialists('${aiAssessment.specialist}')">
+                                🔍 Find ${aiAssessment.specialist}s
                             </button>
                         </div>
                         <small class="text-muted">🤖 AI assessment saved to your health record</small>
@@ -2422,18 +2438,115 @@ Keep it professional, concise, and medically accurate.`;
 
                 await addAIHistoryEntry('triage', {
                     symptoms,
-                    urgency: urgencyLevel.level,
-                    action: urgencyLevel.action
+                    age,
+                    gender,
+                    urgency: aiAssessment.level,
+                    action: aiAssessment.action,
+                    assessment: aiAssessment.assessment
                 });
             } catch (error) {
                 console.error('Triage error:', error);
-                const triageResult = document.getElementById('triageResult');
                 triageResult.innerHTML = `
-                    <div class="text-danger">
-                        <p>Unable to complete assessment. Please consult a healthcare provider.</p>
+                    <div class="alert alert-danger">
+                        <p class="mb-0">Unable to complete AI assessment. Please consult a healthcare provider directly.</p>
+                        <small class="text-muted">Error: ${error.message}</small>
                     </div>
                 `;
             }
+        }
+        
+        async function getAITriageAssessment(symptoms, age, gender) {
+            const prompt = `You are a medical triage AI assistant. Based on the following patient information, provide a brief medical assessment and urgency classification.
+
+Patient Information:
+- Symptoms: ${symptoms}
+- Age: ${age}
+- Gender: ${gender}
+
+Provide a response in the following format:
+1. Brief medical assessment (2-3 sentences explaining possible causes and concerns)
+2. Urgency level (URGENT, HIGH PRIORITY, or ROUTINE)
+3. Recommended action
+4. Recommended specialist type
+
+Keep your response concise and professional. Focus on the medical assessment.`;
+
+            let aiResponse;
+            
+            try {
+                // Try to get AI response
+                aiResponse = await getAIResponse(prompt);
+            } catch (error) {
+                console.error('AI triage failed, using fallback:', error);
+                // Fallback to rule-based assessment
+                const fallback = calculateUrgency(symptoms.toLowerCase());
+                return {
+                    level: fallback.level,
+                    emoji: fallback.emoji,
+                    class: fallback.class,
+                    action: fallback.action,
+                    specialist: fallback.specialist,
+                    timeframe: fallback.timeframe,
+                    assessment: `Based on keyword analysis: The symptoms described may require attention. ${fallback.action.toLowerCase()}.`
+                };
+            }
+            
+            // Parse AI response and classify urgency
+            const urgencyLevel = classifyUrgencyFromAI(aiResponse, symptoms.toLowerCase());
+            
+            return {
+                level: urgencyLevel.level,
+                emoji: urgencyLevel.emoji,
+                class: urgencyLevel.class,
+                action: urgencyLevel.action,
+                specialist: urgencyLevel.specialist,
+                timeframe: urgencyLevel.timeframe,
+                assessment: aiResponse
+            };
+        }
+        
+        function classifyUrgencyFromAI(aiResponse, symptoms) {
+            const responseLower = aiResponse.toLowerCase();
+            
+            // Check for emergency keywords in AI response or symptoms
+            if (responseLower.includes('urgent') || responseLower.includes('emergency') || 
+                responseLower.includes('immediately') || responseLower.includes('911') ||
+                symptoms.includes('chest pain') || symptoms.includes('difficulty breathing') || 
+                symptoms.includes('severe pain') || symptoms.includes('unconscious')) {
+                return {
+                    level: 'URGENT',
+                    emoji: '🚨',
+                    class: 'alert-danger',
+                    action: 'Seek immediate emergency care',
+                    specialist: 'Emergency Medicine',
+                    timeframe: 'Immediately / Call 911'
+                };
+            }
+            
+            // Check for high priority indicators
+            if (responseLower.includes('high priority') || responseLower.includes('soon') ||
+                responseLower.includes('24 hours') || symptoms.includes('fever') || 
+                symptoms.includes('vomiting') || symptoms.includes('bleeding') ||
+                symptoms.includes('blood')) {
+                return {
+                    level: 'HIGH PRIORITY',
+                    emoji: '⚠️',
+                    class: 'alert-warning',
+                    action: 'Schedule appointment within 24-48 hours',
+                    specialist: 'General Practitioner',
+                    timeframe: 'Within 24-48 hours'
+                };
+            }
+            
+            // Default to routine
+            return {
+                level: 'ROUTINE',
+                emoji: '✅',
+                class: 'alert-success',
+                action: 'Schedule routine appointment',
+                specialist: 'General Practitioner',
+                timeframe: 'Within 1-2 weeks'
+            };
         }
         
         async function findSpecialists(specialistType) {
