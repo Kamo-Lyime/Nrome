@@ -7,6 +7,8 @@
     <!-- Simple base64 favicon to prevent 404 error -->
     <link rel="icon" href="Images/nrome-logo.png" type="image/png" />
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <!-- Local development config (gitignored) - Load before other scripts -->
+    <script src="config.local.js"></script>
     <!-- Supabase Client -->
     <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
     <script src="js/auth.js"></script>
@@ -295,13 +297,14 @@
         };
         
         // Database Configuration (use different names to avoid clashes with auth.js globals)
-        const LOCAL_SUPABASE_URL = 'your_supabase_url_here';
-        const LOCAL_SUPABASE_ANON_KEY = 'your_supabase_anon_key_here';
+        // Use local config if available (for development), otherwise use placeholders (for production/CI)
+        const LOCAL_SUPABASE_URL = window.LOCAL_CONFIG?.SUPABASE_URL || 'your_supabase_url_here';
+        const LOCAL_SUPABASE_ANON_KEY = window.LOCAL_CONFIG?.SUPABASE_ANON_KEY || 'your_supabase_anon_key_here';
 
         // AI API Configuration - Browser Compatible
         const AI_CONFIG = {
             // Replace these with your actual API keys
-            HUGGING_FACE_API_KEY: 'your_huggingface_token_here', // Your actual token
+            HUGGING_FACE_API_KEY: window.LOCAL_CONFIG?.HUGGING_FACE_API_KEY || 'your_huggingface_token_here', // Your actual token
             COHERE_API_KEY: 'your_cohere_key_here', // Optional: Add your Cohere key
             
             // Feature flags - Set to true when you have valid keys

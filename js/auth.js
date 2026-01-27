@@ -1,6 +1,7 @@
 // Shared Supabase auth utilities
-const SUPABASE_URL = 'your_supabase_url_here';
-const SUPABASE_ANON_KEY = 'your_supabase_anon_key_here';
+// Use local config if available (for development), otherwise use placeholders (for production/CI)
+const SUPABASE_URL = window.LOCAL_CONFIG?.SUPABASE_URL || 'your_supabase_url_here';
+const SUPABASE_ANON_KEY = window.LOCAL_CONFIG?.SUPABASE_ANON_KEY || 'your_supabase_anon_key_here';
 
 // Initialize a single shared client
 const supabaseClient = window.supabaseClient || supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
