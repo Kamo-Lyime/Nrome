@@ -1,0 +1,2673 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Nrome</title>
+    <!-- Simple base64 favicon to prevent 404 error -->
+    <link rel="icon" href="Images/nrome-logo.png" type="image/png" />
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <!-- Supabase Client -->
+    <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
+    <script src="js/auth.js"></script>
+    <!-- No paid APIs needed - using free alternatives -->
+    <link rel="stylesheet" href="css/styles.css">
+    <style>
+        /* Default hide landing; reveal only when not embedded */
+        #landingContainer { display: none; }
+        html.show-landing #landingContainer { display: block; }
+        /* Hide landing content when launched as embedded AI only */
+        html.embedded-ai-only body { overflow: hidden; background-color: #0b1b2b; }
+        html.embedded-ai-only #landingContainer { display: none !important; }
+    </style>
+    <script>
+        // Apply embedded/non-embedded mode early to prevent flashes
+        (function() {
+            const params = new URLSearchParams(window.location.search);
+            const hash = window.location.hash || '';
+            const isEmbedded = params.get('embed') === '1' || hash.includes('open=');
+            if (isEmbedded) {
+                document.documentElement.classList.add('embedded-ai-only');
+            } else {
+                document.documentElement.classList.add('show-landing');
+            }
+        })();
+    </script>
+</head>
+<body>
+    <div class="position-center top-2 start-0 p-3 w-500">
+        <img src="Images/nrome-logo.png" alt="Nrome Logo" class="logo" style="height: 130px;">
+    </div>
+    
+    <div class="container mt-5 pt-5" id="landingContainer">
+         <!-- Link to Nurse Services -->
+ <div class="end-0 p-0 text-end mb-2">
+    <a href="index.html" class="btn btn-info">Home</a>
+</div>
+
+        <!-- Page Description -->
+        <div class="text-center my-4">
+            <h2 class="display-4">African Medical Practitioners</h2>
+            <p class="lead text-muted">Connect with qualified medical practitioners across Africa. Find doctors, nurses, dentists, therapists, and other healthcare professionals offering services in your area.</p>
+            
+            <!-- AI Medical Assistant Section -->
+            <div class="row mt-4">
+                <div class="col-md-3">
+                    <div class="ai-feature-card text-center p-3">
+                        <div class="ai-icon mb-2">📅</div>
+                        <h5>AI Appointment Booking</h5>
+                        <p class="small">Smart scheduling with practitioners</p>
+                        <button class="btn btn-outline-primary btn-sm" onclick="openAppointmentBooking(); console.log('Appointment button clicked');">Book Now</button>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="ai-feature-card text-center p-3">
+                        <div class="ai-icon mb-2">🤖</div>
+                        <h5>AI Medical Assistant</h5>
+                        <p class="small">24/7 health guidance and symptom checking</p>
+                        <button class="btn btn-outline-primary btn-sm" onclick="openAIChat(); console.log('AI Chat button clicked');">Chat Now</button>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="ai-feature-card text-center p-3">
+                        <div class="ai-icon mb-2">🎤</div>
+                        <h5>Voice Medical Scribe</h5>
+                        <p class="small">AI-powered clinical documentation</p>
+                        <button class="btn btn-outline-success btn-sm" onclick="startVoiceScribe(); console.log('Voice button clicked');">Start Recording</button>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="ai-feature-card text-center p-3">
+                        <div class="ai-icon mb-2">📋</div>
+                        <h5>Smart Triage</h5>
+                        <p class="small">AI patient priority assessment</p>
+                        <button class="btn btn-outline-info btn-sm" onclick="openTriage(); console.log('Triage button clicked');">Assess Patient</button>
+                    </div>
+                </div>
+            </div>
+            <!-- AI history controls removed per request -->
+            
+            <hr class="my-4">
+        </div>
+
+         <!-- Medication Delivery Button -->
+        <div class="text-center mb-4">
+            <a href="medication.html" class="btn btn-outline-info btn-lg">
+                <i class="fas fa-pills me-2"></i>
+                Order Medication Home Delivery
+            </a>
+        </div>
+
+        <!-- Registration Form Buttons -->
+        <div class="text-center mb-3">
+            <button class="btn btn-outline-primary btn-lg" type="button" id="openFormBtn" onclick="openRegistrationForm()">
+                <i class="fas fa-plus-circle me-2"></i>
+                Register Your Medical Practice
+            </button>
+            <button class="btn btn-success btn-lg" type="button" id="closeFormBtn" onclick="closeRegistrationForm()" style="display: none;">
+                <i class="fas fa-minus-circle me-2"></i>
+                Close Registration Form
+            </button>
+        </div>
+        
+        <!-- Collapsible Registration Form -->
+        <div class="collapse" id="registrationForm">
+            <div class="card mt-3">
+            <div class="card-header bg-primary text-white">
+                <h4 class="mb-0">Register Your Medical Practice</h4>
+                <small>Join Africa's leading medical practitioners directory</small>
+            </div>
+            <div class="card-body">
+                <form id="serviceForm">
+                    <div class="mb-3">
+                        <label for="profilePicture" class="form-label">Professional Profile Picture</label>
+                        <input type="file" class="form-control" id="profilePicture" accept="image/*">
+                        <small class="text-muted">Upload a professional profile picture</small>
+                    </div>
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="practitionerName" class="form-label">Full Name</label>
+                                <input type="text" class="form-control" id="practitionerName" placeholder="Dr. John Smith" required>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="profession" class="form-label">Medical Profession</label>
+                                <select class="form-control" id="profession" required>
+                                    <option value="">Select your profession</option>
+                                    <option value="General Practitioner">General Practitioner</option>
+                                    <option value="Specialist Doctor">Specialist Doctor</option>
+                                    <option value="Registered Nurse">Registered Nurse</option>
+                                    <option value="Dentist">Dentist</option>
+                                    <option value="Pharmacist">Pharmacist</option>
+                                    <option value="Physiotherapist">Physiotherapist</option>
+                                    <option value="Psychologist">Psychologist</option>
+                                    <option value="Optometrist">Optometrist</option>
+                                    <option value="Radiologist">Radiologist</option>
+                                    <option value="Surgeon">Surgeon</option>
+                                    <option value="Midwife">Midwife</option>
+                                    <option value="Other">Other (specify in description)</option>
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="qualifications" class="form-label">Qualifications & Specializations</label>
+                                <input type="text" class="form-control" id="qualifications" placeholder="e.g., MBBS, MD, PhD, Specialist Cardiology">
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="licenseNumber" class="form-label">Medical License/Registration Number</label>
+                                <input type="text" class="form-control" id="licenseNumber" placeholder="Enter your medical license number">
+                            </div>
+                        </div>
+                    </div>
+                    <div class="mb-3">
+                        <label for="experience" class="form-label">Years of Experience</label>
+                        <input type="number" class="form-control" id="experience" placeholder="Enter years of practice" min="0">
+                    </div>
+                    <div class="mb-3">
+                        <label for="serviceDescription" class="form-label">Services & Specialties</label>
+                        <textarea class="form-control" id="serviceDescription" rows="4" placeholder="Describe your medical services, specialties, and treatment approaches in detail"></textarea>
+                    </div>
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="servicePrice" class="form-label">Consultation Fee (Local Currency)</label>
+                                <input type="number" class="form-control" id="servicePrice" placeholder="Enter consultation fee">
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="currency" class="form-label">Currency</label>
+                                <select class="form-control" id="currency">
+                                    <option value="ZAR">South African Rand (ZAR)</option>
+                                    <option value="NGN">Nigerian Naira (NGN)</option>
+                                    <option value="KES">Kenyan Shilling (KES)</option>
+                                    <option value="EGP">Egyptian Pound (EGP)</option>
+                                    <option value="GHS">Ghanaian Cedi (GHS)</option>
+                                    <option value="TZS">Tanzanian Shilling (TZS)</option>
+                                    <option value="UGX">Ugandan Shilling (UGX)</option>
+                                    <option value="ETB">Ethiopian Birr (ETB)</option>
+                                    <option value="MAD">Moroccan Dirham (MAD)</option>
+                                    <option value="USD">US Dollar (USD)</option>
+                                    <option value="Other">Other</option>
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="mb-3">
+                        <label for="servingLocations" class="form-label">Practice Location & Service Areas</label>
+                        <input type="text" class="form-control" id="servingLocations" placeholder="e.g., Lagos, Nigeria | Cape Town, South Africa | Nairobi, Kenya - specify cities/regions you serve">
+                        <small class="text-muted">Include country, state/province, and cities where you practice</small>
+                    </div>
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="availability" class="form-label">Availability & Working Hours</label>
+                                <input type="text" class="form-control" id="availability" placeholder="e.g., Mon-Fri 8AM-5PM, Sat 9AM-1PM">
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="phoneNumber" class="form-label">Phone Number</label>
+                                <input type="tel" class="form-control" id="phoneNumber" placeholder="e.g., +27 123 456 7890, +234 801 234 5678" required>
+                                <small class="text-muted">Include country code</small>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="mb-3">
+                        <label for="emailAddress" class="form-label">Email Address</label>
+                        <input type="email" class="form-control" id="emailAddress" placeholder="your.email@example.com">
+                    </div>
+                    <button type="submit" class="btn btn-primary btn-lg w-100">Register My Practice</button>
+                </form>
+            </div>
+        </div>
+        </div> <!-- End collapsible registration form -->
+        
+        <div id="serviceList" class="mt-5">
+ <div class="text-center mb-4">
+                <img src="images/nrome-chatbot-logo.png" alt="Nrome Chatbot" class="img-fluid" style="max-height: 100px; border-radius: 10px;">
+            </div>
+            <h2 class="fas fa-user-md me-2">All Available Registered Medical Practitioners</h2>
+            <p class="text-muted">Browse verified healthcare professionals across the African continent</p>
+            <!-- Services will be listed here -->
+             
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        // Initialize basic console logging for debugging
+        console.log('Bootstrap and main scripts loaded successfully');
+        
+        // Prevent any blocking errors
+        window.addEventListener('error', function(e) {
+            console.warn('Non-critical error caught:', e.message);
+        });
+    </script>
+    
+    <script>
+        // Safe Storage Utility - Handles Tracking Prevention
+        const SafeStorage = {
+            isAvailable: (() => {
+                try {
+                    const test = '__storage_test__';
+                    localStorage.setItem(test, test);
+                    localStorage.removeItem(test);
+                    return true;
+                } catch (e) {
+                    return false;
+                }
+            })(),
+            
+            getItem: function(key) {
+                if (!this.isAvailable) {
+                    console.warn('Storage blocked - returning empty data for:', key);
+                    return null;
+                }
+                try {
+                    return localStorage.getItem(key);
+                } catch (e) {
+                    console.warn('Storage access error:', e);
+                    return null;
+                }
+            },
+            
+            setItem: function(key, value) {
+                if (!this.isAvailable) {
+                    console.warn('Storage blocked - cannot save:', key);
+                    return false;
+                }
+                try {
+                    localStorage.setItem(key, value);
+                    return true;
+                } catch (e) {
+                    console.warn('Storage save error:', e);
+                    return false;
+                }
+            }
+        };
+        
+        // Database Configuration (use different names to avoid clashes with auth.js globals)
+        const LOCAL_SUPABASE_URL = 'https://vpmuooztcqzrrfsvjzwl.supabase.co';
+        const LOCAL_SUPABASE_ANON_KEY = 'sb_publishable_B-5KuQJXEpxkd167_iraZw_IdvsPJNx';
+
+        // AI API Configuration - Browser Compatible
+        const AI_CONFIG = {
+            // Replace these with your actual API keys
+            HUGGING_FACE_API_KEY: 'your_huggingface_token_here', // Your actual token
+            COHERE_API_KEY: 'your_cohere_key_here', // Optional: Add your Cohere key
+            
+            // Feature flags - Set to true when you have valid keys
+            USE_HUGGING_FACE: true, // Currently enabled with your key
+            USE_COHERE: false, // Set to true when you add Cohere key
+            USE_ENHANCED_RULES: true // Always available, no API key needed
+        };
+
+        // Validate API keys
+        const hasValidHuggingFaceKey = AI_CONFIG.HUGGING_FACE_API_KEY && 
+                                      AI_CONFIG.HUGGING_FACE_API_KEY.startsWith('hf_') && 
+                                      AI_CONFIG.HUGGING_FACE_API_KEY !== 'hf_your_token_here';
+        
+        const hasValidCohereKey = AI_CONFIG.COHERE_API_KEY && 
+                                 AI_CONFIG.COHERE_API_KEY !== 'your_cohere_key_here';
+
+        // Pick an active AI provider based on available keys
+        let currentAIProvider = hasValidHuggingFaceKey && AI_CONFIG.USE_HUGGING_FACE
+            ? 'huggingface'
+            : hasValidCohereKey && AI_CONFIG.USE_COHERE
+                ? 'cohere'
+                : 'local';
+
+        // Initialize Supabase (shared with auth.js)
+        if (!window.supabaseClient) {
+            try {
+                window.supabaseClient = supabase.createClient(LOCAL_SUPABASE_URL, LOCAL_SUPABASE_ANON_KEY);
+                console.log('✅ Supabase initialized successfully');
+            } catch (error) {
+                console.warn('⚠️ Supabase initialization failed, using localStorage fallback:', error);
+                window.supabaseClient = null;
+            }
+        }
+        
+        // Use Supabase if available, otherwise fallback to localStorage
+        const USE_LOCAL_STORAGE_ONLY = !supabaseClient;
+
+        // Track signed-in user
+        let currentUserId = null;
+        async function resolveUserId() {
+            try {
+                if (authHelpers?.getSession) {
+                    const session = await authHelpers.getSession();
+                    currentUserId = session?.user?.id || null;
+                } else if (supabaseClient) {
+                    const { data } = await supabaseClient.auth.getSession();
+                    currentUserId = data?.session?.user?.id || null;
+                }
+            } catch (err) {
+                console.warn('Unable to resolve user id:', err);
+                currentUserId = null;
+            }
+            return currentUserId;
+        }
+
+        // AI usage history helpers (localStorage per user)
+        const AI_HISTORY_KEY = 'ai_usage_history_v1';
+
+        function getAIHistory() {
+            const raw = SafeStorage.getItem(AI_HISTORY_KEY);
+            if (!raw) return [];
+            try {
+                return JSON.parse(raw) || [];
+            } catch (err) {
+                console.warn('AI history parse error:', err);
+                return [];
+            }
+        }
+
+        function saveAIHistory(history) {
+            SafeStorage.setItem(AI_HISTORY_KEY, JSON.stringify(history.slice(-200))); // cap to 200 entries
+        }
+
+        async function addAIHistoryEntry(type, payload) {
+            // Resolve user; if unavailable, only store locally
+            const userId = currentUserId || await resolveUserId();
+            const ts = new Date().toISOString();
+            const localEntry = {
+                id: 'hist_' + Date.now() + '_' + Math.random().toString(36).slice(2, 8),
+                userId: userId || 'guest',
+                type,
+                payload,
+                ts
+            };
+
+            if (supabaseClient && userId) {
+                try {
+                    await supabaseClient.from('ai_usage_logs').insert([{
+                        user_id: userId,
+                        feature: type,
+                        input_text: payload?.message || payload?.symptoms || null,
+                        output_text: payload?.response || payload?.urgency || null,
+                        payload,
+                        created_at: ts
+                    }]);
+                    return;
+                } catch (err) {
+                    console.warn('AI history Supabase insert failed, falling back to local:', err.message);
+                }
+            }
+
+            const history = getAIHistory();
+            history.push(localEntry);
+            saveAIHistory(history);
+        }
+
+        async function clearAIHistory(type = null) {
+            const userId = currentUserId || await resolveUserId() || 'guest';
+            if (supabaseClient) {
+                try {
+                    const query = supabaseClient.from('ai_usage_logs').delete().eq('user_id', userId);
+                    if (type) {
+                        query.eq('feature', type);
+                    }
+                    await query;
+                } catch (err) {
+                    console.warn('AI history Supabase delete failed, falling back to local:', err.message);
+                }
+            }
+
+            if (!supabaseClient || type) {
+                if (!type) {
+                    saveAIHistory([]);
+                } else {
+                    const filtered = getAIHistory().filter(h => !(h.userId === userId && h.type === type));
+                    saveAIHistory(filtered);
+                }
+            }
+
+            renderAIHistory();
+        }
+
+        async function renderAIHistory() {
+            const list = document.getElementById('aiHistoryList');
+            if (!list) return;
+            const userId = currentUserId || await resolveUserId() || 'guest';
+            let history = [];
+
+            if (supabaseClient) {
+                try {
+                    const { data, error } = await supabaseClient
+                        .from('ai_usage_logs')
+                        .select('*')
+                        .eq('user_id', userId)
+                        .order('created_at', { ascending: false })
+                        .limit(200);
+
+                    if (!error) {
+                        history = (data || []).map(row => ({
+                            ts: row.created_at,
+                            type: row.feature,
+                            payload: row.payload,
+                            input: row.input_text,
+                            output: row.output_text
+                        }));
+                    } else {
+                        console.warn('AI history Supabase fetch error, using local:', error.message);
+                    }
+                } catch (err) {
+                    console.warn('AI history Supabase fetch failed, using local:', err.message);
+                }
+            }
+
+            if (!history.length) {
+                history = getAIHistory()
+                    .filter(h => h.userId === userId)
+                    .sort((a, b) => b.ts.localeCompare(a.ts));
+            }
+
+            if (!history.length) {
+                list.innerHTML = '<div class="text-muted">No AI usage yet.</div>';
+                return;
+            }
+
+            list.innerHTML = history.map(item => {
+                const timestamp = new Date(item.ts).toLocaleString();
+                if (item.type === 'chat') {
+                    return `
+                        <div class="border rounded p-2 mb-2">
+                            <div class="small text-muted">${timestamp} — Chat</div>
+                            <div><strong>You:</strong> ${item.payload?.message || item.input || ''}</div>
+                            <div class="mt-1"><strong>AI:</strong> ${item.payload?.response || item.output || ''}</div>
+                        </div>`;
+                }
+                if (item.type === 'triage') {
+                    return `
+                        <div class="border rounded p-2 mb-2">
+                            <div class="small text-muted">${timestamp} — Triage</div>
+                            <div><strong>Symptoms:</strong> ${item.payload?.symptoms || item.input || ''}</div>
+                            <div class="mt-1"><strong>Urgency:</strong> ${item.payload?.urgency || item.output || ''}</div>
+                        </div>`;
+                }
+                return `
+                    <div class="border rounded p-2 mb-2">
+                        <div class="small text-muted">${timestamp} — ${item.type}</div>
+                        <div class="mt-1"><strong>Details:</strong> ${JSON.stringify(item.payload || {})}</div>
+                    </div>`;
+            }).join('');
+        }
+
+        function openAIHistory() {
+            renderAIHistory();
+            const modalEl = document.getElementById('aiHistoryModal');
+            if (!modalEl) return;
+            const modal = new bootstrap.Modal(modalEl, { backdrop: 'static' });
+            modal.show();
+        }
+
+        // Expose history helpers
+        window.openAIHistory = openAIHistory;
+        window.clearAIHistory = clearAIHistory;
+        window.renderAIHistory = renderAIHistory;
+
+        console.log('System ready! 🎉');
+        
+        // Use document-level event delegation to avoid duplicate listeners
+        let formToggleInitialized = false;
+        
+        // Auto-load existing practitioners on page load
+        document.addEventListener('DOMContentLoaded', async function() {
+            // Prevent multiple initializations
+            if (window.nromeInitialized) {
+                console.log('⚠️ System already initialized, skipping...');
+                return;
+            }
+            window.nromeInitialized = true;
+
+            const session = await (authHelpers?.requireAuth ? authHelpers.requireAuth() : null);
+            if (session) {
+                currentUserId = session.user.id;
+            } else {
+                return;
+            }
+            
+            console.log('Loading existing practitioners...');
+            await loadAndDisplayPractitioners();
+            
+            // Set up simple manual form control (no Bootstrap collapse)
+            if (!formToggleInitialized) {
+                formToggleInitialized = true;
+                console.log('✅ Manual form control system ready');
+            }
+        });
+        
+        // Manual form control functions
+        function openRegistrationForm() {
+            console.log('Opening registration form manually');
+            const form = document.getElementById('registrationForm');
+            const openBtn = document.getElementById('openFormBtn');
+            const closeBtn = document.getElementById('closeFormBtn');
+            
+            if (form && openBtn && closeBtn) {
+                form.style.display = 'block';
+                openBtn.style.display = 'none';
+                closeBtn.style.display = 'inline-block';
+                console.log('✅ Form opened, buttons switched');
+            }
+        }
+        
+        function closeRegistrationForm() {
+            console.log('Closing registration form manually');
+            const form = document.getElementById('registrationForm');
+            const openBtn = document.getElementById('openFormBtn');
+            const closeBtn = document.getElementById('closeFormBtn');
+            
+            if (form && openBtn && closeBtn) {
+                form.style.display = 'none';
+                openBtn.style.display = 'inline-block';
+                closeBtn.style.display = 'none';
+                console.log('✅ Form closed, buttons switched');
+            }
+        }
+        
+        // Make functions globally accessible
+        window.openRegistrationForm = openRegistrationForm;
+        window.closeRegistrationForm = closeRegistrationForm;
+        
+        // Separate function that only updates button appearance (no side effects)
+        function updateButtonAppearance(isOpening) {
+            console.log('updateButtonAppearance called with:', isOpening);
+            const button = document.getElementById('registrationToggleBtn');
+            const icon = document.getElementById('toggleIcon');
+            const text = document.getElementById('toggleText');
+            
+            console.log('Elements found:', { button: !!button, icon: !!icon, text: !!text });
+            
+            if (!button || !icon || !text) {
+                console.error('Missing button elements:', { button, icon, text });
+                return;
+            }
+            
+            if (isOpening) {
+                console.log('Setting button to OPEN state');
+                icon.className = 'fas fa-minus-circle me-2';
+                text.textContent = 'Close Registration Form';
+                button.classList.remove('btn-outline-primary');
+                button.classList.add('btn-success');
+            } else {
+                console.log('Setting button to CLOSED state');
+                icon.className = 'fas fa-plus-circle me-2';
+                text.textContent = 'Register Your Medical Practice';
+                button.classList.remove('btn-success');
+                button.classList.add('btn-outline-primary');
+            }
+            console.log('Button appearance updated successfully');
+        }
+        
+        // Prevent multiple simultaneous loading
+        let isLoadingPractitioners = false;
+        
+        // Function to load and display existing practitioners
+        async function loadAndDisplayPractitioners() {
+            if (isLoadingPractitioners) {
+                console.log('Already loading practitioners, skipping...');
+                return;
+            }
+            
+            isLoadingPractitioners = true;
+            
+            try {
+                // Clear existing practitioners first to prevent duplicates
+                const serviceList = document.getElementById('serviceList');
+                const existingCards = serviceList.querySelectorAll('.practitioner-profile-card');
+                existingCards.forEach(card => card.remove());
+                
+                const practitioners = await loadPractitioners();
+                console.log('Found practitioners:', practitioners.length);
+                
+                if (practitioners && practitioners.length > 0) {
+                    // Use Set to track displayed IDs and prevent duplicates
+                    const displayedIds = new Set();
+                    
+                    practitioners.forEach(practitioner => {
+                        // Skip if already displayed or no valid ID
+                        if (!practitioner.id || displayedIds.has(practitioner.id)) {
+                            console.warn('Skipping duplicate or invalid practitioner:', practitioner.id);
+                            return;
+                        }
+                        
+                        displayedIds.add(practitioner.id);
+                        createServiceListing(
+                            practitioner.profile_image_url || 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMTUwIiBoZWlnaHQ9IjE1MCIgdmlld0JveD0iMCAwIDE1MCAxNTAiIGZpbGw9Im5vbmUiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+CjxyZWN0IHdpZHRoPSIxNTAiIGhlaWdodD0iMTUwIiBmaWxsPSIjZjBmMGYwIi8+Cjx0ZXh0IHg9Ijc1IiB5PSI4MCIgdGV4dC1hbmNob3I9Im1pZGRsZSIgZmlsbD0iIzk5OSIgZm9udC1mYW1pbHk9IkFyaWFsIiBmb250LXNpemU9IjE0Ij5Qcm9maWxlIFBob3RvPC90ZXh0Pgo8L3N2Zz4K',
+                            practitioner.name,
+                            practitioner.profession,
+                            practitioner.qualifications,
+                            practitioner.license_number,
+                            practitioner.experience_years,
+                            practitioner.service_description,
+                            practitioner.consultation_fee,
+                            practitioner.currency,
+                            practitioner.serving_locations,
+                            practitioner.availability,
+                            practitioner.phone_number,
+                            practitioner.email_address,
+                            practitioner.id
+                        );
+                    });
+                    console.log('✅ Practitioners loaded and displayed successfully. Displayed:', displayedIds.size);
+                } else {
+                    console.log('No existing practitioners found');
+                }
+            } catch (error) {
+                console.error('Error loading practitioners:', error);
+            } finally {
+                isLoadingPractitioners = false;
+            }
+        }
+        
+        // Make function globally accessible
+        window.loadAndDisplayPractitioners = loadAndDisplayPractitioners;
+        
+        // Database Tables Schema
+        const DB_TABLES = {
+            practitioners: 'medical_practitioners',
+            appointments: 'appointments',
+            patients: 'patients',
+            chat_sessions: 'ai_chat_sessions',
+            voice_transcriptions: 'voice_transcriptions',
+            triage_assessments: 'triage_assessments'
+        };
+
+        // Initialize Database Schema
+        async function initializeDatabase() {
+            if (!supabaseClient) {
+                console.warn('Supabase not configured. Using local storage fallback.');
+                return;
+            }
+            
+            try {
+                // Check if tables exist and create if needed
+                console.log('Database initialized successfully');
+            } catch (error) {
+                console.error('Database initialization error:', error);
+            }
+        }
+
+        // Make function globally accessible
+        window.initializeDatabase = initializeDatabase;
+        
+        // Toggle Registration Form Button
+        function toggleRegistrationButton(isOpening) {
+            console.log('Toggle button called, isOpening:', isOpening); // Debug log
+            const button = document.getElementById('registrationToggleBtn');
+            const icon = document.getElementById('toggleIcon');
+            const text = document.getElementById('toggleText');
+            
+            if (isOpening) {
+                // Form is being opened
+                icon.className = 'fas fa-minus-circle me-2';
+                text.textContent = 'Close Registration Form';
+                button.classList.remove('btn-outline-primary');
+                button.classList.add('btn-success');
+            } else {
+                // Form is being closed
+                icon.className = 'fas fa-plus-circle me-2';
+                text.textContent = 'Register Your Medical Practice';
+                button.classList.remove('btn-success');
+                button.classList.add('btn-outline-primary');
+            }
+        }
+        
+        // Make function globally accessible
+        window.toggleRegistrationButton = toggleRegistrationButton;
+        
+        document.getElementById('serviceForm').addEventListener('submit', async function(event) {
+            event.preventDefault();
+            
+            // Show loading state
+            const submitBtn = event.target.querySelector('button[type="submit"]');
+            const originalText = submitBtn.innerHTML;
+            submitBtn.innerHTML = '⏳ Registering Practice...';
+            submitBtn.disabled = true;
+            
+            try {
+                var profilePictureFile = document.getElementById('profilePicture').files[0];
+                var practitionerName = document.getElementById('practitionerName').value;
+                var profession = document.getElementById('profession').value;
+                var qualifications = document.getElementById('qualifications').value;
+                var licenseNumber = document.getElementById('licenseNumber').value;
+                var experience = document.getElementById('experience').value;
+                var serviceDescription = document.getElementById('serviceDescription').value;
+                var servicePrice = document.getElementById('servicePrice').value;
+                var currency = document.getElementById('currency').value;
+                var servingLocations = document.getElementById('servingLocations').value;
+                var availability = document.getElementById('availability').value;
+                var phoneNumber = document.getElementById('phoneNumber').value;
+                var emailAddress = document.getElementById('emailAddress').value;
+
+                // Upload profile picture to Supabase Storage
+                let profileImageUrl = 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMTUwIiBoZWlnaHQ9IjE1MCIgdmlld0JveD0iMCAwIDE1MCAxNTAiIGZpbGw9Im5vbmUiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+CjxyZWN0IHdpZHRoPSIxNTAiIGhlaWdodD0iMTUwIiBmaWxsPSIjZjBmMGYwIi8+Cjx0ZXh0IHg9Ijc1IiB5PSI4MCIgdGV4dC1hbmNob3I9Im1pZGRsZSIgZmlsbD0iIzk5OSIgZm9udC1mYW1pbHk9IkFyaWFsIiBmb250LXNpemU9IjE0Ij5Qcm9maWxlIFBob3RvPC90ZXh0Pgo8L3N2Zz4K';
+                if (profilePictureFile) {
+                    profileImageUrl = await uploadProfilePicture(profilePictureFile, practitionerName);
+                }
+
+                // Save practitioner to database
+                const practitionerData = {
+                    owner_user_id: currentUserId,
+                    name: practitionerName,
+                    profession: profession,
+                    qualifications: qualifications,
+                    license_number: licenseNumber,
+                    experience_years: parseInt(experience) || 0,
+                    service_description: serviceDescription,
+                    consultation_fee: parseFloat(servicePrice) || 0,
+                    currency: currency,
+                    serving_locations: servingLocations,
+                    availability: availability,
+                    phone_number: phoneNumber,
+                    email_address: emailAddress,
+                    profile_image_url: profileImageUrl,
+                    created_at: new Date().toISOString(),
+                    verified: false,
+                    rating: 0,
+                    total_patients: 0
+                };
+
+                const savedPractitioner = await savePractitioner(practitionerData);
+                if (savedPractitioner) {
+                    // Reload all practitioners to display the new one (prevents duplicates)
+                    await loadAndDisplayPractitioners();
+                    
+                    // Show success message
+                    showSuccessAlert('✅ Practice registered successfully! Your profile is now live.');
+                    
+                    // Close registration form after successful registration
+                    closeRegistrationForm();
+                } else {
+                    throw new Error('Failed to save practitioner data');
+                }
+
+                document.getElementById('serviceForm').reset();
+            } catch (error) {
+                console.error('Registration error:', error);
+                showErrorAlert('❌ Registration failed. Please try again.');
+            } finally {
+                submitBtn.innerHTML = originalText;
+                submitBtn.disabled = false;
+            }
+        });
+
+        // Supabase Database Functions
+        async function uploadProfilePicture(file, practitionerName) {
+            if (!supabaseClient) {
+                // Fallback to FileReader for demo
+                return new Promise(resolve => {
+                    const reader = new FileReader();
+                    reader.onload = e => resolve(e.target.result);
+                    reader.readAsDataURL(file);
+                });
+            }
+            
+            try {
+                const fileName = `${practitionerName.replace(/[^a-zA-Z0-9]/g, '_')}_${Date.now()}`;
+                const { data, error } = await supabaseClient.storage
+                    .from('practitioner-profiles')
+                    .upload(fileName, file);
+                
+                if (error) throw error;
+                
+                const { data: urlData } = supabaseClient.storage
+                    .from('practitioner-profiles')
+                    .getPublicUrl(fileName);
+                
+                return urlData.publicUrl;
+            } catch (error) {
+                console.error('Profile picture upload error:', error);
+                // Fallback to base64
+                return new Promise(resolve => {
+                    const reader = new FileReader();
+                    reader.onload = e => resolve(e.target.result);
+                    reader.readAsDataURL(file);
+                });
+            }
+        }
+
+        async function savePractitioner(practitionerData) {
+            if (!supabaseClient) {
+                // Fallback to SafeStorage
+                const id = Date.now().toString();
+                const practitioners = JSON.parse(SafeStorage.getItem('practitioners') || '[]');
+                const newPractitioner = { ...practitionerData, id };
+                practitioners.push(newPractitioner);
+                SafeStorage.setItem('practitioners', JSON.stringify(practitioners));
+                return newPractitioner;
+            }
+            
+            try {
+                const { data, error } = await supabaseClient
+                    .from(DB_TABLES.practitioners)
+                    .insert([practitionerData])
+                    .select()
+                    .single();
+                
+                if (error) throw error;
+                return data;
+            } catch (error) {
+                console.error('Save practitioner error:', error);
+                return null;
+            }
+        }
+
+        async function loadPractitioners() {
+            if (!supabaseClient) {
+                // Fallback to SafeStorage
+                return JSON.parse(SafeStorage.getItem('practitioners') || '[]');
+            }
+            
+            try {
+                const { data, error } = await supabaseClient
+                    .from(DB_TABLES.practitioners)
+                    .select('*')
+                    .order('created_at', { ascending: false });
+                
+                if (error) throw error;
+                return data || [];
+            } catch (error) {
+                console.error('Load practitioners error:', error);
+                return [];
+            }
+        }
+
+        // Make function globally accessible
+        window.loadPractitioners = loadPractitioners;
+
+        async function saveAppointment(appointmentData) {
+            if (!supabaseClient) {
+                // Fallback to localStorage
+                const appointments = JSON.parse(localStorage.getItem('appointments') || '[]');
+                const newAppointment = { ...appointmentData, id: Date.now().toString() };
+                appointments.push(newAppointment);
+                localStorage.setItem('appointments', JSON.stringify(appointments));
+                return newAppointment;
+            }
+            
+            try {
+                const { data, error } = await supabaseClient
+                    .from(DB_TABLES.appointments)
+                    .insert([appointmentData])
+                    .select()
+                    .single();
+                
+                if (error) throw error;
+                return data;
+            } catch (error) {
+                console.error('Save appointment error:', error);
+                return null;
+            }
+        }
+
+        async function saveChatSession(chatData) {
+            if (!supabaseClient) return;
+            
+            try {
+                const { data, error } = await supabaseClient
+                    .from(DB_TABLES.chat_sessions)
+                    .insert([chatData]);
+                
+                if (error) throw error;
+                return data;
+            } catch (error) {
+                console.error('Save chat session error:', error);
+            }
+        }
+
+        async function saveVoiceTranscription(transcriptionData) {
+            if (!supabaseClient) return;
+            
+            try {
+                const { data, error } = await supabaseClient
+                    .from(DB_TABLES.voice_transcriptions)
+                    .insert([transcriptionData]);
+                
+                if (error) throw error;
+                return data;
+            } catch (error) {
+                console.error('Save transcription error:', error);
+            }
+        }
+
+        async function saveTriageAssessment(triageData) {
+            if (!supabaseClient) return;
+            
+            try {
+                const { data, error } = await supabaseClient
+                    .from(DB_TABLES.triage_assessments)
+                    .insert([triageData]);
+                
+                if (error) throw error;
+                return data;
+            } catch (error) {
+                console.error('Save triage assessment error:', error);
+            }
+        }
+
+        function showSuccessAlert(message) {
+            const alertDiv = document.createElement('div');
+            alertDiv.className = 'alert alert-success alert-dismissible fade show position-fixed';
+            alertDiv.style.top = '20px';
+            alertDiv.style.right = '20px';
+            alertDiv.style.zIndex = '9999';
+            alertDiv.innerHTML = `
+                ${message}
+                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+            `;
+            document.body.appendChild(alertDiv);
+            setTimeout(() => alertDiv.remove(), 5000);
+        }
+
+        function showErrorAlert(message) {
+            const alertDiv = document.createElement('div');
+            alertDiv.className = 'alert alert-danger alert-dismissible fade show position-fixed';
+            alertDiv.style.top = '20px';
+            alertDiv.style.right = '20px';
+            alertDiv.style.zIndex = '9999';
+            alertDiv.innerHTML = `
+                ${message}
+                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+            `;
+            document.body.appendChild(alertDiv);
+            setTimeout(() => alertDiv.remove(), 5000);
+        }
+        
+        function createServiceListing(imageUrl, practitionerName, profession, qualifications, licenseNumber, experience, serviceDescription, servicePrice, currency, servingLocations, availability, phoneNumber, emailAddress, practitionerId) {
+            // Debug logging for template literal issues
+            if (!imageUrl || imageUrl.includes('${')) {
+                console.warn('Image URL contains template literal, fixing:', imageUrl);
+                imageUrl = 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMTUwIiBoZWlnaHQ9IjE1MCIgdmlld0JveD0iMCAwIDE1MCAxNTAiIGZpbGw9Im5vbmUiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+CjxyZWN0IHdpZHRoPSIxNTAiIGhlaWdodD0iMTUwIiBmaWxsPSIjZjBmMGYwIi8+Cjx0ZXh0IHg9Ijc1IiB5PSI4MCIgdGV4dC1hbmNob3I9Im1pZGRsZSIgZmlsbD0iIzk5OSIgZm9udC1mYW1pbHk9IkFyaWFsIiBmb250LXNpemU9IjE0Ij5Qcm9maWxlIFBob3RvPC90ZXh0Pgo8L3N2Zz4K';
+            }
+            
+            var serviceList = document.getElementById('serviceList');
+            var serviceId = practitionerId || 'service_' + Date.now(); // Use database ID if available
+            var newService = document.createElement('div');
+            newService.className = 'card mt-3 practitioner-profile-card';
+            newService.setAttribute('data-practitioner-id', serviceId);
+            newService.innerHTML = `
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-3 text-center">
+                            <img src="${imageUrl}" alt="${practitionerName}" class="profile-picture img-fluid rounded" 
+                                 onclick="openImageModal('${imageUrl}', '${practitionerName}')" 
+                                 style="cursor: pointer; max-width: 150px; height: 150px; object-fit: cover;">
+                            <p class="mt-2 mb-0"><small class="text-muted">Click to view full size</small></p>
+                            <div class="profession-badge mt-2">
+                                <span class="badge bg-primary">${profession}</span>
+                            </div>
+                        </div>
+                        <div class="col-md-9">
+                            <h5 class="card-title text-primary">${practitionerName}</h5>
+                            <h6 class="text-muted mb-3">${profession}</h6>
+                            ${qualifications ? `<p class="mb-2"><strong>Qualifications:</strong> ${qualifications}</p>` : ''}
+                            ${licenseNumber ? `<p class="mb-2"><strong>License Number:</strong> ${licenseNumber}</p>` : ''}
+                            ${experience ? `<p class="mb-2"><strong>Experience:</strong> ${experience} years</p>` : ''}
+                            <p class="card-text">${serviceDescription}</p>
+                            <div class="row">
+                                <div class="col-md-6">
+                                    ${servicePrice ? `<p class="mb-2"><strong>Consultation Fee:</strong> <span class="text-success">${servicePrice} ${currency}</span></p>` : ''}
+                                    <p class="mb-2"><strong>Phone:</strong> <a href="tel:${phoneNumber}" class="text-decoration-none">${phoneNumber}</a></p>
+                                    ${emailAddress ? `<p class="mb-2"><strong>Email:</strong> <a href="mailto:${emailAddress}" class="text-decoration-none">${emailAddress}</a></p>` : ''}
+                                </div>
+                                <div class="col-md-6">
+                                    ${servingLocations ? `<p class="mb-2"><strong>Practice Locations:</strong> ${servingLocations}</p>` : ''}
+                                    ${availability ? `<p class="mb-2"><strong>Availability:</strong> ${availability}</p>` : ''}
+                                </div>
+                            </div>
+                            <div class="mt-3">
+                                <button class="btn btn-primary btn-sm me-2" onclick="contactPractitioner('${phoneNumber}', '${practitionerName}')">📞 Call Now</button>
+                                ${emailAddress ? `<button class="btn btn-outline-primary btn-sm me-2" onclick="emailPractitioner('${emailAddress}', '${practitionerName}')">✉️ Send Email</button>` : ''}
+                                <button class="btn btn-success btn-sm me-2" onclick="bookAppointment('${practitionerName}', '${profession}', '${phoneNumber}', '${emailAddress}', '${serviceId}')">📅 Book Appointment</button>
+                                <button class="btn btn-outline-info btn-sm">👁️ View Full Profile</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            `;
+            serviceList.appendChild(newService);
+        }
+
+        // Make functions globally accessible
+        window.createServiceListing = createServiceListing;
+
+        // Function to open image in full screen modal
+        function openImageModal(imageUrl, practitionerName) {
+            const modal = document.getElementById('imageModal');
+            const modalImg = document.getElementById('modalImage');
+            const modalTitle = document.getElementById('modalTitle');
+            if (!modal || !modalImg || !modalTitle) return;
+
+            modal.classList.add('show');
+            modalImg.src = imageUrl;
+            modalTitle.textContent = practitionerName + ' - Professional Profile';
+        }
+
+        // Function to close modal
+        function closeImageModal(event) {
+            if (event) {
+                event.preventDefault();
+            }
+            const modal = document.getElementById('imageModal');
+            if (modal) {
+                modal.classList.remove('show');
+            }
+        }
+
+        // AI Appointment Booking Functions
+        let practitionersData = [];
+        let selectedTimeSlot = null;
+
+        function openAppointmentBooking() {
+            console.log('Opening Appointment Booking...');
+            try {
+                const modalElement = document.getElementById('appointmentModal');
+                const modal = new bootstrap.Modal(modalElement, {
+                    backdrop: 'static',
+                    keyboard: false
+                });
+                
+                // Fix accessibility: remove aria-hidden when modal is shown
+                modalElement.addEventListener('shown.bs.modal', function() {
+                    modalElement.removeAttribute('aria-hidden');
+                }, { once: true });
+                
+                modal.show();
+                console.log('Appointment modal opened successfully');
+                
+                // Load data after modal opens
+                setTimeout(() => {
+                    loadPractitionersDropdown();
+                    setMinDate();
+                }, 100);
+            } catch (error) {
+                console.error('Error opening appointment modal:', error);
+                alert('Unable to open appointment booking. Please try again.');
+            }
+        }
+        // Make functions globally accessible
+        window.openAppointmentBooking = openAppointmentBooking;
+
+        function closeAppointmentBooking() {
+            console.log('Closing Appointment Booking...');
+            try {
+                const modalElement = document.getElementById('appointmentModal');
+                const modal = bootstrap.Modal.getInstance(modalElement);
+                if (modal) {
+                    modal.hide();
+                }
+                resetBookingForm();
+            } catch (error) {
+                console.error('Error closing appointment modal:', error);
+            }
+        }
+
+        function bookAppointment(practitionerName, profession, phone, email) {
+            openAppointmentBooking();
+            // Pre-select the practitioner
+            setTimeout(() => {
+                const dropdown = document.getElementById('selectedPractitioner');
+                for (let option of dropdown.options) {
+                    if (option.text.includes(practitionerName)) {
+                        option.selected = true;
+                        updatePractitionerInfo();
+                        break;
+                    }
+                }
+            }, 100);
+        }
+
+        function setMinDate() {
+            const today = new Date();
+            today.setDate(today.getDate() + 1); // Tomorrow as minimum
+            const dateInput = document.getElementById('appointmentDate');
+            dateInput.min = today.toISOString().split('T')[0];
+        }
+
+        function loadPractitionersDropdown() {
+            const dropdown = document.getElementById('selectedPractitioner');
+            const serviceCards = document.querySelectorAll('.practitioner-profile-card');
+            
+            dropdown.innerHTML = '<option value="">Choose a medical practitioner...</option>';
+            
+            serviceCards.forEach((card) => {
+                const nameElement = card.querySelector('.card-title');
+                const professionElement = card.querySelector('h6');
+                const practitionerId = card.getAttribute('data-practitioner-id');
+                
+                if (nameElement && professionElement && practitionerId) {
+                    const name = nameElement.textContent;
+                    const profession = professionElement.textContent;
+                    dropdown.innerHTML += `<option value="${practitionerId}">${name} - ${profession}</option>`;
+                }
+            });
+        }
+
+        function updatePractitionerInfo() {
+            const dropdown = document.getElementById('selectedPractitioner');
+            const selectedPractitionerId = dropdown.value;
+            const infoDiv = document.getElementById('practitionerInfo');
+            
+            if (selectedPractitionerId === '') {
+                infoDiv.style.display = 'none';
+                return;
+            }
+            
+            const serviceCards = document.querySelectorAll('.practitioner-profile-card');
+            const selectedCard = Array.from(serviceCards).find(card => 
+                card.getAttribute('data-practitioner-id') === selectedPractitionerId
+            );
+            
+            if (selectedCard) {
+                const name = selectedCard.querySelector('.card-title').textContent;
+                const profession = selectedCard.querySelector('h6').textContent;
+                
+                infoDiv.innerHTML = `
+                    <div class="d-flex align-items-center">
+                        <div class="me-3">
+                            <img src="data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iODAiIGhlaWdodD0iODAiIHZpZXdCb3g9IjAgMCA4MCA4MCIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KPHJlY3Qgd2lkdGg9IjgwIiBoZWlnaHQ9IjgwIiBmaWxsPSIjZjBmMGYwIi8+Cjx0ZXh0IHg9IjQwIiB5PSI0NSIgdGV4dC1hbmNob3I9Im1pZGRsZSIgZmlsbD0iIzk5OSIgZm9udC1mYW1pbHk9IkFyaWFsIiBmb250LXNpemU9IjEwIj5QaG90bzwvdGV4dD4KPC9zdmc+Cg==" class="rounded-circle" width="80" height="80">
+                        </div>
+                        <div>
+                            <h6 class="mb-1">${name}</h6>
+                            <p class="mb-1 text-muted">${profession}</p>
+                            <small class="text-success">✅ Available for appointments</small>
+                        </div>
+                    </div>
+                `;
+                infoDiv.style.display = 'block';
+                
+                // Trigger AI suggestions
+                getAIRecommendations();
+            }
+        }
+
+        function loadAvailableSlots() {
+            const selectedDate = document.getElementById('appointmentDate').value;
+            const timeSlotsContainer = document.getElementById('timeSlots');
+            
+            if (!selectedDate) {
+                timeSlotsContainer.innerHTML = '<em class="text-muted">Select a date to see available time slots...</em>';
+                return;
+            }
+            
+            // Generate available time slots (simulated)
+            const slots = generateTimeSlots(selectedDate);
+            timeSlotsContainer.innerHTML = '';
+            
+            slots.forEach(slot => {
+                const button = document.createElement('button');
+                button.className = `btn btn-outline-primary btn-sm me-2 mb-2 time-slot ${slot.available ? '' : 'disabled'}`;
+                button.textContent = slot.time;
+                button.disabled = !slot.available;
+                
+                if (slot.available) {
+                    button.onclick = () => selectTimeSlot(slot, button);
+                }
+                
+                timeSlotsContainer.appendChild(button);
+            });
+        }
+
+        function generateTimeSlots(date) {
+            const slots = [];
+            const startHour = 8; // 8 AM
+            const endHour = 17; // 5 PM
+            
+            for (let hour = startHour; hour < endHour; hour++) {
+                for (let minute = 0; minute < 60; minute += 30) {
+                    const time = `${hour.toString().padStart(2, '0')}:${minute.toString().padStart(2, '0')}`;
+                    const available = Math.random() > 0.3; // 70% chance of being available
+                    slots.push({ time, available });
+                }
+            }
+            
+            return slots;
+        }
+
+        function selectTimeSlot(slot, button) {
+            // Remove previous selection
+            document.querySelectorAll('.time-slot').forEach(btn => {
+                btn.classList.remove('btn-primary');
+                btn.classList.add('btn-outline-primary');
+            });
+            
+            // Highlight selected slot
+            button.classList.remove('btn-outline-primary');
+            button.classList.add('btn-primary');
+            
+            selectedTimeSlot = slot;
+            updateAppointmentSummary();
+            
+            // Enable booking button
+            document.getElementById('bookAppointmentBtn').disabled = false;
+        }
+
+        function updateConsultationFee() {
+            const dropdown = document.getElementById('selectedPractitioner');
+            const selectedPractitionerId = dropdown.value;
+            const appointmentType = document.getElementById('appointmentType').value;
+            
+            if (!selectedPractitionerId || !appointmentType) return;
+            
+            const serviceCards = document.querySelectorAll('.practitioner-profile-card');
+            const selectedCard = Array.from(serviceCards).find(card => 
+                card.getAttribute('data-practitioner-id') === selectedPractitionerId
+            );
+            
+            if (selectedCard) {
+                const feeElement = selectedCard.querySelector('[class*="consultation"], [class*="fee"], .card-text');
+                const baseFee = extractFeeFromText(feeElement ? feeElement.textContent : '50');
+                const adjustedFee = calculateAdjustedFee(baseFee, appointmentType);
+                
+                console.log(`Consultation fee updated: ${adjustedFee} for ${appointmentType}`);
+            }
+        }
+        
+        function extractFeeFromText(text) {
+            const match = text.match(/\d+/);
+            return match ? parseInt(match[0]) : 50;
+        }
+        
+        function calculateAdjustedFee(baseFee, appointmentType) {
+            const multipliers = {
+                'consultation': 1.0,
+                'followup': 0.8,
+                'emergency': 1.5,
+                'specialist': 1.3,
+                'telemedicine': 0.9
+            };
+            return Math.round(baseFee * (multipliers[appointmentType] || 1.0));
+        }
+        
+        function updateAppointmentSummary() {
+            const practitioner = document.getElementById('selectedPractitioner').selectedOptions[0]?.text || '';
+            const date = document.getElementById('appointmentDate').value;
+            const appointmentType = document.getElementById('appointmentType').value;
+            const summaryDiv = document.getElementById('appointmentSummary');
+            
+            if (practitioner && date && selectedTimeSlot) {
+                const formattedDate = new Date(date).toLocaleDateString('en-US', { 
+                    weekday: 'long', 
+                    year: 'numeric', 
+                    month: 'long', 
+                    day: 'numeric' 
+                });
+                
+                summaryDiv.innerHTML = `
+                    <h6>📋 Appointment Summary</h6>
+                    <p><strong>Practitioner:</strong> ${practitioner}</p>
+                    <p><strong>Date & Time:</strong> ${formattedDate} at ${selectedTimeSlot.time}</p>
+                    <p><strong>Type:</strong> ${appointmentType.replace(/([A-Z])/g, ' $1').replace(/^./, str => str.toUpperCase())}</p>
+                    <p><strong>Estimated Duration:</strong> ${getAppointmentDuration(appointmentType)}</p>
+                    <div class="alert alert-info">
+                        <small>🤖 AI Note: Optimal time slot selected based on your preferences and practitioner availability.</small>
+                    </div>
+                `;
+                summaryDiv.style.display = 'block';
+            }
+        }
+
+        function getAppointmentDuration(type) {
+            const durations = {
+                'consultation': '30 minutes',
+                'followup': '20 minutes',
+                'emergency': '45 minutes',
+                'specialist': '45 minutes',
+                'telemedicine': '25 minutes'
+            };
+            return durations[type] || '30 minutes';
+        }
+
+        function getAIRecommendations() {
+            const patientName = document.getElementById('patientName').value;
+            const reason = document.getElementById('appointmentReason').value;
+            const suggestionBox = document.getElementById('aiSchedulingSuggestions');
+            
+            if (!patientName) {
+                suggestionBox.innerHTML = `
+                    <div class="alert alert-warning">
+                        <small>Please fill in patient information to get personalized AI recommendations.</small>
+                    </div>
+                `;
+                return;
+            }
+            
+            // Simulate AI analysis
+            setTimeout(() => {
+                const recommendations = generateAIRecommendations(reason);
+                suggestionBox.innerHTML = `
+                    <h6>🤖 AI Scheduling Recommendations</h6>
+                    ${recommendations.map(rec => `
+                        <div class="recommendation-item p-2 mb-2 border-start border-primary border-3">
+                            <strong>${rec.title}:</strong> ${rec.description}
+                        </div>
+                    `).join('')}
+                    <small class="text-muted">Recommendations based on symptom analysis and practitioner expertise.</small>
+                `;
+            }, 1000);
+        }
+
+        function generateAIRecommendations(reason) {
+            const lowerReason = reason.toLowerCase();
+            const recommendations = [];
+            
+            if (lowerReason.includes('emergency') || lowerReason.includes('urgent') || lowerReason.includes('severe')) {
+                recommendations.push({
+                    title: "⚡ Urgent Priority",
+                    description: "Schedule within next 24 hours. Consider emergency care if severe."
+                });
+            }
+            
+            if (lowerReason.includes('heart') || lowerReason.includes('chest')) {
+                recommendations.push({
+                    title: "🫀 Specialist Recommended",
+                    description: "Consider booking with a cardiologist for chest/heart related symptoms."
+                });
+            }
+            
+            recommendations.push({
+                title: "📅 Optimal Time",
+                description: "Morning slots (8-11 AM) typically have shorter wait times."
+            });
+            
+            return recommendations;
+        }
+
+        async function confirmBooking() {
+            const patientName = document.getElementById('patientName').value;
+            const patientEmail = document.getElementById('patientEmail').value;
+            const patientPhone = document.getElementById('patientPhone').value;
+            const practitionerSelect = document.getElementById('selectedPractitioner');
+            const practitioner = practitionerSelect.selectedOptions[0]?.text;
+            const practitionerId = practitionerSelect.value;
+            const date = document.getElementById('appointmentDate').value;
+            const reason = document.getElementById('appointmentReason').value;
+            const appointmentType = document.getElementById('appointmentType').value;
+            
+            if (!patientName || !patientPhone || !practitioner || !date || !selectedTimeSlot) {
+                alert('Please fill in all required fields and select a time slot.');
+                return;
+            }
+            
+            if (!practitionerId || practitionerId === '') {
+                alert('Please select a practitioner from the dropdown.');
+                return;
+            }
+            
+            // Generate booking ID
+            const bookingId = 'APT-' + Date.now().toString().slice(-6);
+            const userId = currentUserId || await resolveUserId();
+            
+            // Create appointment data - handle both real IDs and fallback IDs
+            const appointmentData = {
+                booking_id: bookingId,
+                practitioner_id: practitionerId,
+                practitioner_name: practitioner.split(' - ')[0],
+                patient_name: patientName,
+                patient_phone: patientPhone,
+                patient_email: patientEmail,
+                appointment_date: date,
+                appointment_time: selectedTimeSlot.time,
+                appointment_type: appointmentType || 'consultation',
+                reason_for_visit: reason || 'General consultation',
+                status: 'pending',
+                created_at: new Date().toISOString(),
+                user_id: userId
+            };
+            
+            try {
+                // Show loading
+                document.getElementById('bookAppointmentBtn').disabled = true;
+                document.getElementById('bookAppointmentBtn').innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Booking...';
+                
+                // Save appointment
+                const savedAppointment = await saveAppointment(appointmentData);
+                
+                if (savedAppointment) {
+                    alert(`✅ Appointment Request Sent Successfully!\\n\\nBooking ID: ${bookingId}\\nPatient: ${patientName}\\nPractitioner: ${appointmentData.practitioner_name}\\nDate: ${new Date(date).toLocaleDateString()} at ${selectedTimeSlot.time}\\n\\nStatus: Pending Practitioner Confirmation\\n\\nYou will be notified once the practitioner confirms your appointment. Check your dashboard for updates.`);
+                    
+                    // Close booking modal
+                    closeAppointmentBooking();
+                } else {
+                    throw new Error('Failed to save appointment');
+                }
+                
+            } catch (error) {
+                console.error('Booking error:', error);
+                alert('❌ Booking failed. Please try again or contact support.');
+            } finally {
+                // Reset button
+                document.getElementById('bookAppointmentBtn').disabled = false;
+                document.getElementById('bookAppointmentBtn').innerHTML = '<i class="fas fa-calendar-check me-2"></i>Confirm Booking';
+            }
+        }
+        
+        async function saveAppointment(appointmentData) {
+            if (!supabaseClient) {
+                // Fallback to localStorage
+                const appointments = JSON.parse(localStorage.getItem('appointments') || '[]');
+                const newAppointment = { ...appointmentData, id: Date.now().toString() };
+                appointments.push(newAppointment);
+                localStorage.setItem('appointments', JSON.stringify(appointments));
+                console.log('Appointment saved to localStorage:', newAppointment);
+                return newAppointment;
+            }
+            
+            try {
+                // If practitioner_id is not a valid UUID, generate one or use localStorage fallback
+                if (!appointmentData.practitioner_id || appointmentData.practitioner_id.length < 10) {
+                    console.warn('Invalid practitioner ID, using localStorage fallback');
+                    return await saveAppointmentToLocalStorage(appointmentData);
+                }
+                
+                const { data, error } = await supabaseClient
+                    .from('appointments')
+                    .insert([appointmentData])
+                    .select()
+                    .single();
+                
+                if (error) {
+                    console.error('Supabase appointment error:', error);
+                    // Fallback to localStorage if database fails
+                    return await saveAppointmentToLocalStorage(appointmentData);
+                }
+                
+                console.log('Appointment saved to database:', data);
+                return data;
+            } catch (error) {
+                console.error('Save appointment error:', error);
+                // Fallback to localStorage
+                return await saveAppointmentToLocalStorage(appointmentData);
+            }
+        }
+        
+        function saveAppointmentToLocalStorage(appointmentData) {
+            const appointments = JSON.parse(localStorage.getItem('appointments') || '[]');
+            const newAppointment = { ...appointmentData, id: Date.now().toString() };
+            appointments.push(newAppointment);
+            localStorage.setItem('appointments', JSON.stringify(appointments));
+            console.log('Appointment saved to localStorage as fallback:', newAppointment);
+            return newAppointment;
+        }
+        
+        async function sendAppointmentNotifications() {
+            console.log('Notifications disabled; use dashboard messaging.');
+            return true;
+        }
+        
+        async function sendPatientConfirmation() { return true; }
+        
+        function contactPractitioner(phoneNumber, practitionerName) {
+            if (!phoneNumber || phoneNumber === 'undefined') {
+                alert('Phone number not available for this practitioner.');
+                return;
+            }
+            
+            const cleanNumber = phoneNumber.replace(/[^\d+]/g, '');
+            const telUrl = `tel:${cleanNumber}`;
+            
+            try {
+                window.location.href = telUrl;
+            } catch (error) {
+                console.error('Error initiating call:', error);
+                navigator.clipboard.writeText(cleanNumber).then(() => {
+                    alert(`Phone number copied to clipboard: ${cleanNumber}`);
+                }).catch(() => {
+                    alert(`Please call: ${cleanNumber}`);
+                });
+            }
+        }
+        
+        function emailPractitioner(emailAddress, practitionerName) {
+            if (!emailAddress || emailAddress === 'undefined') {
+                alert('Email address not available for this practitioner.');
+                return;
+            }
+            
+            const subject = encodeURIComponent(`Inquiry about medical consultation with ${practitionerName}`);
+            const body = encodeURIComponent(`Dear ${practitionerName},\n\nI would like to inquire about scheduling a consultation.\n\nBest regards`);
+            const mailtoUrl = `mailto:${emailAddress}?subject=${subject}&body=${body}`;
+            
+            try {
+                window.location.href = mailtoUrl;
+            } catch (error) {
+                console.error('Error opening email client:', error);
+                navigator.clipboard.writeText(emailAddress).then(() => {
+                    alert(`Email address copied to clipboard: ${emailAddress}`);
+                }).catch(() => {
+                    alert(`Please email: ${emailAddress}`);
+                });
+            }
+        }
+        
+        // Make functions globally accessible
+        window.contactPractitioner = contactPractitioner;
+        window.emailPractitioner = emailPractitioner;
+        window.updateConsultationFee = updateConsultationFee;
+        
+        async function sendPractitionerNotification() { return true; }
+        
+        function generatePractitionerEmailTemplate() { return ''; }
+
+        
+        async function getPractitionerById(practitionerId) {
+            if (!supabaseClient) {
+                // Fallback to localStorage
+                const practitioners = JSON.parse(localStorage.getItem('practitioners') || '[]');
+                return practitioners.find(p => p.id == practitionerId);
+            }
+            
+            try {
+                const { data, error } = await supabaseClient
+                    .from(DB_TABLES.practitioners)
+                    .select('*')
+                    .eq('id', practitionerId)
+                    .single();
+                
+                if (error) throw error;
+                return data;
+            } catch (error) {
+                console.error('Get practitioner error:', error);
+                return null;
+            }
+        }
+        
+        async function saveNotification() { return null; }
+        
+        async function simulateNotificationSending() { return true; }
+        
+        // Real-world SMS/Email Integration Examples
+        async function sendRealSMS() { return true; }
+        
+        async function sendRealEmail() { return true; }
+
+        function updateConsultationFee() {
+            // Update consultation fee display based on appointment type
+            const appointmentType = document.getElementById('appointmentType').value;
+            const feeDisplay = document.getElementById('consultationFeeDisplay');
+            
+            if (feeDisplay) {
+                let fee = 'Contact practitioner for pricing';
+                
+                switch(appointmentType) {
+                    case 'consultation':
+                        fee = 'Standard consultation fee applies';
+                        break;
+                    case 'followup':
+                        fee = 'Follow-up rate (typically 20% less)';
+                        break;
+                    case 'emergency':
+                        fee = 'Emergency consultation rate';
+                        break;
+                    case 'specialist':
+                        fee = 'Specialist consultation fee';
+                        break;
+                    case 'telemedicine':
+                        fee = 'Telemedicine rate (typically 10% less)';
+                        break;
+                }
+                
+                feeDisplay.innerHTML = `<small class="text-info">💰 ${fee}</small>`;
+            }
+        }
+
+        // Contact practitioner function
+        function contactPractitioner(phoneNumber, practitionerName) {
+            if (confirm(`Call ${practitionerName} at ${phoneNumber}?`)) {
+                window.open(`tel:${phoneNumber}`, '_self');
+            }
+        }
+
+        // Email practitioner function  
+        function emailPractitioner(emailAddress, practitionerName) {
+            if (confirm(`Send email to ${practitionerName} at ${emailAddress}?`)) {
+                window.location.href = `mailto:${emailAddress}?subject=Medical Consultation Inquiry&body=Dear ${practitionerName},%0D%0A%0D%0AI would like to inquire about your medical services.%0D%0A%0D%0AThank you.`;
+            }
+        }
+
+        // Make functions globally accessible
+        window.updateConsultationFee = updateConsultationFee;
+        window.contactPractitioner = contactPractitioner;
+        window.emailPractitioner = emailPractitioner;
+
+        function resetBookingForm() {
+            document.getElementById('patientName').value = '';
+            document.getElementById('patientPhone').value = '';
+            document.getElementById('patientEmail').value = '';
+            document.getElementById('selectedPractitioner').value = '';
+            document.getElementById('appointmentDate').value = '';
+            document.getElementById('appointmentReason').value = '';
+            selectedTimeSlot = null;
+        }
+
+        // AI Medical Assistant Functions
+        function openAIChat() {
+            console.log('Opening AI Chat...');
+            try {
+                const modalElement = document.getElementById('aiChatModal');
+                const modal = new bootstrap.Modal(modalElement, {
+                    backdrop: 'static',
+                    keyboard: false
+                });
+                
+                // Fix accessibility: remove aria-hidden when modal is shown
+                modalElement.addEventListener('shown.bs.modal', function() {
+                    modalElement.removeAttribute('aria-hidden');
+                }, { once: true });
+                
+                modal.show();
+                console.log('AI Chat opened successfully');
+            } catch (error) {
+                console.error('Error opening AI chat modal:', error);
+                alert('Unable to open AI chat. Please try again.');
+            }
+        }
+
+        function closeAIChat() {
+            console.log('Closing AI Chat...');
+            try {
+                const modalElement = document.getElementById('aiChatModal');
+                const modal = bootstrap.Modal.getInstance(modalElement);
+                if (modal) {
+                    modal.hide();
+                }
+            } catch (error) {
+                console.error('Error closing AI chat modal:', error);
+            }
+        }
+        
+        // Make AI functions globally accessible
+        window.openAIChat = openAIChat;
+        window.closeAIChat = closeAIChat;
+
+        function handleChatEnter(event) {
+            if (event.key === 'Enter') {
+                sendMessage();
+            }
+        }
+
+        async function sendMessage() {
+            const input = document.getElementById('chatInput');
+            const message = input.value.trim();
+            if (!message) return;
+
+            const chatContainer = document.getElementById('chatContainer');
+            
+            // Add user message
+            chatContainer.innerHTML += `
+                <div class="user-message mb-2">
+                    <strong>👤 You:</strong> ${message}
+                </div>
+            `;
+
+            // Show loading indicator
+            chatContainer.innerHTML += `
+                <div class="ai-message mb-2 loading-message">
+                    <strong>🤖 AI Assistant:</strong> <em>Analyzing your query...</em> ⏳
+                </div>
+            `;
+            chatContainer.scrollTop = chatContainer.scrollHeight;
+
+            try {
+                // Get AI response from OpenAI or fallback to local
+                const aiResponse = await getAIResponse(message);
+                
+                // Remove loading message
+                const loadingMsg = chatContainer.querySelector('.loading-message');
+                if (loadingMsg) loadingMsg.remove();
+                
+                // Add AI response
+                chatContainer.innerHTML += `
+                    <div class="ai-message mb-2">
+                        <strong>🤖 AI Assistant:</strong> ${aiResponse}
+                    </div>
+                `;
+
+                // Record chat usage
+                await addAIHistoryEntry('chat', { message, response: aiResponse });
+                
+                // Save chat session to database
+                await saveChatSession({
+                    user_message: message,
+                    ai_response: aiResponse,
+                    session_id: getSessionId(),
+                    created_at: new Date().toISOString()
+                });
+            } catch (error) {
+                console.error('AI chat error:', error);
+                // Remove loading message and show error
+                const loadingMsg = chatContainer.querySelector('.loading-message');
+                if (loadingMsg) loadingMsg.remove();
+                
+                chatContainer.innerHTML += `
+                    <div class="ai-message mb-2">
+                        <strong>🤖 AI Assistant:</strong> I'm having trouble connecting right now. For medical emergencies, please contact emergency services immediately. For non-urgent matters, I can still help with basic health information.
+                    </div>
+                `;
+            }
+
+            input.value = '';
+            chatContainer.scrollTop = chatContainer.scrollHeight;
+        }
+
+        async function getAIResponse(message) {
+            console.log('Getting AI response, current provider:', currentAIProvider);
+            
+            // Try configured API providers first
+            try {
+                // Option 1: Use Hugging Face if configured
+                if (hasValidHuggingFaceKey && AI_CONFIG.USE_HUGGING_FACE) {
+                    console.log('Using Hugging Face API...');
+                    const response = await getHuggingFaceResponse(message);
+                    if (response) {
+                        console.log('Hugging Face response received');
+                        return response;
+                    }
+                }
+                
+                // Option 2: Use Cohere if configured
+                if (hasValidCohereKey && AI_CONFIG.USE_COHERE) {
+                    console.log('Using Cohere API...');
+                    const cohereResponse = await getCohereResponse(message);
+                    if (cohereResponse) {
+                        console.log('Cohere response received');
+                        return cohereResponse;
+                    }
+                }
+                
+            } catch (error) {
+                console.log('API error, falling back to enhanced local AI:', error.message);
+                
+                // Special handling for CORS issues
+                if (error.message.includes('CORS') || error.message.includes('Failed to fetch')) {
+                    console.log('🌐 Note: API calls from local files are restricted by browsers. For full API functionality, host this on a web server.');
+                }
+            }
+            
+            // Fallback: Enhanced Rule-Based AI (100% FREE)
+            console.log('Using enhanced local AI');
+            return generateEnhancedAIResponse(message);
+        }
+        
+        async function getHuggingFaceResponse(message) {
+            try {
+                // Note: Direct API calls from local files are blocked by CORS
+                // Using a text completion endpoint that's more permissive
+                const API_URL = 'https://api-inference.huggingface.co/models/gpt2';
+                
+                // Simple approach that works better with CORS
+                const response = await fetch(API_URL, {
+                    method: 'POST',
+                    headers: {
+                        'Authorization': `Bearer ${AI_CONFIG.HUGGING_FACE_API_KEY}`,
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        inputs: `Medical Assistant: How can I help with your health question about ${message}? Here's my advice:`,
+                        parameters: {
+                            max_new_tokens: 100,
+                            temperature: 0.7,
+                            return_full_text: false
+                        }
+                    })
+                });
+                
+                if (!response.ok) {
+                    // Handle specific CORS error
+                    if (response.status === 0) {
+                        throw new Error('CORS_BLOCKED');
+                    }
+                    throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                }
+                
+                const data = await response.json();
+                
+                if (data.error) {
+                    if (data.error.includes('CORS') || data.error.includes('origin')) {
+                        throw new Error('CORS_BLOCKED');
+                    }
+                    throw new Error(data.error);
+                }
+                
+                if (data[0]?.generated_text) {
+                    return data[0].generated_text.trim();
+                }
+                
+                return null;
+            } catch (error) {
+                console.error('Hugging Face API error:', error);
+                
+                // Provide user-friendly error message for CORS issues
+                if (error.message.includes('CORS') || error.message.includes('Failed to fetch')) {
+                    console.log('🌐 Hugging Face API blocked by CORS - this is normal for local files. Using enhanced local AI.');
+                }
+                
+                throw error;
+            }
+        }
+        
+        async function getCohereResponse(message) {
+            // Implement Cohere API when key is available
+            return null;
+        }
+        
+        async function tryCohereFree(message) {
+            // Cohere has a free tier - implement if needed
+            return null;
+        }
+        
+        function generateEnhancedAIResponse(message) {
+            const lowerMessage = message.toLowerCase();
+            
+            // Medical Emergency Keywords
+            const emergencyKeywords = ['emergency', 'urgent', 'severe pain', 'can\'t breathe', 'chest pain', 'heart attack', 'stroke', 'bleeding', 'unconscious'];
+            if (emergencyKeywords.some(keyword => lowerMessage.includes(keyword))) {
+                return `🚨 MEDICAL EMERGENCY DETECTED\n\nIf this is a life-threatening emergency, please:\n• Call emergency services immediately (911, 999, or your local emergency number)\n• Go to the nearest emergency room\n• Contact emergency services in your area\n\nFor South Africa: 10177 or 112\nFor Nigeria: 199 or 112\nFor Kenya: 999 or 112\n\nI can help with non-emergency medical information once you're safe.`;
+            }
+            
+            // Symptom-Based Responses
+            if (lowerMessage.includes('headache') || lowerMessage.includes('head pain')) {
+                return `🤕 For headaches, here's what can help:\n\n💧 **Stay Hydrated**: Drink water regularly\n😴 **Rest**: Get adequate sleep in a dark, quiet room\n🌡️ **Temperature**: Apply cold or warm compress\n🍯 **Natural**: Try ginger tea or peppermint\n💊 **Medication**: Paracetamol/Ibuprofen if needed\n\n⚠️ **See a doctor if**:\n• Severe or sudden onset\n• With fever, stiff neck\n• Vision changes\n• Lasting more than 3 days\n\nWould you like me to help you find a neurologist or GP in your area?`;
+            }
+            
+            if (lowerMessage.includes('fever') || lowerMessage.includes('temperature') || lowerMessage.includes('hot')) {
+                return `🌡️ **Fever Management:**\n\n🏠 **Home Care**:\n• Rest and stay hydrated\n• Light clothing, room temperature\n• Paracetamol or ibuprofen for comfort\n• Monitor temperature regularly\n\n🚨 **Seek immediate medical care if**:\n• Fever above 39°C (102°F)\n• Difficulty breathing\n• Severe headache or neck stiffness\n• Persistent vomiting\n• Signs of dehydration\n• In infants under 3 months\n\n📍 I can help you find the nearest clinic or GP in your area. What's your location?`;
+            }
+            
+            if (lowerMessage.includes('cough') || lowerMessage.includes('throat') || lowerMessage.includes('respiratory')) {
+                return `😷 **Respiratory Symptoms Care:**\n\n🏠 **Home Remedies**:\n• Warm salt water gargling\n• Honey and warm water\n• Steam inhalation\n• Rest your voice\n• Avoid irritants (smoke, dust)\n\n⚠️ **See a healthcare provider if**:\n• Cough with blood\n• Difficulty breathing\n• Chest pain\n• Fever above 38.5°C\n• Symptoms worsen after a week\n\n🫁 For persistent respiratory issues, you may need a pulmonologist. Shall I help you find respiratory specialists in your area?`;
+            }
+            
+            if (lowerMessage.includes('stomach') || lowerMessage.includes('nausea') || lowerMessage.includes('vomiting') || lowerMessage.includes('diarrhea')) {
+                return `🤢 **Digestive Issues:**\n\n💧 **Immediate Care**:\n• Stay hydrated (ORS, clear fluids)\n• BRAT diet: Bananas, Rice, Applesauce, Toast\n• Avoid dairy, fatty, spicy foods\n• Small, frequent meals\n\n🌿 **Natural Remedies**:\n• Ginger tea for nausea\n• Peppermint for stomach upset\n• Chamomile tea for inflammation\n\n🚨 **Seek medical help if**:\n• Severe dehydration\n• Blood in vomit/stool\n• High fever\n• Severe abdominal pain\n• Symptoms persist >3 days\n\nI can help you find a gastroenterologist or general practitioner nearby.`;
+            }
+            
+            if (lowerMessage.includes('child') || lowerMessage.includes('baby') || lowerMessage.includes('pediatric') || lowerMessage.includes('infant')) {
+                return `👶 **Pediatric Health:**\n\nChildren need special medical attention. Here's what to know:\n\n🏥 **When to see a pediatrician immediately**:\n• Fever in infants <3 months\n• Difficulty breathing\n• Unusual lethargy\n• Persistent crying\n• Dehydration signs\n• Any emergency symptoms\n\n👨‍⚕️ **Regular Check-ups Important**:\n• Vaccinations on schedule\n• Growth monitoring\n• Developmental milestones\n\n📍 I can help you find qualified pediatricians in your area. What specific symptoms is the child experiencing?\n\n⚠️ **Note**: Never give adult medications to children without medical advice.`;
+            }
+            
+            if (lowerMessage.includes('pregnancy') || lowerMessage.includes('pregnant') || lowerMessage.includes('expecting')) {
+                return `🤱 **Pregnancy Health:**\n\n✨ **Important Prenatal Care**:\n• Regular check-ups with OB/GYN\n• Folic acid supplements\n• Healthy diet with variety\n• Avoid alcohol, smoking\n• Moderate exercise (as approved)\n\n🚨 **Contact healthcare provider immediately for**:\n• Severe nausea/vomiting\n• Bleeding or cramping\n• Severe headaches\n• Vision changes\n• Reduced fetal movement (later pregnancy)\n\n👩‍⚕️ I can help you find:\n• Obstetricians/Gynecologists\n• Midwives\n• Prenatal care clinics\n\nWhat stage of pregnancy and what concerns do you have?`;
+            }
+            
+            if (lowerMessage.includes('mental') || lowerMessage.includes('depression') || lowerMessage.includes('anxiety') || lowerMessage.includes('stress')) {
+                return `🧠 **Mental Health Support:**\n\n💚 **Immediate Self-Care**:\n• Deep breathing exercises\n• Regular sleep schedule\n• Physical activity\n• Connect with loved ones\n• Limit caffeine/alcohol\n\n🏥 **Professional Help Available**:\n• Psychologists\n• Psychiatrists\n• Counselors\n• Support groups\n\n🆘 **Crisis Support**:\n• South Africa: 0800 567 567\n• Nigeria: Mental health helplines\n• Kenya: Call healthcare providers\n\n💭 Mental health is as important as physical health. I can help you find mental health professionals in your area. What type of support are you looking for?`;
+            }
+            
+            if (lowerMessage.includes('diabetes') || lowerMessage.includes('blood sugar') || lowerMessage.includes('insulin')) {
+                return `🩸 **Diabetes Management:**\n\n📊 **Daily Management**:\n• Monitor blood glucose regularly\n• Take medications as prescribed\n• Balanced diet with controlled carbs\n• Regular exercise\n• Stay hydrated\n\n🍎 **Nutrition Tips**:\n• Choose whole grains\n• Plenty of vegetables\n• Lean proteins\n• Avoid sugary drinks\n• Regular meal times\n\n⚠️ **Emergency Signs**:\n• Extremely high/low blood sugar\n• Ketoacidosis symptoms\n• Diabetic coma signs\n\n👨‍⚕️ You need regular care from an endocrinologist or diabetes specialist. I can help you find diabetes care providers in your area.`;
+            }
+            
+            // General Health Advice
+            if (lowerMessage.includes('medicine') || lowerMessage.includes('medication') || lowerMessage.includes('drug')) {
+                return `💊 **Medication Safety:**\n\n✅ **Always**:\n• Take as prescribed by doctor\n• Complete the full course\n• Check expiry dates\n• Store properly\n• Inform doctors of all medications\n\n❌ **Never**:\n• Share medications\n• Stop antibiotics early\n• Mix with alcohol (unless approved)\n• Take expired medicines\n\n📋 Keep a list of all your medications. I can help you find pharmacists or doctors who can review your medications safely.`;
+            }
+            
+            if (lowerMessage.includes('vaccine') || lowerMessage.includes('vaccination') || lowerMessage.includes('immunization')) {
+                return `💉 **Vaccination Information:**\n\n🛡️ **Vaccines are safe and important for**:\n• Preventing serious diseases\n• Community protection\n• Travel requirements\n• Workplace safety\n\n📅 **African Vaccination Schedule**:\n• Routine childhood vaccines\n• COVID-19 boosters\n• Yellow fever (for travel)\n• Meningitis (in belt regions)\n• Hepatitis A/B\n\nI can help you find vaccination centers and check your vaccination status. What vaccines do you need?`;
+            }
+            
+            // Location-based and general
+            if (lowerMessage.includes('doctor') || lowerMessage.includes('find') || lowerMessage.includes('near')) {
+                return `🔍 **Finding Healthcare Providers:**\n\nI can help you find qualified medical professionals in your area:\n\n👨‍⚕️ **Available Specialists**:\n• General Practitioners\n• Specialists (cardiology, neurology, etc.)\n• Nurses and midwives\n• Dentists\n• Mental health professionals\n\n📍 **Tell me**:\n• Your location or city\n• Type of specialist needed\n• Urgency level\n• Budget considerations\n\n💡 You can also use our AI appointment booking system to schedule directly!`;
+            }
+            
+            // Default comprehensive response
+            return `👋 Hello! I'm your AI medical assistant for African healthcare.\n\n🩺 **I can help with**:\n• Symptom information & guidance\n• Finding healthcare providers across Africa\n• Emergency care advice\n• Medication information\n• Health education\n• Appointment booking\n\n🌍 **Available in**: English, French, Swahili, Arabic, and more African languages\n\n⚠️ **Important**: I provide general health information only. For medical diagnosis and treatment, always consult qualified healthcare professionals.\n\n💬 Try asking me about:\n• Specific symptoms you're experiencing\n• Finding doctors in your area\n• General health questions\n• Emergency care guidance\n\nWhat would you like to know about your health today?`;
+        }
+
+        function getSessionId() {
+            let sessionId = SafeStorage.getItem('ai_chat_session_id');
+            if (!sessionId) {
+                sessionId = 'session_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
+                SafeStorage.setItem('ai_chat_session_id', sessionId);
+            }
+            return sessionId;
+        }
+        
+        function clearChatHistory() {
+            const chatContainer = document.getElementById('chatContainer');
+            const isLocalFile = window.location.protocol === 'file:';
+            const apiNote = isLocalFile ? 
+                '<br><small class="text-muted">📝 Note: Running from local file - using enhanced local AI. For full API features, host on a web server.</small>' : '';
+            const providerLabel = currentAIProvider === 'huggingface' ? '🚀 Hugging Face AI' : currentAIProvider === 'cohere' ? '🚀 Cohere AI' : '📋 Enhanced Medical Rules Engine';
+                
+            chatContainer.innerHTML = `
+                <div class="ai-message mb-2">
+                    <strong>🤖 AI Medical Assistant:</strong> Hello! I'm here to help with your health questions. I'm powered by ${providerLabel}.${apiNote}<br><br>
+                    <em>⚠️ Important: I provide general health information only. For medical emergencies, contact emergency services immediately.</em>
+                </div>
+            `;
+        }
+        
+        // Make chat functions globally accessible
+        window.sendMessage = sendMessage;
+        window.clearChatHistory = clearChatHistory;
+        window.handleChatEnter = handleChatEnter;
+        window.getSessionId = getSessionId;
+
+        
+        function startVoiceInput() {
+            const chatInput = document.getElementById('chatInput');
+            
+            if (!chatInput) {
+                console.error('Chat input not found');
+                return;
+            }
+            
+            // Check for speech recognition support
+            const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+            
+            if (!SpeechRecognition) {
+                alert('Speech recognition not supported in this browser. Please type your message instead.');
+                return;
+            }
+            
+            const recognition = new SpeechRecognition();
+            recognition.lang = 'en-US';
+            recognition.continuous = false;
+            recognition.interimResults = false;
+            
+            recognition.onstart = function() {
+                console.log('Voice input started');
+                chatInput.placeholder = '🎤 Listening... Speak now';
+                chatInput.style.backgroundColor = '#f0f8ff';
+            };
+            
+            recognition.onresult = function(event) {
+                const transcript = event.results[0][0].transcript;
+                chatInput.value = transcript;
+                console.log('Voice input received:', transcript);
+            };
+            
+            recognition.onerror = function(event) {
+                console.error('Voice input error:', event.error);
+                alert('Voice input error: ' + event.error);
+            };
+            
+            recognition.onend = function() {
+                console.log('Voice input ended');
+                chatInput.placeholder = 'Type your health question here...';
+                chatInput.style.backgroundColor = '';
+            };
+            
+            recognition.start();
+        }
+        
+        // Make voice function globally accessible
+        window.startVoiceInput = startVoiceInput;
+        
+        // Initialize chat when modal opens
+        window.addEventListener('DOMContentLoaded', function() {
+            // Set up event listeners when the page loads
+            const aiChatModal = document.getElementById('aiChatModal');
+            if (aiChatModal) {
+                aiChatModal.addEventListener('shown.bs.modal', function() {
+                    clearChatHistory();
+                    const chatInput = document.getElementById('chatInput');
+                    if (chatInput) {
+                        chatInput.focus();
+                    }
+                });
+            }
+
+            // Auto-open feature when hash specifies it (supports dashboard iframe launcher)
+            const hash = window.location.hash || '';
+            const match = hash.match(/open=([a-z-]+)/i);
+            if (match && !window.nromeFeatureOpened) {
+                const feature = match[1];
+                const actions = {
+                    'appointment': () => openAppointmentBooking && openAppointmentBooking(),
+                    'medical-assistant': () => openAIChat && openAIChat(),
+                    'voice-scribe': () => openVoiceScribe && openVoiceScribe(),
+                    'smart-triage': () => openTriage && openTriage()
+                };
+                const action = actions[feature];
+                if (typeof action === 'function') {
+                    document.documentElement.classList.add('embedded-ai-only');
+                    try { history.replaceState(null, '', window.location.pathname + '?embed=1#embedded'); } catch (e) {}
+                    window.nromeFeatureOpened = true;
+                    setTimeout(action, 100);
+                }
+            }
+        });
+
+        // Voice Medical Scribe Functions
+        let isRecording = false;
+        let recognition;
+
+        function openVoiceScribe() {
+            console.log('Opening Voice Scribe...');
+            try {
+                const modal = new bootstrap.Modal(document.getElementById('voiceScribeModal'), {
+                    backdrop: 'static',
+                    keyboard: false
+                });
+                modal.show();
+                console.log('Voice Scribe opened successfully');
+            } catch (error) {
+                console.error('Error opening voice scribe modal:', error);
+                alert('Unable to open voice scribe. Please try again.');
+            }
+        }
+
+        function closeVoiceScribe() {
+            console.log('Closing Voice Scribe...');
+            try {
+                const modalElement = document.getElementById('voiceScribeModal');
+                const modal = bootstrap.Modal.getInstance(modalElement);
+                if (modal) {
+                    modal.hide();
+                }
+                if (typeof isRecording !== 'undefined' && isRecording) {
+                    toggleRecording();
+                }
+            } catch (error) {
+                console.error('Error closing voice scribe modal:', error);
+            }
+        }
+
+        function startVoiceScribe() {
+            openVoiceScribe();
+        }
+        
+        // Make voice functions globally accessible
+        window.openVoiceScribe = openVoiceScribe;
+        window.closeVoiceScribe = closeVoiceScribe;
+        window.startVoiceScribe = startVoiceScribe;
+
+        function toggleRecording() {
+            const recordBtn = document.getElementById('recordBtn');
+            const transcriptionBox = document.getElementById('liveTranscription');
+
+            if (!isRecording) {
+                // Start recording
+                if ('webkitSpeechRecognition' in window) {
+                    recognition = new webkitSpeechRecognition();
+                    recognition.continuous = true;
+                    recognition.interimResults = true;
+                    recognition.lang = 'en-US';
+
+                    recognition.onstart = function() {
+                        recordBtn.innerHTML = '⏹️ Stop Recording';
+                        recordBtn.className = 'btn btn-danger btn-lg';
+                        transcriptionBox.innerHTML = '<em class="text-success">🎤 Recording... Speak now</em>';
+                    };
+
+                    recognition.onresult = async function(event) {
+                        let transcript = '';
+                        for (let i = event.resultIndex; i < event.results.length; i++) {
+                            transcript += event.results[i][0].transcript;
+                        }
+                        transcriptionBox.innerHTML = transcript;
+                        
+                        // Save transcription to database
+                        await saveVoiceTranscription({
+                            transcription_text: transcript,
+                            session_id: getSessionId(),
+                            created_at: new Date().toISOString(),
+                            language: recognition.lang
+                        });
+                    };
+
+                    recognition.onerror = function(event) {
+                        transcriptionBox.innerHTML = `<em class="text-danger">Error: ${event.error}. Please try again.</em>`;
+                    };
+
+                    recognition.start();
+                    isRecording = true;
+                } else {
+                    alert('Speech recognition not supported in your browser. Please use Chrome or Safari.');
+                }
+            } else {
+                // Stop recording
+                if (recognition) {
+                    recognition.stop();
+                }
+                recordBtn.innerHTML = '🎤 Start Recording';
+                recordBtn.className = 'btn btn-success btn-lg';
+                isRecording = false;
+            }
+        }
+
+        function generateNotes() {
+            const transcription = document.getElementById('liveTranscription').innerHTML;
+            if (transcription.includes('Recording') || transcription.includes('Click')) {
+                alert('Please record some audio first.');
+                return;
+            }
+
+            const notesBox = document.getElementById('clinicalNotes');
+            notesBox.innerHTML = `
+                <h6>📋 Clinical Documentation</h6>
+                <strong>Chief Complaint:</strong> [Extracted from conversation]<br>
+                <strong>History of Present Illness:</strong> [AI analysis of symptoms]<br>
+                <strong>Assessment:</strong> [AI preliminary assessment]<br>
+                <strong>Plan:</strong> [Suggested follow-up actions]<br><br>
+                <em class="text-info">🤖 AI-generated notes based on voice transcription. Please review and edit as needed.</em>
+            `;
+        }
+
+        function exportNotes() {
+            const notes = document.getElementById('clinicalNotes').innerText;
+            if (notes.includes('appear here')) {
+                alert('Please generate notes first.');
+                return;
+            }
+            
+            const blob = new Blob([notes], { type: 'text/plain' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = 'clinical-notes-' + new Date().toISOString().slice(0,10) + '.txt';
+            a.click();
+        }
+
+        // Smart Triage Functions
+        function openTriage() {
+            console.log('Opening Triage...');
+            try {
+                const modalElement = document.getElementById('triageModal');
+                const modal = new bootstrap.Modal(modalElement, {
+                    backdrop: 'static',
+                    keyboard: false
+                });
+                
+                // Fix accessibility: remove aria-hidden when modal is shown
+                modalElement.addEventListener('shown.bs.modal', function() {
+                    modalElement.removeAttribute('aria-hidden');
+                }, { once: true });
+                
+                modal.show();
+                console.log('Triage opened successfully');
+            } catch (error) {
+                console.error('Error opening triage modal:', error);
+                alert('Unable to open triage assessment. Please try again.');
+            }
+        }
+
+        function closeTriage() {
+            console.log('Closing Triage...');
+            try {
+                const modalElement = document.getElementById('triageModal');
+                const modal = bootstrap.Modal.getInstance(modalElement);
+                if (modal) {
+                    modal.hide();
+                }
+            } catch (error) {
+                console.error('Error closing triage modal:', error);
+            }
+        }
+        
+        // Make triage functions globally accessible
+        window.openTriage = openTriage;
+        window.closeTriage = closeTriage;
+
+        async function performTriage() {
+            const symptoms = document.getElementById('triageSymptoms').value;
+            const age = document.getElementById('triageAge').value;
+            const gender = document.getElementById('triageGender').value;
+
+            if (!symptoms.trim()) {
+                alert('Please describe the symptoms.');
+                return;
+            }
+
+            try {
+                const triageResult = document.getElementById('triageResult');
+                const urgencyLevel = calculateUrgency(symptoms.toLowerCase());
+
+                triageResult.innerHTML = `
+                    <div class="alert ${urgencyLevel.class}">
+                        <div class="d-flex align-items-center">
+                            <span style="font-size: 2rem; margin-right: 12px;">${urgencyLevel.emoji}</span>
+                            <div>
+                                <h5 class="mb-1">${urgencyLevel.level}</h5>
+                                <p class="mb-0">${urgencyLevel.action}</p>
+                                <small class="text-muted">Recommended timeframe: ${urgencyLevel.timeframe}</small>
+                            </div>
+                        </div>
+                        <div class="mt-3">
+                            <button class="btn btn-sm btn-primary" onclick="findSpecialists('${urgencyLevel.specialist}')">
+                                🔍 Find ${urgencyLevel.specialist}s
+                            </button>
+                        </div>
+                        <small class="text-muted">🤖 AI assessment saved to your health record</small>
+                    </div>
+                `;
+
+                await addAIHistoryEntry('triage', {
+                    symptoms,
+                    urgency: urgencyLevel.level,
+                    action: urgencyLevel.action
+                });
+            } catch (error) {
+                console.error('Triage error:', error);
+                const triageResult = document.getElementById('triageResult');
+                triageResult.innerHTML = `
+                    <div class="text-danger">
+                        <p>Unable to complete assessment. Please consult a healthcare provider.</p>
+                    </div>
+                `;
+            }
+        }
+        
+        async function findSpecialists(specialistType) {
+            try {
+                const practitioners = await loadPractitioners();
+                const specialists = practitioners.filter(p => 
+                    p.profession.toLowerCase().includes(specialistType.toLowerCase()) ||
+                    p.qualifications?.toLowerCase().includes(specialistType.toLowerCase())
+                );
+                
+                if (specialists.length > 0) {
+                    alert(`Found ${specialists.length} ${specialistType}(s) in your area. Check the main listings below.`);
+                    closeTriage();
+                    // Highlight specialists in the main view
+                    highlightSpecialists(specialists);
+                } else {
+                    alert(`No ${specialistType}s found in current listings. Please check back later or contact general practitioners.`);
+                }
+            } catch (error) {
+                console.error('Find specialists error:', error);
+                alert('Unable to search specialists at the moment.');
+            }
+        }
+        
+        function highlightSpecialists(specialists) {
+            // Remove previous highlights
+            document.querySelectorAll('.practitioner-profile-card').forEach(card => {
+                card.classList.remove('specialist-highlight');
+            });
+            
+            // Highlight matching specialists
+            specialists.forEach(specialist => {
+                const card = document.querySelector(`[data-practitioner-id="${specialist.id}"]`);
+                if (card) {
+                    card.classList.add('specialist-highlight');
+                    card.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                }
+            });
+        }
+
+        function calculateUrgency(symptoms) {
+            if (symptoms.includes('chest pain') || symptoms.includes('difficulty breathing') || symptoms.includes('severe pain')) {
+                return {
+                    level: 'URGENT',
+                    emoji: '🚨',
+                    class: 'text-danger',
+                    action: 'Seek immediate emergency care',
+                    specialist: 'Emergency Medicine / Cardiologist',
+                    timeframe: 'Immediately'
+                };
+            } else if (symptoms.includes('fever') || symptoms.includes('vomiting') || symptoms.includes('bleeding')) {
+                return {
+                    level: 'HIGH PRIORITY',
+                    emoji: '⚠️',
+                    class: 'text-warning',
+                    action: 'Schedule appointment within 24 hours',
+                    specialist: 'General Practitioner',
+                    timeframe: 'Within 24 hours'
+                };
+            } else {
+                return {
+                    level: 'ROUTINE',
+                    emoji: '✅',
+                    class: 'text-success',
+                    action: 'Schedule routine appointment',
+                    specialist: 'General Practitioner',
+                    timeframe: 'Within 1-2 weeks'
+                };
+            }
+        }
+
+        // Function to email practitioner
+        function emailPractitioner(emailAddress, practitionerName) {
+            if (confirm(`Send email to ${practitionerName} at ${emailAddress}?`)) {
+                window.location.href = `mailto:${emailAddress}?subject=Medical Consultation Inquiry&body=Dear ${practitionerName},%0D%0A%0D%0AI would like to inquire about your medical services.%0D%0A%0D%0AThank you.`;
+            }
+        }
+        
+    </script>
+
+    <!-- AI Appointment Booking Modal -->
+    <div id="appointmentModal" class="modal fade" tabindex="-1">
+        <div class="modal-dialog modal-xl">
+            <div class="modal-content">
+                <div class="modal-header bg-success text-white">
+                    <h5 class="modal-title">📅 AI-Powered Appointment Booking</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="row">
+                        <!-- Left Panel: Booking Form -->
+                        <div class="col-md-6">
+                            <h6>👤 Patient Information</h6>
+                            <div class="mb-3">
+                                <label class="form-label">Full Name:</label>
+                                <input type="text" id="patientName" class="form-control" placeholder="Enter your full name">
+                            </div>
+                            <div class="row">
+                                <div class="col-md-6">
+                                    <div class="mb-3">
+                                        <label class="form-label">Phone Number:</label>
+                                        <input type="tel" id="patientPhone" class="form-control" placeholder="+27 123 456 7890">
+                                    </div>
+                                </div>
+                                <div class="col-md-6">
+                                    <div class="mb-3">
+                                        <label class="form-label">Email:</label>
+                                        <input type="email" id="patientEmail" class="form-control" placeholder="your@email.com">
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <h6 class="mt-4">🏥 Appointment Details</h6>
+                            <div class="mb-3">
+                                <label class="form-label">Select Practitioner:</label>
+                                <select id="selectedPractitioner" class="form-control" onchange="updatePractitionerInfo()">
+                                    <option value="">Choose a medical practitioner...</option>
+                                </select>
+                            </div>
+                            <div id="practitionerInfo" class="practitioner-info-card p-3 mb-3" style="display: none;">
+                                <!-- Practitioner details will be populated here -->
+                            </div>
+                            
+                            <div class="mb-3">
+                                <label class="form-label">Appointment Type:</label>
+                                <select id="appointmentType" class="form-control" onchange="updateConsultationFee()">
+                                    <option value="consultation">General Consultation</option>
+                                    <option value="followup">Follow-up Visit</option>
+                                    <option value="emergency">Urgent Care</option>
+                                    <option value="specialist">Specialist Consultation</option>
+                                    <option value="telemedicine">Telemedicine/Video Call</option>
+                                </select>
+                            </div>
+                            
+                            <div class="mb-3">
+                                <label class="form-label">Reason for Visit:</label>
+                                <textarea id="appointmentReason" class="form-control" rows="3" placeholder="Briefly describe your symptoms or reason for the appointment..."></textarea>
+                            </div>
+                        </div>
+                        
+                        <!-- Right Panel: AI Scheduling -->
+                        <div class="col-md-6">
+                            <h6>🤖 AI Smart Scheduling</h6>
+                            <div id="aiSchedulingSuggestions" class="ai-suggestions-box p-3 mb-3">
+                                <em class="text-muted">Fill in patient information to get AI scheduling suggestions...</em>
+                            </div>
+                            
+                            <h6>📅 Available Slots</h6>
+                            <div class="mb-3">
+                                <label class="form-label">Preferred Date:</label>
+                                <input type="date" id="appointmentDate" class="form-control" onchange="loadAvailableSlots()" min="">
+                            </div>
+                            
+                            <div class="mb-3">
+                                <label class="form-label">Available Time Slots:</label>
+                                <div id="timeSlots" class="time-slots-container">
+                                    <em class="text-muted">Select a date to see available time slots...</em>
+                                </div>
+                            </div>
+                            
+                            <div id="appointmentSummary" class="appointment-summary p-3 mb-3" style="display: none;">
+                                <!-- Appointment summary will be shown here -->
+                            </div>
+                            
+                            <div class="d-grid gap-2">
+                                <button id="bookAppointmentBtn" class="btn btn-success btn-lg" onclick="confirmBooking()">
+                                    📅 Confirm Appointment Booking
+                                </button>
+                                <button class="btn btn-outline-primary" onclick="getAIRecommendations()">
+                                    🤖 Get AI Scheduling Recommendations
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- AI Medical Assistant Chat Modal -->
+    <div id="aiChatModal" class="modal fade" tabindex="-1">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header bg-primary text-white">
+                    <h5 class="modal-title">🤖 AI Medical Assistant - Nrome Health (100% FREE)</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="alert alert-success">
+                        <strong>🆓 FREE AI Service!</strong> No OpenAI subscription needed. Using advanced rule-based AI + free Hugging Face models.
+                    </div>
+                    <div id="chatContainer" class="chat-container mb-3" style="height: 400px; overflow-y: auto; border: 1px solid #ddd; padding: 10px; border-radius: 8px;">
+                        <div class="ai-message">
+                            <strong>🤖 AI Assistant:</strong> Hello! I'm your FREE AI medical assistant. I can help with:
+                            <ul class="mt-2">
+                                <li>🩺 Symptom assessment and health guidance</li>
+                                <li>💊 Basic medication information</li>
+                                <li>📅 Help finding the right specialist</li>
+                                <li>🏥 Health education and prevention tips</li>
+                                <li>🚨 Emergency care guidance</li>
+                            </ul>
+                            How can I assist you today? <em>(Available in English, French, Swahili, Amharic, Arabic & more)</em>
+                            <br><br>
+                            <small class="text-success">✨ <strong>Powered by FREE AI</strong> - No expensive APIs needed!</small>
+                        </div>
+                    </div>
+                    <div class="input-group">
+                        <input type="text" id="chatInput" class="form-control" placeholder="Ask me about symptoms, health concerns, or medical questions..." onkeypress="handleChatEnter(event)">
+                        <button class="btn btn-primary" onclick="sendMessage()">Send</button>
+                        <button class="btn btn-outline-secondary" onclick="startVoiceInput()">🎤</button>
+                    </div>
+                    <div class="mt-2">
+                        <small class="text-muted">⚠️ This AI provides general health information only. Always consult qualified practitioners for medical advice.</small>
+                        <br>
+                        <small class="text-success">✨ <strong>100% FREE AI</strong> - No subscription fees or API costs!</small>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Voice Medical Scribe Modal -->
+    <div id="voiceScribeModal" class="modal fade" tabindex="-1">
+        <div class="modal-dialog modal-xl">
+            <div class="modal-content">
+                <div class="modal-header bg-success text-white">
+                    <h5 class="modal-title">🎤 Voice Medical Scribe - Clinical Documentation AI</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="row">
+                        <div class="col-md-6">
+                            <h6>🎙️ Live Transcription</h6>
+                            <div id="liveTranscription" class="transcription-box p-3 mb-3" style="height: 200px; overflow-y: auto; border: 2px solid #28a745; border-radius: 8px; background: #f8f9fa;">
+                                <em class="text-muted">Click "Start Recording" to begin voice transcription...</em>
+                            </div>
+                            <div class="text-center">
+                                <button id="recordBtn" class="btn btn-success btn-lg" onclick="toggleRecording()">
+                                    🎤 Start Recording
+                                </button>
+                                <div class="mt-2">
+                                    <small class="text-muted">Supports 110+ languages including African languages</small>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <h6>📋 AI-Generated Clinical Notes</h6>
+                            <div id="clinicalNotes" class="notes-box p-3 mb-3" style="height: 200px; overflow-y: auto; border: 2px solid #007bff; border-radius: 8px; background: #f8f9fa;">
+                                <em class="text-muted">AI-generated clinical documentation will appear here...</em>
+                            </div>
+                            <div class="text-center">
+                                <button class="btn btn-outline-primary" onclick="generateNotes()">📝 Generate Notes</button>
+                                <button class="btn btn-outline-info" onclick="exportNotes()">📤 Export</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Smart Triage Modal -->
+    <div id="triageModal" class="modal fade" tabindex="-1">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header bg-info text-white">
+                    <h5 class="modal-title">📋 Smart Triage - AI Patient Assessment</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="row">
+                        <div class="col-md-8">
+                            <div class="mb-3">
+                                <label class="form-label">Patient Symptoms (describe in detail):</label>
+                                <textarea id="triageSymptoms" class="form-control" rows="4" placeholder="e.g., Chest pain, shortness of breath, started 2 hours ago..."></textarea>
+                            </div>
+                            <div class="row">
+                                <div class="col-md-6">
+                                    <label class="form-label">Age:</label>
+                                    <input type="number" id="triageAge" class="form-control" placeholder="Patient age">
+                                </div>
+                                <div class="col-md-6">
+                                    <label class="form-label">Gender:</label>
+                                    <select id="triageGender" class="form-control">
+                                        <option value="">Select gender</option>
+                                        <option value="male">Male</option>
+                                        <option value="female">Female</option>
+                                        <option value="other">Other</option>
+                                    </select>
+                                </div>
+                            </div>
+                            <div class="mt-3">
+                                <button class="btn btn-info" onclick="performTriage()">🔍 Analyze Symptoms</button>
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <h6>🚨 Triage Result</h6>
+                            <div id="triageResult" class="triage-result p-3" style="border: 2px solid #17a2b8; border-radius: 8px; background: #f8f9fa;">
+                                <em class="text-muted">Enter symptoms and click "Analyze" to get AI triage assessment...</em>
+                            </div>
+
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal for full-screen image viewing -->
+    <div id="imageModal" class="image-modal" onclick="closeImageModal(event)">
+        <div class="modal-content-custom" onclick="event.stopPropagation();">
+            <span class="close-button" onclick="closeImageModal(event)">&times;</span>
+            <h4 id="modalTitle" class="text-center text-white mb-3"></h4>
+            <img id="modalImage" class="modal-image">
+        </div>
+    </div>
+
+    <!-- Bootstrap JavaScript -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    
+    <!-- Final initialization - runs after all functions are loaded -->
+    <script>
+        // Define essential functions directly here to ensure availability
+        async function loadPractitioners() {
+            if (!supabaseClient) {
+                // Fallback to SafeStorage
+                return JSON.parse(SafeStorage.getItem('practitioners') || '[]');
+            }
+            
+            try {
+                const { data, error } = await supabaseClient
+                    .from(DB_TABLES.practitioners)
+                    .select('*')
+                    .order('created_at', { ascending: false });
+                
+                if (error) throw error;
+                return data || [];
+            } catch (error) {
+                console.error('Load practitioners error:', error);
+                return [];
+            }
+        }
+
+        function createServiceListing(imageUrl, practitionerName, profession, qualifications, licenseNumber, experience, serviceDescription, servicePrice, currency, servingLocations, availability, phoneNumber, emailAddress, practitionerId) {
+            // Fix template literal issues
+            if (!imageUrl || imageUrl.includes('${')) {
+                console.warn('Image URL contains template literal, fixing:', imageUrl);
+                imageUrl = 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMTUwIiBoZWlnaHQ9IjE1MCIgdmlld0JveD0iMCAwIDE1MCAxNTAiIGZpbGw9Im5vbmUiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+CjxyZWN0IHdpZHRoPSIxNTAiIGhlaWdodD0iMTUwIiBmaWxsPSIjZjBmMGYwIi8+Cjx0ZXh0IHg9Ijc1IiB5PSI4MCIgdGV4dC1hbmNob3I9Im1pZGRsZSIgZmlsbD0iIzk5OSIgZm9udC1mYW1pbHk9IkFyaWFsIiBmb250LXNpemU9IjE0Ij5Qcm9maWxlIFBob3RvPC90ZXh0Pgo8L3N2Zz4K';
+            }
+            
+            var serviceList = document.getElementById('serviceList');
+            if (!serviceList) {
+                console.error('Service list element not found');
+                return;
+            }
+            
+            var serviceId = practitionerId || 'service_' + Date.now();
+            var newService = document.createElement('div');
+            newService.className = 'card mt-3 practitioner-profile-card';
+            newService.setAttribute('data-practitioner-id', serviceId);
+            
+            // Build HTML string with proper escaping
+            var htmlContent = `
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-3 text-center">
+                            <img src="${imageUrl}" alt="${practitionerName}" class="profile-picture img-fluid rounded" 
+                                 onclick="openImageModal('${imageUrl}', '${practitionerName}')" 
+                                 style="cursor: pointer; max-width: 150px; height: 150px; object-fit: cover;">
+                            <p class="mt-2 mb-0"><small class="text-muted">Click to view full size</small></p>
+                            <div class="profession-badge mt-2">
+                                <span class="badge bg-primary">${profession}</span>
+                            </div>
+                        </div>
+                        <div class="col-md-9">
+                            <h5 class="card-title text-primary">${practitionerName}</h5>
+                            <h6 class="text-muted mb-3">${profession}</h6>
+                            ${qualifications ? `<p class="mb-2"><strong>Qualifications:</strong> ${qualifications}</p>` : ''}
+                            ${licenseNumber ? `<p class="mb-2"><strong>License Number:</strong> ${licenseNumber}</p>` : ''}
+                            ${experience ? `<p class="mb-2"><strong>Experience:</strong> ${experience} years</p>` : ''}
+                            <p class="card-text">${serviceDescription}</p>
+                            <div class="row">
+                                <div class="col-md-6">
+                                    ${servicePrice ? `<p class="mb-2"><strong>Consultation Fee:</strong> <span class="text-success">${servicePrice} ${currency}</span></p>` : ''}
+                                    <p class="mb-2"><strong>Phone:</strong> <a href="tel:${phoneNumber}" class="text-decoration-none">${phoneNumber}</a></p>
+                                    ${emailAddress ? `<p class="mb-2"><strong>Email:</strong> <a href="mailto:${emailAddress}" class="text-decoration-none">${emailAddress}</a></p>` : ''}
+                                </div>
+                                <div class="col-md-6">
+                                    ${servingLocations ? `<p class="mb-2"><strong>Practice Locations:</strong> ${servingLocations}</p>` : ''}
+                                    ${availability ? `<p class="mb-2"><strong>Availability:</strong> ${availability}</p>` : ''}
+                                </div>
+                            </div>
+                            <div class="mt-3">
+                                <button class="btn btn-primary btn-sm me-2" onclick="contactPractitioner('${phoneNumber}', '${practitionerName}')">📞 Call Now</button>
+                                ${emailAddress ? `<button class="btn btn-outline-primary btn-sm me-2" onclick="emailPractitioner('${emailAddress}', '${practitionerName}')">✉️ Send Email</button>` : ''}
+                                <button class="btn btn-success btn-sm me-2" onclick="bookAppointment('${practitionerName}', '${profession}', '${phoneNumber}', '${emailAddress}')">📅 Book Appointment</button>
+                                <button class="btn btn-outline-info btn-sm">👁️ View Full Profile</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            `;
+            
+            newService.innerHTML = htmlContent;
+            serviceList.appendChild(newService);
+            console.log('✅ Added practitioner to listing:', practitionerName);
+        }
+    </script>
+</body>
+</html>

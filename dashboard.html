@@ -1,0 +1,354 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Nrome - Dashboard</title>
+    <link rel="icon" href="Images/nrome-logo.png" type="image/png" />
+    <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="css/styles.css">
+</head>
+<body class="bg-light">
+    <div class="position-center top-2 start-0 p-3 w-500">
+        <img src="Images/nrome-logo.png" alt="Nrome Logo" class="logo" style="height: 120px;">
+    </div>
+
+    <div class="container mt-5 pt-4 mb-5">
+        <div class="d-flex justify-content-between align-items-center mt-3">
+            <div>
+                <h1 class="h3 mb-2">Care Dashboard</h1>
+                <p class="text-muted mb-0">Appointments, prescriptions, deliveries, and your practitioner profile in one place.</p>
+            </div>
+            <div class="d-flex gap-2">
+                <a class="btn btn-outline-secondary" href="nurse.html">Practitioners</a>
+                <a class="btn btn-outline-secondary" href="medication.html">Medication</a>
+                <div class="fixed-top p-3 d-flex justify-content-end">
+                    <button class="btn btn-danger" data-auth="signout">Sign out</button>
+                </div>
+            </div>
+        </div>
+
+        <div class="row mt-4 g-4">
+            <div class="col-lg-6">
+                <div class="card shadow-sm h-100">
+                    <div class="card-header bg-primary text-white d-flex justify-content-between align-items-center">
+                        <span><i class="fas fa-calendar-check me-2"></i>Appointments</span>
+                        <span class="badge bg-light text-primary" id="appointmentCount">0</span>
+                    </div>
+                    <div class="card-body" id="appointmentList">
+                        <div class="text-muted">Loading appointments...</div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="col-lg-6">
+                <div class="card shadow-sm h-100">
+                    <div class="card-header bg-success text-white d-flex justify-content-between align-items-center">
+                        <h5 class="mb-0"><i class="fas fa-file-prescription me-2"></i>Prescriptions</h5>
+                        <div class="d-flex align-items-center gap-2">
+                            <button class="btn btn-sm btn-light" id="uploadPrescriptionBtn" onclick="openUploadPrescriptionModal()" style="display: none;" title="Upload prescription for patient">
+                                <i class="fas fa-plus me-1"></i>Add Prescription
+                            </button>
+                            <span class="badge bg-light text-success" id="prescriptionCount">0</span>
+                        </div>
+                    </div>
+                    <div class="card-body" id="prescriptionListDashboard">
+                        <div class="text-muted">Loading prescriptions...</div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="col-lg-6">
+                <div class="card shadow-sm h-100">
+                    <div class="card-header bg-info text-white d-flex justify-content-between align-items-center">
+                        <span><i class="fas fa-truck me-2"></i>Medication Deliveries</span>
+                        <span class="badge bg-light text-info" id="deliveryCount">0</span>
+                    </div>
+                    <div class="card-body" id="deliveryList">
+                        <div class="text-muted">Loading deliveries...</div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="col-lg-6">
+                <div class="card shadow-sm h-100">
+                    <div class="card-header bg-secondary text-white d-flex justify-content-between align-items-center">
+                        <span><i class="fas fa-robot me-2"></i>AI Usage History</span>
+                        <div class="btn-group btn-group-sm">
+                            <button class="btn btn-outline-light" onclick="openAIHistory()">Open</button>
+                            <button class="btn btn-outline-light" onclick="clearAIHistory()">Delete</button>
+                        </div>
+                    </div>
+                    <div class="card-body">
+                        <p class="text-muted small">View your AI chats, triage runs, and other AI usage. Stored locally per user.</p>
+
+                        <div id="aiHistoryPreview" class="small text-muted">Open to load history.</div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="col-lg-6">
+                <div class="card shadow-sm h-100">
+                    <div class="card-header bg-dark text-white">
+                        <i class="fas fa-user-md me-2"></i>Practitioner Profile
+                    </div>
+                    <div class="card-body">
+                        <p class="text-muted small">Update your public listing. Only the account owner can edit.</p>
+                        <form id="practitionerForm" class="row g-3">
+                            <div class="col-12">
+                                <label class="form-label">Full name</label>
+                                <input type="text" class="form-control" id="practitionerName" required>
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label">Profession</label>
+                                <input type="text" class="form-control" id="practitionerProfession" required>
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label">License number</label>
+                                <input type="text" class="form-control" id="practitionerLicense">
+                            </div>
+                            <div class="col-12">
+                                <label class="form-label">Service description</label>
+                                <textarea class="form-control" id="practitionerDescription" rows="2"></textarea>
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label">Consultation fee</label>
+                                <input type="number" class="form-control" id="practitionerFee" min="0" step="0.01">
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label">Currency</label>
+                                <input type="text" class="form-control" id="practitionerCurrency" placeholder="USD">
+                            </div>
+                            <div class="col-12">
+                                <label class="form-label">Practice locations</label>
+                                <input type="text" class="form-control" id="practitionerLocations">
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label">Availability</label>
+                                <input type="text" class="form-control" id="practitionerAvailability" placeholder="Mon-Fri 8-5">
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label">Phone</label>
+                                <input type="text" class="form-control" id="practitionerPhone">
+                            </div>
+                            <div class="col-12">
+                                <label class="form-label">Email</label>
+                                <input type="email" class="form-control" id="practitionerEmail">
+                            </div>
+                            <div class="col-12 d-flex justify-content-between align-items-center">
+                                <div id="practitionerFeedback" class="small text-muted"></div>
+                                <button type="submit" class="btn btn-dark">Save profile</button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- AI History Modal -->
+    <div id="aiHistoryModal" class="modal fade" tabindex="-1">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">AI Usage History</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="d-flex justify-content-between align-items-center mb-2">
+                        <span class="small text-muted">Recent AI interactions (stored locally, per user).</span>
+                        <div class="btn-group btn-group-sm">
+                            <button class="btn btn-outline-secondary" onclick="renderAIHistory()">Refresh</button>
+                            <button class="btn btn-outline-danger" onclick="clearAIHistory()">Delete All</button>
+                        </div>
+                    </div>
+                    <div id="aiHistoryList" class="small"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Embedded AI Feature Modal (loads practitioner AI tools inline) -->
+    <div class="modal fade" id="aiFeatureModal" tabindex="-1">
+        <div class="modal-dialog modal-xl modal-dialog-centered" style="max-width: 1100px;">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">AI Feature</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body p-0" style="height: 80vh;">
+                    <iframe id="aiFeatureFrame" src="about:blank" title="AI Feature"
+                        style="border:0;width:100%;height:100%;"
+                        sandbox="allow-scripts allow-forms allow-popups allow-same-origin"
+                        referrerpolicy="no-referrer">
+                    </iframe>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Prescription Viewer Modal -->
+    <div class="modal fade" id="viewPrescriptionModal" tabindex="-1">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header bg-primary text-white">
+                    <h5 class="modal-title">📝 Prescription Details</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="row">
+                        <div class="col-md-6">
+                            <h6 class="mb-3">Patient Information</h6>
+                            <div class="mb-2"><strong>Patient Name:</strong> <span id="viewRxPatientName"></span></div>
+                            <div class="mb-2"><strong>Patient Email:</strong> <span id="viewRxPatientEmail"></span></div>
+                            <hr>
+                            <h6 class="mb-3">Prescription Information</h6>
+                            <div class="mb-2"><strong>Doctor:</strong> <span id="viewRxDoctorName"></span></div>
+                            <div class="mb-2"><strong>Prescription Date:</strong> <span id="viewRxDate"></span></div>
+                            <div class="mb-2"><strong>Expiry Date:</strong> <span id="viewRxExpiry"></span></div>
+                            <div class="mb-2"><strong>Refills Allowed:</strong> <span id="viewRxRefills"></span></div>
+                            <div class="mb-2"><strong>Status:</strong> <span id="viewRxStatus" class="badge"></span></div>
+                            <div class="mb-2"><strong>Uploaded:</strong> <span id="viewRxUploadDate"></span></div>
+                            <div class="mb-2" id="viewRxPractitionerInfo" style="display: none;">
+                                <strong>Uploaded by:</strong> <span class="text-success">Practitioner</span>
+                            </div>
+                            <div class="mt-3" id="viewRxNotesSection" style="display: none;">
+                                <strong>Notes:</strong>
+                                <div class="border rounded p-2 bg-light" id="viewRxNotes"></div>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <h6 class="mb-3">Prescription File</h6>
+                            <div class="text-center" id="viewRxFileContainer">
+                                <div class="spinner-border" role="status">
+                                    <span class="visually-hidden">Loading...</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Upload Prescription Modal for Practitioners -->
+    <div class="modal fade" id="uploadPrescriptionModal" tabindex="-1">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header bg-success text-white">
+                    <h5 class="modal-title">📄 Upload Prescription for Patient</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="row">
+                        <div class="col-md-5 border-end">
+                            <h6 class="mb-3">🔍 Search Patient</h6>
+                            <div class="mb-3">
+                                <label class="form-label small">Patient Email:</label>
+                                <input type="email" class="form-control" id="patientSearchInput" placeholder="Enter patient email...">
+                                <button class="btn btn-sm btn-primary mt-2" onclick="searchPatients()">Search</button>
+                            </div>
+                            <div id="patientSearchResults" style="max-height: 300px; overflow-y: auto;">
+                                <div class="text-muted small">Enter patient email to search...</div>
+                            </div>
+                            <div id="selectedPatientInfo" class="mt-3"></div>
+                        </div>
+                        <div class="col-md-7">
+                            <h6 class="mb-3">📋 Prescription Details</h6>
+                            <form id="prescriptionUploadForm">
+                                <div class="mb-3">
+                                    <label class="form-label">Prescription File: <span class="text-danger">*</span></label>
+                                    <input type="file" class="form-control" id="prescriptionFile" accept="image/*,.pdf" required>
+                                    <small class="text-muted">Upload prescription image or PDF</small>
+                                </div>
+                                <div class="mb-3">
+                                    <label class="form-label">Doctor Name: <span class="text-danger">*</span></label>
+                                    <input type="text" class="form-control" id="rxDoctorName" placeholder="Dr. Smith" required>
+                                </div>
+                                <div class="row">
+                                    <div class="col-md-6">
+                                        <div class="mb-3">
+                                            <label class="form-label">Prescription Date: <span class="text-danger">*</span></label>
+                                            <input type="date" class="form-control" id="rxDate" required>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <div class="mb-3">
+                                            <label class="form-label">Expiry Date:</label>
+                                            <input type="date" class="form-control" id="rxExpiry">
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="mb-3">
+                                    <label class="form-label">Refills Allowed:</label>
+                                    <input type="number" class="form-control" id="rxRefills" value="0" min="0" max="12">
+                                </div>
+                                <div class="mb-3">
+                                    <label class="form-label">Notes:</label>
+                                    <textarea class="form-control" id="rxNotes" rows="2" placeholder="Additional notes about the prescription..."></textarea>
+                                </div>
+                                <button type="button" class="btn btn-success w-100" onclick="uploadPrescriptionForPatient()">
+                                    <i class="fas fa-upload me-2"></i>Upload Prescription
+                                </button>
+                            </form>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Appointment Messages Modal -->
+    <div class="modal fade" id="appointmentMessagesModal" tabindex="-1">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header bg-primary text-white">
+                    <h5 class="modal-title">
+                        <i class="fas fa-comments me-2"></i>
+                        <span id="messageModalTitle">Appointment Messages</span>
+                    </h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="mb-3 p-2 bg-light rounded" id="messageAppointmentInfo">
+                        <small class="text-muted">Loading appointment details...</small>
+                    </div>
+                    <div id="messagesContainer" style="height: 400px; overflow-y: auto; border: 1px solid #5693cf; border-radius: 5px; padding: 15px; background-color: #0e4780;">
+                        <div class="text-center text-muted">
+                            <div class="spinner-border spinner-border-sm" role="status">
+                                <span class="visually-hidden">Loading messages...</span>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="mt-3">
+                        <form id="sendMessageForm" onsubmit="sendMessage(event)">
+                            <div class="input-group">
+                                <input type="text" class="form-control" id="messageInput" placeholder="Type your message..." required maxlength="500" autocomplete="off">
+                                <button type="submit" class="btn btn-primary">
+                                    <i class="fas fa-paper-plane me-1"></i>Send
+                                </button>
+                            </div>
+                            <small class="text-muted">Press Enter to send • Max 500 characters</small>
+                        </form>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-danger" onclick="deleteConversation()" title="Delete entire conversation">
+                        <i class="fas fa-trash me-1"></i>Delete Conversation
+                    </button>
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="js/auth.js"></script>
+    <script src="js/dashboard.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>
