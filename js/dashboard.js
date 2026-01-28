@@ -25,7 +25,8 @@ async function initDashboard() {
     await Promise.all([
         loadAppointments(userId),
         loadPrescriptions(userId),
-        loadDeliveries(userId)
+        loadDeliveries(userId),
+        loadVoiceScribeHistory()
     ]);
 
     // Update UI based on role
