@@ -1382,3 +1382,279 @@ async function uploadPrescriptionForPatient() {
 }
 
 window.openAIFeature = openAIFeature;
+
+// =====================================================
+// VOICE MEDICAL SCRIBE HISTORY
+// =====================================================
+
+async function loadVoiceScribeHistory() {
+    const container = document.getElementById('voiceScribeHistoryList');
+    
+    if (!currentUserId) {
+        container.innerHTML = '<div class="text-muted">Please log in to view voice scribe history.</div>';
+        return;
+    }
+    
+    try {
+        container.innerHTML = '<div class="text-muted"><div class="spinner-border spinner-border-sm me-2"></div>Loading...</div>';
+        
+        const { data, error } = await authHelpers.supabaseClient
+            .from('voice_scribe_sessions')
+            .select('*')
+            .eq('user_id', currentUserId)
+            .order('created_at', { ascending: false })
+            .limit(20);
+        
+        if (error) throw error;
+        
+        if (!data || data.length === 0) {
+            container.innerHTML = '<div class="text-muted">No voice scribe sessions yet. Use the Voice Medical Scribe feature on the practitioners page to create clinical documentation.</div>';
+            return;
+        }
+        
+        container.innerHTML = data.map(session => {
+            const date = new Date(session.created_at).toLocaleString('en-US', {
+                year: 'numeric',
+                month: 'short',
+                day: 'numeric',
+                hour: '2-digit',
+                minute: '2-digit'
+            });
+            
+            const transcriptPreview = session.transcription_text 
+                ? (session.transcription_text.substring(0, 100) + (session.transcription_text.length > 100 ? '...' : ''))
+                : 'No transcription';
+            
+            const notesPreview = session.clinical_notes 
+                ? (session.clinical_notes.substring(0, 150) + (session.clinical_notes.length > 150 ? '...' : ''))
+                : 'No clinical notes generated';
+            
+            const hasPDF = session.pdf_base64 && session.pdf_base64.length > 0;
+            
+            return `
+                <div class="card mb-3 border-success">
+                    <div class="card-body">
+                        <div class="d-flex justify-content-between align-items-start mb-2">
+                            <div>
+                                <h6 class="card-title mb-1">
+                                    <i class="fas fa-microphone text-success me-2"></i>
+                                    Clinical Documentation Session
+                                </h6>
+                                <small class="text-muted">
+                                    <i class="fas fa-clock me-1"></i>${date}
+                                    ${session.word_count ? ` • ${session.word_count} words` : ''}
+                                </small>
+                            </div>
+                            ${hasPDF ? `
+                                <button class="btn btn-sm btn-outline-success" onclick="viewScribePDF('${session.id}')">
+                                    <i class="fas fa-file-pdf me-1"></i>View PDF
+                                </button>
+                            ` : ''}
+                        </div>
+                        
+                        <div class="mb-2">
+                            <strong class="small">Transcription:</strong>
+                            <p class="small text-muted mb-1">${transcriptPreview}</p>
+                        </div>
+                        
+                        ${session.clinical_notes ? `
+                            <div class="mb-2">
+                                <strong class="small">AI-Generated Notes:</strong>
+                                <p class="small text-muted mb-1" style="white-space: pre-wrap;">${notesPreview}</p>
+                            </div>
+                        ` : ''}
+                        
+                        <div class="btn-group btn-group-sm" role="group">
+                            <button class="btn btn-outline-primary" onclick="viewFullScribeSession('${session.id}')">
+                                <i class="fas fa-eye me-1"></i>View Full
+                            </button>
+                            ${hasPDF ? `
+                                <button class="btn btn-outline-success" onclick="downloadScribePDF('${session.id}', '${session.pdf_filename || 'clinical-notes.pdf'}')">
+                                    <i class="fas fa-download me-1"></i>Download PDF
+                                </button>
+                            ` : ''}
+                            <button class="btn btn-outline-danger" onclick="deleteScribeSession('${session.id}')">
+                                <i class="fas fa-trash me-1"></i>Delete
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            `;
+        }).join('');
+        
+    } catch (error) {
+        console.error('Error loading voice scribe history:', error);
+        container.innerHTML = `<div class="alert alert-danger">Error loading history: ${error.message}</div>`;
+    }
+}
+
+async function viewFullScribeSession(sessionId) {
+    try {
+        const { data, error } = await authHelpers.supabaseClient
+            .from('voice_scribe_sessions')
+            .select('*')
+            .eq('id', sessionId)
+            .single();
+        
+        if (error) throw error;
+        
+        const date = new Date(data.created_at).toLocaleString('en-US', {
+            year: 'numeric',
+            month: 'long',
+            day: 'numeric',
+            hour: '2-digit',
+            minute: '2-digit'
+        });
+        
+        const modalHTML = `
+            <div class="modal fade" id="viewScribeSessionModal" tabindex="-1">
+                <div class="modal-dialog modal-xl">
+                    <div class="modal-content">
+                        <div class="modal-header bg-success text-white">
+                            <h5 class="modal-title">
+                                <i class="fas fa-microphone me-2"></i>
+                                Clinical Documentation - ${date}
+                            </h5>
+                            <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                        </div>
+                        <div class="modal-body">
+                            <div class="row">
+                                <div class="col-md-6">
+                                    <h6><i class="fas fa-file-alt me-2"></i>Transcription</h6>
+                                    <div class="p-3 mb-3 border rounded" style="max-height: 400px; overflow-y: auto; background: #f8f9fa;">
+                                        ${data.transcription_text || '<em class="text-muted">No transcription</em>'}
+                                    </div>
+                                </div>
+                                <div class="col-md-6">
+                                    <h6><i class="fas fa-notes-medical me-2"></i>AI-Generated Clinical Notes</h6>
+                                    <div class="p-3 mb-3 border rounded" style="max-height: 400px; overflow-y: auto; background: #f8f9fa; white-space: pre-wrap;">
+                                        ${data.clinical_notes || '<em class="text-muted">No clinical notes</em>'}
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="row mt-3">
+                                <div class="col-12">
+                                    <small class="text-muted">
+                                        Session ID: ${data.session_id} | 
+                                        Words: ${data.word_count || 'N/A'} | 
+                                        Language: ${data.language || 'N/A'}
+                                    </small>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="modal-footer">
+                            ${data.pdf_base64 ? `
+                                <button class="btn btn-success" onclick="downloadScribePDF('${data.id}', '${data.pdf_filename || 'clinical-notes.pdf'}')">
+                                    <i class="fas fa-file-pdf me-2"></i>Download PDF
+                                </button>
+                            ` : ''}
+                            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        `;
+        
+        // Remove existing modal if present
+        const existingModal = document.getElementById('viewScribeSessionModal');
+        if (existingModal) existingModal.remove();
+        
+        // Add modal to page
+        document.body.insertAdjacentHTML('beforeend', modalHTML);
+        
+        // Show modal
+        const modal = new bootstrap.Modal(document.getElementById('viewScribeSessionModal'));
+        modal.show();
+        
+        // Clean up when modal is closed
+        document.getElementById('viewScribeSessionModal').addEventListener('hidden.bs.modal', function() {
+            this.remove();
+        });
+        
+    } catch (error) {
+        console.error('Error viewing session:', error);
+        alert('Error loading session: ' + error.message);
+    }
+}
+
+async function viewScribePDF(sessionId) {
+    try {
+        const { data, error } = await authHelpers.supabaseClient
+            .from('voice_scribe_sessions')
+            .select('pdf_base64, pdf_filename')
+            .eq('id', sessionId)
+            .single();
+        
+        if (error) throw error;
+        
+        if (!data.pdf_base64) {
+            alert('No PDF available for this session');
+            return;
+        }
+        
+        // Open PDF in new tab
+        const pdfDataUrl = 'data:application/pdf;base64,' + data.pdf_base64;
+        window.open(pdfDataUrl, '_blank');
+        
+    } catch (error) {
+        console.error('Error viewing PDF:', error);
+        alert('Error viewing PDF: ' + error.message);
+    }
+}
+
+async function downloadScribePDF(sessionId, filename) {
+    try {
+        const { data, error } = await authHelpers.supabaseClient
+            .from('voice_scribe_sessions')
+            .select('pdf_base64, pdf_filename')
+            .eq('id', sessionId)
+            .single();
+        
+        if (error) throw error;
+        
+        if (!data.pdf_base64) {
+            alert('No PDF available for this session');
+            return;
+        }
+        
+        // Create download link
+        const pdfDataUrl = 'data:application/pdf;base64,' + data.pdf_base64;
+        const link = document.createElement('a');
+        link.href = pdfDataUrl;
+        link.download = filename || data.pdf_filename || 'clinical-notes.pdf';
+        link.click();
+        
+    } catch (error) {
+        console.error('Error downloading PDF:', error);
+        alert('Error downloading PDF: ' + error.message);
+    }
+}
+
+async function deleteScribeSession(sessionId) {
+    if (!confirm('Are you sure you want to delete this voice scribe session? This action cannot be undone.')) {
+        return;
+    }
+    
+    try {
+        const { error } = await authHelpers.supabaseClient
+            .from('voice_scribe_sessions')
+            .delete()
+            .eq('id', sessionId);
+        
+        if (error) throw error;
+        
+        alert('✅ Session deleted successfully');
+        loadVoiceScribeHistory(); // Reload history
+        
+    } catch (error) {
+        console.error('Error deleting session:', error);
+        alert('Error deleting session: ' + error.message);
+    }
+}
+
+// Make functions globally accessible
+window.loadVoiceScribeHistory = loadVoiceScribeHistory;
+window.viewFullScribeSession = viewFullScribeSession;
+window.viewScribePDF = viewScribePDF;
+window.downloadScribePDF = downloadScribePDF;
+window.deleteScribeSession = deleteScribeSession;

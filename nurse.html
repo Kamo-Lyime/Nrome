@@ -2283,9 +2283,11 @@ Keep it professional, concise, and medically accurate.`;
             }
         }
 
-        function exportNotes() {
+        async function exportNotes() {
             const notesElement = document.getElementById('clinicalNotes');
+            const transcriptionElement = document.getElementById('liveTranscription');
             let notes = notesElement.innerText;
+            let transcription = transcriptionElement.innerText;
             
             if (notes.includes('appear here')) {
                 alert('Please generate notes first.');
@@ -2307,7 +2309,7 @@ Keep it professional, concise, and medically accurate.`;
             const logoImg = new Image();
             logoImg.src = 'Images/nrome-logo.png';
             
-            logoImg.onload = function() {
+            logoImg.onload = async function() {
                 // Add logo (centered, at top)
                 const logoWidth = 30;
                 const logoHeight = 30;
@@ -2366,13 +2368,26 @@ Keep it professional, concise, and medically accurate.`;
                     doc.text('Nrome Healthcare - Page ' + i + ' of ' + pageCount, 105, pageHeight - 10, { align: 'center' });
                 }
                 
+                // Get PDF as base64
+                const pdfBase64 = doc.output('dataurlstring').split(',')[1];
+                
+                // Save to database
+                await saveVoiceScribeSession({
+                    transcription: transcription,
+                    clinicalNotes: notes,
+                    pdfBase64: pdfBase64
+                });
+                
                 // Save the PDF
                 const filename = 'nrome-clinical-notes-' + new Date().toISOString().slice(0,10) + '.pdf';
                 doc.save(filename);
+                
+                // Show success message
+                alert('✅ PDF exported and saved to history!');
             };
             
             // Error handling if image fails to load
-            logoImg.onerror = function() {
+            logoImg.onerror = async function() {
                 console.warn('Logo failed to load, generating PDF without logo');
                 // Fallback: generate without logo
                 doc.setFontSize(18);
@@ -2418,9 +2433,65 @@ Keep it professional, concise, and medically accurate.`;
                     doc.text('Nrome Healthcare - Page ' + i + ' of ' + pageCount, 105, pageHeight - 10, { align: 'center' });
                 }
                 
+                // Get PDF as base64
+                const pdfBase64 = doc.output('dataurlstring').split(',')[1];
+                
+                // Save to database
+                await saveVoiceScribeSession({
+                    transcription: transcription,
+                    clinicalNotes: notes,
+                    pdfBase64: pdfBase64
+                });
+                
                 const filename = 'nrome-clinical-notes-' + new Date().toISOString().slice(0,10) + '.pdf';
                 doc.save(filename);
+                
+                alert('✅ PDF exported and saved to history!');
             };
+        }
+
+        // Save voice scribe session to database
+        async function saveVoiceScribeSession(data) {
+            try {
+                if (!supabaseClient) {
+                    console.warn('Supabase not available, voice scribe session not saved');
+                    return;
+                }
+
+                // Get current user
+                const session = await supabaseClient.auth.getSession();
+                const userId = session?.data?.session?.user?.id;
+
+                if (!userId) {
+                    console.warn('No user logged in, voice scribe session not saved');
+                    return;
+                }
+
+                // Count words in transcription
+                const wordCount = data.transcription ? data.transcription.split(/\s+/).filter(word => word.length > 0).length : 0;
+
+                const sessionData = {
+                    user_id: userId,
+                    session_id: getSessionId(),
+                    transcription_text: data.transcription,
+                    clinical_notes: data.clinicalNotes,
+                    pdf_base64: data.pdfBase64,
+                    pdf_filename: `nrome-clinical-notes-${new Date().toISOString().slice(0,10)}.pdf`,
+                    word_count: wordCount,
+                    language: 'en-US'
+                };
+
+                const { data: result, error } = await supabaseClient
+                    .from('voice_scribe_sessions')
+                    .insert([sessionData])
+                    .select();
+
+                if (error) throw error;
+
+                console.log('✅ Voice scribe session saved to history:', result);
+            } catch (error) {
+                console.error('Error saving voice scribe session:', error);
+            }
         }
 
         // Smart Triage Functions
