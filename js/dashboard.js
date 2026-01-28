@@ -6,6 +6,14 @@ let messageSubscription = null;
 let currentUserName = '';
 let globalMessageSubscription = null;
 
+// View state for history sections (default: show latest only)
+let viewState = {
+    appointments: 'latest',
+    prescriptions: 'latest',
+    deliveries: 'latest',
+    voiceScribe: 'latest'
+};
+
 async function initDashboard() {
     const session = await authHelpers.requireAuth();
     if (!session) return;
@@ -25,7 +33,8 @@ async function initDashboard() {
     await Promise.all([
         loadAppointments(userId),
         loadPrescriptions(userId),
-        loadDeliveries(userId)
+        loadDeliveries(userId),
+        loadVoiceScribeHistory()
     ]);
 
     // Update UI based on role
@@ -38,7 +47,7 @@ async function initDashboard() {
     subscribeToGlobalMessages();
 }
 
-async function loadAppointments(userId) {
+async function loadAppointments(userId, limit = null) {
     const list = document.getElementById('appointmentList');
     
     let query = authHelpers.supabaseClient.from('appointments').select('*');
@@ -51,14 +60,30 @@ async function loadAppointments(userId) {
         query = query.eq('user_id', userId);
     }
     
-    const { data, error } = await query.order('appointment_date', { ascending: false });
+    query = query.order('appointment_date', { ascending: false });
+    
+    // Apply limit if showing latest only
+    if (limit || viewState.appointments === 'latest') {
+        query = query.limit(limit || 1);
+    }
+    
+    const { data, error } = await query;
 
     if (error) {
         list.innerHTML = `<div class="text-danger">${error.message}</div>`;
         return;
     }
 
-    document.getElementById('appointmentCount').textContent = data.length;
+    // Get total count for badge
+    let countQuery = authHelpers.supabaseClient.from('appointments').select('id', { count: 'exact', head: true });
+    if (userRole === 'practitioner' && practitionerRecord) {
+        countQuery = countQuery.eq('practitioner_id', practitionerRecord.id);
+    } else {
+        countQuery = countQuery.eq('user_id', userId);
+    }
+    const { count } = await countQuery;
+    
+    document.getElementById('appointmentCount').textContent = count || 0;
 
     if (!data.length) {
         const emptyMsg = userRole === 'practitioner' 
@@ -114,6 +139,14 @@ async function loadAppointments(userId) {
                </div>`
             : '';
         
+        // Show AI scheduling suggestion if available
+        const aiSuggestionInfo = item.ai_scheduling_suggestion
+            ? `<div class="alert alert-info mt-2 mb-0 py-2 px-3 small">
+                 <strong>🤖 AI Scheduling Recommendation:</strong><br>
+                 ${item.ai_scheduling_suggestion}
+               </div>`
+            : '';
+        
         return `
             <div class="border rounded p-3 mb-2">
                 <div class="d-flex justify-content-between">
@@ -125,7 +158,9 @@ async function loadAppointments(userId) {
                 <div class="small mt-2"><strong>📅 ${new Date(item.appointment_date).toLocaleDateString()} at ${item.appointment_time}</strong></div>
                 <div class="small text-muted">Type: ${item.appointment_type}</div>
                 ${item.reason_for_visit && userRole === 'practitioner' ? `<div class="small mt-1"><strong>Reason:</strong> ${item.reason_for_visit}</div>` : ''}
+                ${item.reason_for_visit && userRole === 'patient' ? `<div class="small mt-1"><strong>Reason:</strong> ${item.reason_for_visit}</div>` : ''}
                 <div class="small text-muted">Booking ID: ${item.booking_id}</div>
+                ${aiSuggestionInfo}
                 ${rescheduleInfo}
                 ${cancellationInfo}
                 <div class="mt-2">
@@ -240,7 +275,7 @@ function updateDashboardUIForRole() {
     }
 }
 
-async function loadPrescriptions(userId) {
+async function loadPrescriptions(userId, limit = null) {
     const container = document.getElementById('prescriptionListDashboard');
     
     let query = authHelpers.supabaseClient.from('prescriptions').select('*');
@@ -253,14 +288,30 @@ async function loadPrescriptions(userId) {
         query = query.eq('user_id', userId);
     }
     
-    const { data, error } = await query.order('upload_date', { ascending: false });
+    query = query.order('upload_date', { ascending: false });
+    
+    // Apply limit if showing latest only
+    if (limit || viewState.prescriptions === 'latest') {
+        query = query.limit(limit || 1);
+    }
+    
+    const { data, error } = await query;
 
     if (error) {
         container.innerHTML = `<div class="text-danger">${error.message}</div>`;
         return;
     }
 
-    document.getElementById('prescriptionCount').textContent = data.length;
+    // Get total count for badge
+    let countQuery = authHelpers.supabaseClient.from('prescriptions').select('id', { count: 'exact', head: true });
+    if (userRole === 'practitioner' && practitionerRecord) {
+        countQuery = countQuery.eq('practitioner_id', practitionerRecord.id);
+    } else {
+        countQuery = countQuery.eq('user_id', userId);
+    }
+    const { count } = await countQuery;
+    
+    document.getElementById('prescriptionCount').textContent = count || 0;
 
     if (!data.length) {
         const emptyMsg = userRole === 'practitioner'
@@ -322,20 +373,34 @@ function updatePrescriptionSectionTitle() {
     }
 }
 
-async function loadDeliveries(userId) {
+async function loadDeliveries(userId, limit = null) {
     const container = document.getElementById('deliveryList');
-    const { data, error } = await authHelpers.supabaseClient
+    
+    let query = authHelpers.supabaseClient
         .from('medication_orders')
         .select('*')
         .eq('user_id', userId)
         .order('order_date', { ascending: false });
+    
+    // Apply limit if showing latest only
+    if (limit || viewState.deliveries === 'latest') {
+        query = query.limit(limit || 1);
+    }
+    
+    const { data, error } = await query;
 
     if (error) {
         container.innerHTML = `<div class="text-danger">${error.message}</div>`;
         return;
     }
 
-    document.getElementById('deliveryCount').textContent = data.length;
+    // Get total count for badge
+    const { count } = await authHelpers.supabaseClient
+        .from('medication_orders')
+        .select('id', { count: 'exact', head: true })
+        .eq('user_id', userId);
+    
+    document.getElementById('deliveryCount').textContent = count || 0;
 
     if (!data.length) {
         container.innerHTML = '<div class="text-muted">No delivery requests yet.</div>';
@@ -570,11 +635,16 @@ async function renderAIHistory() {
                 </div>`;
         }
         if (item.type === 'triage') {
+            const assessment = item.payload?.assessment || '';
             return `
                 <div class="border rounded p-2 mb-2">
                     <div class="small text-muted">${heading} — ${timestamp}</div>
                     <div><strong>Symptoms:</strong> ${item.payload?.symptoms || item.input || ''}</div>
                     <div class="mt-1"><strong>Urgency:</strong> ${item.payload?.urgency || item.output || ''}</div>
+                    ${assessment ? `<div class="mt-2 alert alert-light border-start border-primary border-3 mb-0">
+                        <small><strong>AI Assessment:</strong></small>
+                        <div class="small" style="white-space: pre-wrap;">${assessment}</div>
+                    </div>` : ''}
                 </div>`;
         }
         return `
@@ -1354,18 +1424,14 @@ async function uploadPrescriptionForPatient() {
         try {
             const { error } = await authHelpers.supabaseClient
                 .from('prescriptions')
-                .insert([prescriptionData]);
+                .insert(prescriptionData);
             
             if (error) throw error;
             
-            alert(`✅ Prescription uploaded successfully for ${selectedPatientForPrescription.patientName}!`);
-            
-            // Close modal
-            const modal = bootstrap.Modal.getInstance(document.getElementById('uploadPrescriptionModal'));
-            modal?.hide();
-            
-            // Reload prescriptions
-            loadPrescriptions(currentUserId);
+            alert('✅ Prescription uploaded successfully!');
+            bootstrap.Modal.getInstance(document.getElementById('uploadPrescriptionModal')).hide();
+            document.getElementById('uploadPrescriptionForm').reset();
+            loadPrescriptions(currentUserId); // Reload prescriptions list
             
         } catch (error) {
             console.error('Upload prescription error:', error);
@@ -1377,3 +1443,359 @@ async function uploadPrescriptionForPatient() {
 }
 
 window.openAIFeature = openAIFeature;
+
+// =====================================================
+// VOICE MEDICAL SCRIBE HISTORY
+// =====================================================
+
+async function loadVoiceScribeHistory(limit = null) {
+    const container = document.getElementById('voiceScribeHistoryList');
+    
+    if (!currentUserId) {
+        container.innerHTML = '<div class="text-muted">Please log in to view voice scribe history.</div>';
+        return;
+    }
+    
+    try {
+        container.innerHTML = '<div class="text-muted"><div class="spinner-border spinner-border-sm me-2"></div>Loading...</div>';
+        
+        let query = authHelpers.supabaseClient
+            .from('voice_scribe_sessions')
+            .select('*')
+            .eq('user_id', currentUserId)
+            .order('created_at', { ascending: false });
+        
+        // Apply limit if showing latest only
+        if (limit || viewState.voiceScribe === 'latest') {
+            query = query.limit(limit || 1);
+        }
+        
+        const { data, error } = await query;
+        
+        if (error) throw error;
+        
+        if (!data || data.length === 0) {
+            container.innerHTML = '<div class="text-muted">No voice scribe sessions yet. Use the Voice Medical Scribe feature on the practitioners page to create clinical documentation.</div>';
+            return;
+        }
+        
+        container.innerHTML = data.map(session => {
+            const date = new Date(session.created_at).toLocaleString('en-US', {
+                year: 'numeric',
+                month: 'short',
+                day: 'numeric',
+                hour: '2-digit',
+                minute: '2-digit'
+            });
+            
+            const transcriptPreview = session.transcription_text 
+                ? (session.transcription_text.substring(0, 100) + (session.transcription_text.length > 100 ? '...' : ''))
+                : 'No transcription';
+            
+            const notesPreview = session.clinical_notes 
+                ? (session.clinical_notes.substring(0, 150) + (session.clinical_notes.length > 150 ? '...' : ''))
+                : 'No clinical notes generated';
+            
+            const hasPDF = session.pdf_base64 && session.pdf_base64.length > 0;
+            
+            return `
+                <div class="card mb-3 border-success">
+                    <div class="card-body">
+                        <div class="d-flex justify-content-between align-items-start mb-2">
+                            <div>
+                                <h6 class="card-title mb-1">
+                                    <i class="fas fa-microphone text-success me-2"></i>
+                                    Clinical Documentation Session
+                                </h6>
+                                <small class="text-muted">
+                                    <i class="fas fa-clock me-1"></i>${date}
+                                    ${session.word_count ? ` • ${session.word_count} words` : ''}
+                                </small>
+                            </div>
+                            ${hasPDF ? `
+                                <button class="btn btn-sm btn-outline-success" onclick="viewScribePDF('${session.id}')">
+                                    <i class="fas fa-file-pdf me-1"></i>View PDF
+                                </button>
+                            ` : ''}
+                        </div>
+                        
+                        <div class="mb-2">
+                            <strong class="small">Transcription:</strong>
+                            <p class="small text-muted mb-1">${transcriptPreview}</p>
+                        </div>
+                        
+                        ${session.clinical_notes ? `
+                            <div class="mb-2">
+                                <strong class="small">AI-Generated Notes:</strong>
+                                <p class="small text-muted mb-1" style="white-space: pre-wrap;">${notesPreview}</p>
+                            </div>
+                        ` : ''}
+                        
+                        <div class="btn-group btn-group-sm" role="group">
+                            <button class="btn btn-outline-primary" onclick="viewFullScribeSession('${session.id}')">
+                                <i class="fas fa-eye me-1"></i>View Full
+                            </button>
+                            ${hasPDF ? `
+                                <button class="btn btn-outline-success" onclick="downloadScribePDF('${session.id}', '${session.pdf_filename || 'clinical-notes.pdf'}')">
+                                    <i class="fas fa-download me-1"></i>Download PDF
+                                </button>
+                            ` : ''}
+                            <button class="btn btn-outline-danger" onclick="deleteScribeSession('${session.id}')">
+                                <i class="fas fa-trash me-1"></i>Delete
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            `;
+        }).join('');
+        
+    } catch (error) {
+        console.error('Error loading voice scribe history:', error);
+        container.innerHTML = `<div class="alert alert-danger">Error loading history: ${error.message}</div>`;
+    }
+}
+
+async function viewFullScribeSession(sessionId) {
+    try {
+        const { data, error } = await authHelpers.supabaseClient
+            .from('voice_scribe_sessions')
+            .select('*')
+            .eq('id', sessionId)
+            .single();
+        
+        if (error) throw error;
+        
+        const date = new Date(data.created_at).toLocaleString('en-US', {
+            year: 'numeric',
+            month: 'long',
+            day: 'numeric',
+            hour: '2-digit',
+            minute: '2-digit'
+        });
+        
+        const modalHTML = `
+            <div class="modal fade" id="viewScribeSessionModal" tabindex="-1">
+                <div class="modal-dialog modal-xl">
+                    <div class="modal-content">
+                        <div class="modal-header bg-success text-white">
+                            <h5 class="modal-title">
+                                <i class="fas fa-microphone me-2"></i>
+                                Clinical Documentation - ${date}
+                            </h5>
+                            <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                        </div>
+                        <div class="modal-body">
+                            <div class="row">
+                                <div class="col-md-6">
+                                    <h6><i class="fas fa-file-alt me-2"></i>Transcription</h6>
+                                    <div class="p-3 mb-3 border rounded" style="max-height: 400px; overflow-y: auto; background: #f8f9fa;">
+                                        ${data.transcription_text || '<em class="text-muted">No transcription</em>'}
+                                    </div>
+                                </div>
+                                <div class="col-md-6">
+                                    <h6><i class="fas fa-notes-medical me-2"></i>AI-Generated Clinical Notes</h6>
+                                    <div class="p-3 mb-3 border rounded" style="max-height: 400px; overflow-y: auto; background: #f8f9fa; white-space: pre-wrap;">
+                                        ${data.clinical_notes || '<em class="text-muted">No clinical notes</em>'}
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="row mt-3">
+                                <div class="col-12">
+                                    <small class="text-muted">
+                                        Session ID: ${data.session_id} | 
+                                        Words: ${data.word_count || 'N/A'} | 
+                                        Language: ${data.language || 'N/A'}
+                                    </small>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="modal-footer">
+                            ${data.pdf_base64 ? `
+                                <button class="btn btn-success" onclick="downloadScribePDF('${data.id}', '${data.pdf_filename || 'clinical-notes.pdf'}')">
+                                    <i class="fas fa-file-pdf me-2"></i>Download PDF
+                                </button>
+                            ` : ''}
+                            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        `;
+        
+        // Remove existing modal if present
+        const existingModal = document.getElementById('viewScribeSessionModal');
+        if (existingModal) existingModal.remove();
+        
+        // Add modal to page
+        document.body.insertAdjacentHTML('beforeend', modalHTML);
+        
+        // Show modal
+        const modal = new bootstrap.Modal(document.getElementById('viewScribeSessionModal'));
+        modal.show();
+        
+        // Clean up when modal is closed
+        document.getElementById('viewScribeSessionModal').addEventListener('hidden.bs.modal', function() {
+            this.remove();
+        });
+        
+    } catch (error) {
+        console.error('Error viewing session:', error);
+        alert('Error loading session: ' + error.message);
+    }
+}
+
+async function viewScribePDF(sessionId) {
+    try {
+        const { data, error } = await authHelpers.supabaseClient
+            .from('voice_scribe_sessions')
+            .select('pdf_base64, pdf_filename')
+            .eq('id', sessionId)
+            .single();
+        
+        if (error) throw error;
+        
+        if (!data.pdf_base64) {
+            alert('No PDF available for this session');
+            return;
+        }
+        
+        // Convert base64 to blob to avoid browser blocking
+        const byteCharacters = atob(data.pdf_base64);
+        const byteNumbers = new Array(byteCharacters.length);
+        for (let i = 0; i < byteCharacters.length; i++) {
+            byteNumbers[i] = byteCharacters.charCodeAt(i);
+        }
+        const byteArray = new Uint8Array(byteNumbers);
+        const blob = new Blob([byteArray], { type: 'application/pdf' });
+        
+        // Create object URL and open in new tab
+        const blobUrl = URL.createObjectURL(blob);
+        const newWindow = window.open(blobUrl, '_blank');
+        
+        // Clean up the object URL after a delay
+        if (newWindow) {
+            setTimeout(() => URL.revokeObjectURL(blobUrl), 100);
+        } else {
+            // If popup was blocked, offer download instead
+            URL.revokeObjectURL(blobUrl);
+            if (confirm('Popup blocked. Would you like to download the PDF instead?')) {
+                downloadScribePDF(sessionId, data.pdf_filename);
+            }
+        }
+        
+    } catch (error) {
+        console.error('Error viewing PDF:', error);
+        alert('Error viewing PDF: ' + error.message);
+    }
+}
+
+async function downloadScribePDF(sessionId, filename) {
+    try {
+        const { data, error } = await authHelpers.supabaseClient
+            .from('voice_scribe_sessions')
+            .select('pdf_base64, pdf_filename')
+            .eq('id', sessionId)
+            .single();
+        
+        if (error) throw error;
+        
+        if (!data.pdf_base64) {
+            alert('No PDF available for this session');
+            return;
+        }
+        
+        // Create download link
+        const pdfDataUrl = 'data:application/pdf;base64,' + data.pdf_base64;
+        const link = document.createElement('a');
+        link.href = pdfDataUrl;
+        link.download = filename || data.pdf_filename || 'clinical-notes.pdf';
+        link.click();
+        
+    } catch (error) {
+        console.error('Error downloading PDF:', error);
+        alert('Error downloading PDF: ' + error.message);
+    }
+}
+
+async function deleteScribeSession(sessionId) {
+    if (!confirm('Are you sure you want to delete this voice scribe session? This action cannot be undone.')) {
+        return;
+    }
+    
+    try {
+        const { error } = await authHelpers.supabaseClient
+            .from('voice_scribe_sessions')
+            .delete()
+            .eq('id', sessionId);
+        
+        if (error) throw error;
+        
+        alert('✅ Session deleted successfully');
+        loadVoiceScribeHistory(); // Reload history
+        
+    } catch (error) {
+        console.error('Error deleting session:', error);
+        alert('Error deleting session: ' + error.message);
+    }
+}
+
+// Make functions globally accessible
+window.loadVoiceScribeHistory = loadVoiceScribeHistory;
+window.viewFullScribeSession = viewFullScribeSession;
+window.viewScribePDF = viewScribePDF;
+window.downloadScribePDF = downloadScribePDF;
+window.deleteScribeSession = deleteScribeSession;
+
+// =====================================================
+// VIEW TOGGLE FUNCTIONS
+// =====================================================
+
+function toggleAppointmentsView(view) {
+    viewState.appointments = view;
+    
+    // Update button states
+    document.getElementById('appointmentsLatestBtn').classList.toggle('active', view === 'latest');
+    document.getElementById('appointmentsAllBtn').classList.toggle('active', view === 'all');
+    
+    // Reload appointments with new limit
+    loadAppointments(currentUserId);
+}
+
+function togglePrescriptionsView(view) {
+    viewState.prescriptions = view;
+    
+    // Update button states
+    document.getElementById('prescriptionsLatestBtn').classList.toggle('active', view === 'latest');
+    document.getElementById('prescriptionsAllBtn').classList.toggle('active', view === 'all');
+    
+    // Reload prescriptions with new limit
+    loadPrescriptions(currentUserId);
+}
+
+function toggleDeliveriesView(view) {
+    viewState.deliveries = view;
+    
+    // Update button states
+    document.getElementById('deliveriesLatestBtn').classList.toggle('active', view === 'latest');
+    document.getElementById('deliveriesAllBtn').classList.toggle('active', view === 'all');
+    
+    // Reload deliveries with new limit
+    loadDeliveries(currentUserId);
+}
+
+function toggleVoiceScribeView(view) {
+    viewState.voiceScribe = view;
+    
+    // Update button states
+    document.getElementById('voiceScribeLatestBtn').classList.toggle('active', view === 'latest');
+    document.getElementById('voiceScribeAllBtn').classList.toggle('active', view === 'all');
+    
+    // Reload voice scribe history with new limit
+    loadVoiceScribeHistory();
+}
+
+// Make toggle functions globally accessible
+window.toggleAppointmentsView = toggleAppointmentsView;
+window.togglePrescriptionsView = togglePrescriptionsView;
+window.toggleDeliveriesView = toggleDeliveriesView;
+window.toggleVoiceScribeView = toggleVoiceScribeView;
