@@ -1593,9 +1593,29 @@ async function viewScribePDF(sessionId) {
             return;
         }
         
-        // Open PDF in new tab
-        const pdfDataUrl = 'data:application/pdf;base64,' + data.pdf_base64;
-        window.open(pdfDataUrl, '_blank');
+        // Convert base64 to blob to avoid browser blocking
+        const byteCharacters = atob(data.pdf_base64);
+        const byteNumbers = new Array(byteCharacters.length);
+        for (let i = 0; i < byteCharacters.length; i++) {
+            byteNumbers[i] = byteCharacters.charCodeAt(i);
+        }
+        const byteArray = new Uint8Array(byteNumbers);
+        const blob = new Blob([byteArray], { type: 'application/pdf' });
+        
+        // Create object URL and open in new tab
+        const blobUrl = URL.createObjectURL(blob);
+        const newWindow = window.open(blobUrl, '_blank');
+        
+        // Clean up the object URL after a delay
+        if (newWindow) {
+            setTimeout(() => URL.revokeObjectURL(blobUrl), 100);
+        } else {
+            // If popup was blocked, offer download instead
+            URL.revokeObjectURL(blobUrl);
+            if (confirm('Popup blocked. Would you like to download the PDF instead?')) {
+                downloadScribePDF(sessionId, data.pdf_filename);
+            }
+        }
         
     } catch (error) {
         console.error('Error viewing PDF:', error);
