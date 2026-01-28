@@ -2441,23 +2441,45 @@ Keep it professional, concise, and medically accurate.`;
                 doc.setLineWidth(0.5);
                 doc.line(20, 25, 190, 25);
                 
-                doc.setFontSize(11);
+                // Add clinical notes content with proper formatting
+                let yPosition = 35;
+                const lineHeight = 6;
+                const paragraphSpacing = 4;
+                const pageHeight = doc.internal.pageSize.getHeight();
                 const pageWidth = doc.internal.pageSize.getWidth();
                 const margins = 20;
                 const maxLineWidth = pageWidth - (margins * 2);
-                const lines = doc.splitTextToSize(notes, maxLineWidth);
                 
-                let yPosition = 35;
-                const lineHeight = 7;
-                const pageHeight = doc.internal.pageSize.getHeight();
+                // Split by double newlines to preserve paragraph structure
+                const paragraphs = notes.split('\n\n');
                 
-                lines.forEach((line) => {
-                    if (yPosition > pageHeight - 20) {
-                        doc.addPage();
-                        yPosition = 20;
+                paragraphs.forEach((paragraph) => {
+                    if (!paragraph.trim()) return;
+                    
+                    // Check if this is a section header
+                    const isHeader = /^(Chief Complaint|History of Present Illness|Assessment|Plan):?$/i.test(paragraph.trim());
+                    
+                    if (isHeader) {
+                        yPosition += paragraphSpacing;
+                        doc.setFont(undefined, 'bold');
+                        doc.setFontSize(12);
+                    } else {
+                        doc.setFont(undefined, 'normal');
+                        doc.setFontSize(11);
                     }
-                    doc.text(line, margins, yPosition);
-                    yPosition += lineHeight;
+                    
+                    const lines = doc.splitTextToSize(paragraph.trim(), maxLineWidth);
+                    
+                    lines.forEach((line) => {
+                        if (yPosition > pageHeight - 20) {
+                            doc.addPage();
+                            yPosition = 20;
+                        }
+                        doc.text(line, margins, yPosition);
+                        yPosition += lineHeight;
+                    });
+                    
+                    yPosition += paragraphSpacing;
                 });
                 
                 const pageCount = doc.internal.getNumberOfPages();
