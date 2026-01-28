@@ -1389,7 +1389,7 @@
                             <strong>${rec.title}:</strong> ${rec.description}
                         </div>
                     `).join('')}
-                    <small class="text-muted">✅ Recommendations powered by AI (Groq Llama 3.3)</small>
+                    <small class="text-muted">✅ Recommendations powered by AI</small>
                 `;
             } catch (error) {
                 console.error('AI recommendations error:', error);
@@ -1441,12 +1441,6 @@ Keep your response concise (3-4 sentences) and actionable.`;
                     });
                 }
                 
-                // Add time slot recommendation
-                recommendations.push({
-                    title: "📅 Optimal Time",
-                    description: "Morning slots (8-11 AM) typically have shorter wait times"
-                });
-                
                 return {
                     analysis: aiResponse,
                     recommendations: recommendations
@@ -1474,11 +1468,6 @@ Keep your response concise (3-4 sentences) and actionable.`;
                     description: "Consider booking with a cardiologist for chest/heart related symptoms."
                 });
             }
-            
-            recommendations.push({
-                title: "📅 Optimal Time",
-                description: "Morning slots (8-11 AM) typically have shorter wait times."
-            });
             
             return recommendations;
         }
@@ -1545,7 +1534,9 @@ Keep your response concise (3-4 sentences) and actionable.`;
                     
                     // Add AI scheduling suggestion if available
                     if (hasAISuggestion) {
-                        confirmationMessage += `\\n\\n🤖 AI Scheduling Recommendation:\\n${aiSuggestionText}`;
+                        // Extract just the analysis text without the heading
+                        let cleanSuggestion = aiSuggestionText.replace(/🤖 AI Scheduling Recommendations?:?\s*/gi, '').trim();
+                        confirmationMessage += `\\n\\n🤖 AI Scheduling Recommendation:\\n${cleanSuggestion}`;
                     }
                     
                     confirmationMessage += `\\n\\nStatus: Pending Practitioner Confirmation\\n\\nYou will be notified once the practitioner confirms your appointment. Check your dashboard for updates.`;
