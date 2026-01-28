@@ -1,4 +1,4 @@
-let practitionerRecord = null;
+﻿let practitionerRecord = null;
 let currentUserId = null;
 let userRole = 'patient'; // Default role
 let currentAppointmentId = null;
@@ -82,9 +82,9 @@ async function loadAppointments(userId) {
                <div class="small text-muted">${item.reason_for_visit || 'General consult'}</div>`;
         
         const actionButtons = userRole === 'practitioner'
-            ? `<button class="btn btn-sm btn-success mt-2 me-1" onclick="updateAppointmentStatus('${item.id}', 'confirmed')">✓ Confirm</button>
-               <button class="btn btn-sm btn-warning mt-2 me-1" onclick="updateAppointmentStatus('${item.id}', 'rescheduled')">↻ Reschedule</button>
-               <button class="btn btn-sm btn-danger mt-2" onclick="updateAppointmentStatus('${item.id}', 'cancelled')">✗ Cancel</button>`
+            ? `<button class="btn btn-sm btn-success mt-2 me-1" onclick="updateAppointmentStatus('${item.id}', 'confirmed')">Γ£ô Confirm</button>
+               <button class="btn btn-sm btn-warning mt-2 me-1" onclick="updateAppointmentStatus('${item.id}', 'rescheduled')">Γå╗ Reschedule</button>
+               <button class="btn btn-sm btn-danger mt-2" onclick="updateAppointmentStatus('${item.id}', 'cancelled')">Γ£ù Cancel</button>`
             : '';
         
         // Get unread count for this appointment
@@ -103,7 +103,7 @@ async function loadAppointments(userId) {
         // Show reschedule info if status is rescheduled
         const rescheduleInfo = item.status === 'rescheduled' && item.rescheduled_date
             ? `<div class="alert alert-warning mt-2 mb-0 py-2 px-3 small">
-                 <strong>↻ Rescheduled to:</strong> ${new Date(item.rescheduled_date).toLocaleDateString()} at ${item.rescheduled_time}
+                 <strong>Γå╗ Rescheduled to:</strong> ${new Date(item.rescheduled_date).toLocaleDateString()} at ${item.rescheduled_time}
                  ${item.practitioner_notes ? `<br><strong>Note:</strong> ${item.practitioner_notes}` : ''}
                </div>`
             : '';
@@ -111,15 +111,7 @@ async function loadAppointments(userId) {
         // Show cancellation reason if cancelled
         const cancellationInfo = item.status === 'cancelled' && item.cancellation_reason
             ? `<div class="alert alert-danger mt-2 mb-0 py-2 px-3 small">
-                 <strong>✗ Cancellation Reason:</strong> ${item.cancellation_reason}
-               </div>`
-            : '';
-        
-        // Show AI scheduling suggestion if available
-        const aiSuggestionInfo = item.ai_scheduling_suggestion
-            ? `<div class="alert alert-info mt-2 mb-0 py-2 px-3 small">
-                 <strong>🤖 AI Scheduling Recommendation:</strong><br>
-                 ${item.ai_scheduling_suggestion}
+                 <strong>Γ£ù Cancellation Reason:</strong> ${item.cancellation_reason}
                </div>`
             : '';
         
@@ -131,12 +123,10 @@ async function loadAppointments(userId) {
                     </div>
                     <span class="badge bg-${getStatusBadgeColor(item.status)}">${item.status}</span>
                 </div>
-                <div class="small mt-2"><strong>📅 ${new Date(item.appointment_date).toLocaleDateString()} at ${item.appointment_time}</strong></div>
+                <div class="small mt-2"><strong>≡ƒôà ${new Date(item.appointment_date).toLocaleDateString()} at ${item.appointment_time}</strong></div>
                 <div class="small text-muted">Type: ${item.appointment_type}</div>
                 ${item.reason_for_visit && userRole === 'practitioner' ? `<div class="small mt-1"><strong>Reason:</strong> ${item.reason_for_visit}</div>` : ''}
-                ${item.reason_for_visit && userRole === 'patient' ? `<div class="small mt-1"><strong>Reason:</strong> ${item.reason_for_visit}</div>` : ''}
                 <div class="small text-muted">Booking ID: ${item.booking_id}</div>
-                ${aiSuggestionInfo}
                 ${rescheduleInfo}
                 ${cancellationInfo}
                 <div class="mt-2">
@@ -244,9 +234,9 @@ function updateDashboardUIForRole() {
     
     if (sectionTitle) {
         if (userRole === 'practitioner') {
-            sectionTitle.innerHTML = '📅 Patient Appointments Booked With You';
+            sectionTitle.innerHTML = '≡ƒôà Patient Appointments Booked With You';
         } else {
-            sectionTitle.innerHTML = '📅 Your Appointments';
+            sectionTitle.innerHTML = '≡ƒôà Your Appointments';
         }
     }
 }
@@ -290,7 +280,7 @@ async function loadPrescriptions(userId) {
                ${rx.practitioner_id ? `<div class="small text-muted">Uploaded by practitioner</div>` : ''}
                <div class="small text-muted">${new Date(rx.prescription_date).toLocaleDateString()}</div>`;
         
-        const viewButton = `<button class="btn btn-sm btn-outline-primary mt-2" onclick="viewPrescription('${rx.id}')">👁️ View</button>`;
+        const viewButton = `<button class="btn btn-sm btn-outline-primary mt-2" onclick="viewPrescription('${rx.id}')">≡ƒæü∩╕Å View</button>`;
         
         return `
             <div class="border rounded p-3 mb-2">
@@ -575,7 +565,7 @@ async function renderAIHistory() {
         if (item.type === 'chat') {
             return `
                 <div class="border rounded p-2 mb-2">
-                    <div class="small text-muted">${heading} — ${timestamp}</div>
+                    <div class="small text-muted">${heading} ΓÇö ${timestamp}</div>
                     <div><strong>You:</strong> ${item.payload?.message || item.input || ''}</div>
                     <div class="mt-1"><strong>AI:</strong> ${item.payload?.response || item.output || ''}</div>
                 </div>`;
@@ -584,7 +574,7 @@ async function renderAIHistory() {
             const assessment = item.payload?.assessment || '';
             return `
                 <div class="border rounded p-2 mb-2">
-                    <div class="small text-muted">${heading} — ${timestamp}</div>
+                    <div class="small text-muted">${heading} ΓÇö ${timestamp}</div>
                     <div><strong>Symptoms:</strong> ${item.payload?.symptoms || item.input || ''}</div>
                     <div class="mt-1"><strong>Urgency:</strong> ${item.payload?.urgency || item.output || ''}</div>
                     ${assessment ? `<div class="mt-2 alert alert-light border-start border-primary border-3 mb-0">
@@ -595,7 +585,7 @@ async function renderAIHistory() {
         }
         return `
             <div class="border rounded p-2 mb-2">
-                <div class="small text-muted">${heading} — ${timestamp}</div>
+                <div class="small text-muted">${heading} ΓÇö ${timestamp}</div>
                 <div class="mt-1"><strong>Details:</strong> ${JSON.stringify(item.payload || {})}</div>
             </div>`;
     }).join('');
@@ -1035,7 +1025,7 @@ async function deleteConversation() {
     }
     
     const confirmDelete = confirm(
-        '⚠️ WARNING: This will permanently delete ALL messages in this conversation.\n\n' +
+        'ΓÜá∩╕Å WARNING: This will permanently delete ALL messages in this conversation.\n\n' +
         'This action cannot be undone and will affect both you and the other person.\n\n' +
         'Are you sure you want to continue?'
     );
@@ -1058,7 +1048,7 @@ async function deleteConversation() {
         
         if (error) throw error;
         
-        alert('✅ Conversation deleted successfully.');
+        alert('Γ£à Conversation deleted successfully.');
         
         // Reload messages (will show empty state)
         await loadMessages(currentAppointmentId);
@@ -1072,7 +1062,7 @@ async function deleteConversation() {
         
     } catch (error) {
         console.error('Error deleting conversation:', error);
-        alert('❌ Error deleting conversation: ' + error.message);
+        alert('Γ¥î Error deleting conversation: ' + error.message);
     }
 }
 
@@ -1280,7 +1270,7 @@ function selectPatient(userId, patientName, patientEmail) {
     // Show selection feedback
     document.getElementById('selectedPatientInfo').innerHTML = `
         <div class="alert alert-info py-2 px-3 small mb-0">
-            ✓ Selected: <strong>${patientName}</strong> (${patientEmail})
+            Γ£ô Selected: <strong>${patientName}</strong> (${patientEmail})
         </div>
     `;
 }
@@ -1310,7 +1300,7 @@ function selectManualPatient() {
     // Show selection feedback
     document.getElementById('selectedPatientInfo').innerHTML = `
         <div class="alert alert-success py-2 px-3 small mb-0">
-            ✓ Manual Entry: <strong>${patientName}</strong> (${patientEmail})
+            Γ£ô Manual Entry: <strong>${patientName}</strong> (${patientEmail})
         </div>
     `;
     
@@ -1374,7 +1364,7 @@ async function uploadPrescriptionForPatient() {
             
             if (error) throw error;
             
-            alert(`✅ Prescription uploaded successfully for ${selectedPatientForPrescription.patientName}!`);
+            alert(`Γ£à Prescription uploaded successfully for ${selectedPatientForPrescription.patientName}!`);
             
             // Close modal
             const modal = bootstrap.Modal.getInstance(document.getElementById('uploadPrescriptionModal'));
@@ -1453,7 +1443,7 @@ async function loadVoiceScribeHistory() {
                                 </h6>
                                 <small class="text-muted">
                                     <i class="fas fa-clock me-1"></i>${date}
-                                    ${session.word_count ? ` • ${session.word_count} words` : ''}
+                                    ${session.word_count ? ` ΓÇó ${session.word_count} words` : ''}
                                 </small>
                             </div>
                             ${hasPDF ? `
@@ -1674,7 +1664,7 @@ async function deleteScribeSession(sessionId) {
         
         if (error) throw error;
         
-        alert('✅ Session deleted successfully');
+        alert('Γ£à Session deleted successfully');
         loadVoiceScribeHistory(); // Reload history
         
     } catch (error) {
