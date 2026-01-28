@@ -115,6 +115,14 @@ async function loadAppointments(userId) {
                </div>`
             : '';
         
+        // Show AI scheduling suggestion if available
+        const aiSuggestionInfo = item.ai_scheduling_suggestion
+            ? `<div class="alert alert-info mt-2 mb-0 py-2 px-3 small">
+                 <strong>🤖 AI Scheduling Recommendation:</strong><br>
+                 ${item.ai_scheduling_suggestion}
+               </div>`
+            : '';
+        
         return `
             <div class="border rounded p-3 mb-2">
                 <div class="d-flex justify-content-between">
@@ -126,7 +134,9 @@ async function loadAppointments(userId) {
                 <div class="small mt-2"><strong>📅 ${new Date(item.appointment_date).toLocaleDateString()} at ${item.appointment_time}</strong></div>
                 <div class="small text-muted">Type: ${item.appointment_type}</div>
                 ${item.reason_for_visit && userRole === 'practitioner' ? `<div class="small mt-1"><strong>Reason:</strong> ${item.reason_for_visit}</div>` : ''}
+                ${item.reason_for_visit && userRole === 'patient' ? `<div class="small mt-1"><strong>Reason:</strong> ${item.reason_for_visit}</div>` : ''}
                 <div class="small text-muted">Booking ID: ${item.booking_id}</div>
+                ${aiSuggestionInfo}
                 ${rescheduleInfo}
                 ${cancellationInfo}
                 <div class="mt-2">

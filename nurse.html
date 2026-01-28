@@ -1508,6 +1508,11 @@ Keep your response concise (3-4 sentences) and actionable.`;
             const bookingId = 'APT-' + Date.now().toString().slice(-6);
             const userId = currentUserId || await resolveUserId();
             
+            // Get AI scheduling suggestion from the AI suggestions box if available
+            const aiSuggestionsBox = document.getElementById('aiSchedulingSuggestions');
+            const aiSuggestionText = aiSuggestionsBox.innerText || '';
+            const hasAISuggestion = !aiSuggestionText.includes('Fill in patient information');
+            
             // Create appointment data - handle both real IDs and fallback IDs
             const appointmentData = {
                 booking_id: bookingId,
@@ -1522,7 +1527,8 @@ Keep your response concise (3-4 sentences) and actionable.`;
                 reason_for_visit: reason || 'General consultation',
                 status: 'pending',
                 created_at: new Date().toISOString(),
-                user_id: userId
+                user_id: userId,
+                ai_scheduling_suggestion: hasAISuggestion ? aiSuggestionText : null
             };
             
             try {
@@ -1534,7 +1540,17 @@ Keep your response concise (3-4 sentences) and actionable.`;
                 const savedAppointment = await saveAppointment(appointmentData);
                 
                 if (savedAppointment) {
-                    alert(`✅ Appointment Request Sent Successfully!\\n\\nBooking ID: ${bookingId}\\nPatient: ${patientName}\\nPractitioner: ${appointmentData.practitioner_name}\\nDate: ${new Date(date).toLocaleDateString()} at ${selectedTimeSlot.time}\\n\\nStatus: Pending Practitioner Confirmation\\n\\nYou will be notified once the practitioner confirms your appointment. Check your dashboard for updates.`);
+                    // Build confirmation message
+                    let confirmationMessage = `✅ Appointment Request Sent Successfully!\\n\\nBooking ID: ${bookingId}\\nPatient: ${patientName}\\nPractitioner: ${appointmentData.practitioner_name}\\nDate: ${new Date(date).toLocaleDateString()} at ${selectedTimeSlot.time}\\n\\nReason for Visit: ${reason || 'General consultation'}`;
+                    
+                    // Add AI scheduling suggestion if available
+                    if (hasAISuggestion) {
+                        confirmationMessage += `\\n\\n🤖 AI Scheduling Recommendation:\\n${aiSuggestionText}`;
+                    }
+                    
+                    confirmationMessage += `\\n\\nStatus: Pending Practitioner Confirmation\\n\\nYou will be notified once the practitioner confirms your appointment. Check your dashboard for updates.`;
+                    
+                    alert(confirmationMessage);
                     
                     // Close booking modal
                     closeAppointmentBooking();
