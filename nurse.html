@@ -1357,6 +1357,7 @@
             const reason = document.getElementById('appointmentReason').value;
             const selectedDate = document.getElementById('appointmentDate').value;
             const suggestionBox = document.getElementById('aiSchedulingSuggestions');
+            const practitionerSelect = document.getElementById('selectedPractitioner');
             
             if (!patientName || !reason) {
                 suggestionBox.innerHTML = `
@@ -1371,19 +1372,33 @@
             suggestionBox.innerHTML = `
                 <div class="text-center">
                     <div class="spinner-border spinner-border-sm text-primary" role="status"></div>
-                    <small class="ms-2">AI analyzing appointment details...</small>
+                    <small class="ms-2">AI analyzing symptoms and finding best practitioner match...</small>
                 </div>
             `;
             
             try {
-                // Get AI-powered recommendations
+                // Get AI-powered recommendations including practitioner matching
                 const aiRecommendations = await getAISchedulingRecommendations(patientName, reason, selectedDate);
+                
+                // Auto-select practitioner if none selected and AI found a match
+                if ((!practitionerSelect.value || practitionerSelect.value === '') && aiRecommendations.recommendedPractitioner) {
+                    practitionerSelect.value = aiRecommendations.recommendedPractitioner.id;
+                    updatePractitionerInfo();
+                }
                 
                 suggestionBox.innerHTML = `
                     <h6>🤖 AI Scheduling Recommendations</h6>
                     <div class="alert alert-light border mb-2">
                         <p class="mb-0" style="white-space: pre-wrap;">${aiRecommendations.analysis}</p>
                     </div>
+                    ${aiRecommendations.recommendedPractitioner ? `
+                        <div class="alert alert-success mb-2">
+                            <strong>👨‍⚕️ Recommended Practitioner:</strong><br>
+                            ${aiRecommendations.recommendedPractitioner.name} - ${aiRecommendations.recommendedPractitioner.profession}<br>
+                            <small>${aiRecommendations.recommendedPractitioner.reason}</small>
+                            ${(!practitionerSelect.value || practitionerSelect.value === '') ? '<br><small class="text-success">✅ Auto-selected for you</small>' : ''}
+                        </div>
+                    ` : ''}
                     ${aiRecommendations.recommendations.map(rec => `
                         <div class="recommendation-item p-2 mb-2 border-start border-primary border-3">
                             <strong>${rec.title}:</strong> ${rec.description}
@@ -1393,10 +1408,25 @@
                 `;
             } catch (error) {
                 console.error('AI recommendations error:', error);
-                // Fallback to basic recommendations
+                // Fallback to basic recommendations with manual matching
                 const recommendations = generateBasicRecommendations(reason);
+                const matchedPractitioner = findMatchingPractitioner(reason);
+                
+                if (matchedPractitioner && (!practitionerSelect.value || practitionerSelect.value === '')) {
+                    practitionerSelect.value = matchedPractitioner.id;
+                    updatePractitionerInfo();
+                }
+                
                 suggestionBox.innerHTML = `
                     <h6>📋 Scheduling Recommendations</h6>
+                    ${matchedPractitioner ? `
+                        <div class="alert alert-info mb-2">
+                            <strong>👨‍⚕️ Suggested Practitioner:</strong><br>
+                            ${matchedPractitioner.name} - ${matchedPractitioner.profession}<br>
+                            <small>${matchedPractitioner.reason}</small>
+                            <br><small class="text-success">✅ Auto-selected based on your symptoms</small>
+                        </div>
+                    ` : ''}
                     ${recommendations.map(rec => `
                         <div class="recommendation-item p-2 mb-2 border-start border-primary border-3">
                             <strong>${rec.title}:</strong> ${rec.description}
@@ -1408,11 +1438,15 @@
         }
         
         async function getAISchedulingRecommendations(patientName, reason, selectedDate) {
+            // First, find matching practitioner based on symptoms
+            const matchedPractitioner = findMatchingPractitioner(reason);
+            
             const prompt = `You are a medical appointment scheduling assistant. Provide scheduling recommendations for the following appointment request:
 
 Patient: ${patientName}
 Reason for Visit: ${reason}
 ${selectedDate ? `Preferred Date: ${selectedDate}` : 'Date: Not specified'}
+${matchedPractitioner ? `Matched Practitioner: ${matchedPractitioner.profession}` : ''}
 
 Provide:
 1. Brief analysis of urgency and appropriate specialty
@@ -1443,7 +1477,8 @@ Keep your response concise (3-4 sentences) and actionable.`;
                 
                 return {
                     analysis: aiResponse,
-                    recommendations: recommendations
+                    recommendations: recommendations,
+                    recommendedPractitioner: matchedPractitioner
                 };
             } catch (error) {
                 console.error('Failed to get AI scheduling recommendations:', error);
@@ -1470,6 +1505,128 @@ Keep your response concise (3-4 sentences) and actionable.`;
             }
             
             return recommendations;
+        }
+
+        function findMatchingPractitioner(reason) {
+            const lowerReason = reason.toLowerCase();
+            const dropdown = document.getElementById('selectedPractitioner');
+            
+            // Get all available practitioners
+            const practitioners = Array.from(dropdown.options)
+                .filter(option => option.value !== '')
+                .map(option => ({
+                    id: option.value,
+                    name: option.text.split(' - ')[0],
+                    profession: option.text.split(' - ')[1] || option.text
+                }));
+            
+            if (practitioners.length === 0) return null;
+            
+            // Symptom-to-specialty mapping
+            const specialtyMatches = {
+                // Dental
+                'tooth': ['dentist', 'dental', 'orthodontist'],
+                'teeth': ['dentist', 'dental', 'orthodontist'],
+                'gum': ['dentist', 'dental'],
+                'cavity': ['dentist', 'dental'],
+                'toothache': ['dentist', 'dental'],
+                
+                // Cardiology
+                'heart': ['cardiologist', 'cardiology'],
+                'chest pain': ['cardiologist', 'emergency', 'general'],
+                'palpitation': ['cardiologist', 'cardiology'],
+                
+                // Dermatology
+                'skin': ['dermatologist', 'dermatology'],
+                'rash': ['dermatologist', 'dermatology'],
+                'acne': ['dermatologist', 'dermatology'],
+                
+                // Ophthalmology
+                'eye': ['ophthalmologist', 'optometrist', 'eye'],
+                'vision': ['ophthalmologist', 'optometrist', 'eye'],
+                'blurry': ['ophthalmologist', 'optometrist'],
+                
+                // Orthopedics
+                'bone': ['orthopedic', 'orthopedist'],
+                'fracture': ['orthopedic', 'orthopedist'],
+                'joint': ['orthopedic', 'rheumatologist'],
+                'back pain': ['orthopedic', 'physiotherapist'],
+                
+                // ENT
+                'ear': ['ent', 'otolaryngologist'],
+                'nose': ['ent', 'otolaryngologist'],
+                'throat': ['ent', 'otolaryngologist'],
+                'sinus': ['ent', 'otolaryngologist'],
+                
+                // Pediatrics
+                'child': ['pediatrician', 'pediatric'],
+                'baby': ['pediatrician', 'pediatric'],
+                'infant': ['pediatrician', 'pediatric'],
+                
+                // OB/GYN
+                'pregnancy': ['obstetrician', 'gynecologist', 'obgyn'],
+                'prenatal': ['obstetrician', 'gynecologist'],
+                'menstrual': ['gynecologist', 'obgyn'],
+                
+                // General symptoms - prefer general practitioners
+                'fever': ['general', 'family medicine', 'internal medicine'],
+                'cough': ['general', 'pulmonologist'],
+                'headache': ['neurologist', 'general'],
+                'pain': ['general', 'family medicine']
+            };
+            
+            // Find matching keywords in reason
+            let bestMatch = null;
+            let bestMatchScore = 0;
+            let matchReason = '';
+            
+            for (const [symptom, specialties] of Object.entries(specialtyMatches)) {
+                if (lowerReason.includes(symptom)) {
+                    // Search practitioners for matching specialty
+                    for (const practitioner of practitioners) {
+                        const lowerProfession = practitioner.profession.toLowerCase();
+                        
+                        for (let i = 0; i < specialties.length; i++) {
+                            const specialty = specialties[i].toLowerCase();
+                            if (lowerProfession.includes(specialty)) {
+                                const score = specialties.length - i; // Higher score for better matches
+                                if (score > bestMatchScore) {
+                                    bestMatchScore = score;
+                                    bestMatch = practitioner;
+                                    matchReason = `Best match for ${symptom}-related symptoms`;
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+            
+            // If no specific match, return first general practitioner
+            if (!bestMatch) {
+                const generalPractitioner = practitioners.find(p => 
+                    p.profession.toLowerCase().includes('general') ||
+                    p.profession.toLowerCase().includes('family') ||
+                    p.profession.toLowerCase().includes('physician')
+                );
+                
+                if (generalPractitioner) {
+                    return {
+                        ...generalPractitioner,
+                        reason: 'General consultation recommended for initial evaluation'
+                    };
+                }
+                
+                // Last resort: return first available practitioner
+                return practitioners[0] ? {
+                    ...practitioners[0],
+                    reason: 'Available practitioner for consultation'
+                } : null;
+            }
+            
+            return {
+                ...bestMatch,
+                reason: matchReason
+            };
         }
 
         async function confirmBooking() {
