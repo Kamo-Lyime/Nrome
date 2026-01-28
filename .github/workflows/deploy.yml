@@ -26,15 +26,44 @@ jobs:
 
       - name: Inject API Keys into files
         run: |
+          # Show what we're working with
+          echo "DEBUG: Checking secrets availability..."
+          echo "SUPABASE_URL length: ${#SUPABASE_URL}"
+          echo "VERCEL_API_URL length: ${#VERCEL_API_URL}"
+          
           # Create inline production config script
-          PROD_CONFIG="<script>window.LOCAL_CONFIG={SUPABASE_URL:'${{ secrets.SUPABASE_URL }}',SUPABASE_ANON_KEY:'${{ secrets.SUPABASE_ANON_KEY }}',VERCEL_API_URL:'${{ secrets.VERCEL_API_URL }}'};window.VERCEL_API_URL='${{ secrets.VERCEL_API_URL }}';</script>"
+          cat > temp_config.js << 'CONFIGEOF'
+window.LOCAL_CONFIG = {
+  SUPABASE_URL: 'SUPABASE_URL_PLACEHOLDER',
+  SUPABASE_ANON_KEY: 'SUPABASE_KEY_PLACEHOLDER',
+  VERCEL_API_URL: 'VERCEL_URL_PLACEHOLDER'
+};
+window.VERCEL_API_URL = window.LOCAL_CONFIG.VERCEL_API_URL;
+console.log('✅ Production config loaded');
+CONFIGEOF
           
-          # Replace placeholder with inline config in all HTML files
-          find . -name "*.html" -type f -exec sed -i "s|<!-- PRODUCTION_CONFIG_PLACEHOLDER -->|${PROD_CONFIG}|g" {} +
+          # Replace placeholders with actual secrets
+          sed -i "s|SUPABASE_URL_PLACEHOLDER|${{ secrets.SUPABASE_URL }}|g" temp_config.js
+          sed -i "s|SUPABASE_KEY_PLACEHOLDER|${{ secrets.SUPABASE_ANON_KEY }}|g" temp_config.js
+          sed -i "s|VERCEL_URL_PLACEHOLDER|${{ secrets.VERCEL_API_URL }}|g" temp_config.js
           
-          # Verify injection (first file only)
-          echo "Config injected into HTML files:"
-          grep -m 1 "window.LOCAL_CONFIG" nurse.html || echo "Warning: Config not found in nurse.html"
+          # Wrap in script tag
+          PROD_CONFIG="<script>$(cat temp_config.js)</script>"
+          
+          # Inject into HTML files
+          for file in index.html dashboard.html medication.html nurse.html; do
+            if [ -f "$file" ]; then
+              sed -i "s|<!-- PRODUCTION_CONFIG_PLACEHOLDER -->|${PROD_CONFIG}|g" "$file"
+              echo "✅ Injected config into $file"
+            fi
+          done
+          
+          # Clean up
+          rm temp_config.js
+          
+          # Verify injection
+          echo "Verifying config injection in nurse.html:"
+          grep -A 2 "window.LOCAL_CONFIG" nurse.html | head -3 || echo "❌ Config not found!"
           
       - name: Setup Pages
         uses: actions/configure-pages@v4
