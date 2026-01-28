@@ -66,7 +66,13 @@ function authStatusListener() {
         return;
     }
     
-    supabaseClient.auth.onAuthStateChange((_event, session) => {
+    // Unsubscribe from previous listener if it exists
+    if (authSubscription) {
+        authSubscription.data?.subscription?.unsubscribe();
+        authSubscription = null;
+    }
+    
+    authSubscription = supabaseClient.auth.onAuthStateChange((_event, session) => {
         const signOutButtons = document.querySelectorAll('[data-auth="signout"]');
         signOutButtons.forEach(btn => {
             btn.disabled = !session;
@@ -77,6 +83,9 @@ function authStatusListener() {
         }
     });
 }
+
+// Store the auth state subscription to prevent multiple listeners
+let authSubscription = null;
 
 async function handleSignOut() {
     if (!supabaseClient) {
@@ -175,7 +184,17 @@ function wireRegisterForm() {
     });
 }
 
+// Track if initAuthUI has been called to prevent multiple initializations
+let authUIInitialized = false;
+
 function initAuthUI() {
+    // Prevent multiple initializations
+    if (authUIInitialized) {
+        console.log('⚠️ Auth UI already initialized, skipping...');
+        return;
+    }
+    
+    authUIInitialized = true;
     authStatusListener();
     wireSignOutButtons();
     wireLoginForm();
@@ -186,8 +205,10 @@ function initAuthUI() {
 function retrySupabaseInit() {
     if (!supabaseClient && window.LOCAL_CONFIG?.SUPABASE_URL) {
         console.log('🔄 Retrying Supabase initialization with loaded config...');
-        try {
-            const url = window.LOCAL_CONFIG.SUPABASE_URL;
+        try {Only initialize auth UI if not already done
+                if (!authUIInitialized) {
+                    initAuthUI();
+                }w.LOCAL_CONFIG.SUPABASE_URL;
             const key = window.LOCAL_CONFIG.SUPABASE_ANON_KEY;
             
             if (url && url.startsWith('http') && key && key !== 'your_supabase_anon_key_here') {
