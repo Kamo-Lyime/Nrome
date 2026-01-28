@@ -5,21 +5,8 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Nrome - Dashboard</title>
     <link rel="icon" href="Images/nrome-logo.png" type="image/png" />
-    <!-- Local development config loader (silent fail if file doesn't exist) -->
-    <script>
-        // Try to load config.local.js for local development
-        (function() {
-            const script = document.createElement('script');
-            script.src = 'config.local.js';
-            script.onerror = function() {
-                // Silently fail if config.local.js doesn't exist (production mode)
-                console.log('Running in production mode (config.local.js not found)');
-            };
-            document.head.appendChild(script);
-        })();
-    </script>
-    <!-- Production config will be injected here by GitHub Actions -->
-    <!-- PRODUCTION_CONFIG_PLACEHOLDER -->
+    <!-- Configuration -->
+    <script src="config.js"></script>
     <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
