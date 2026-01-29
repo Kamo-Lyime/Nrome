@@ -11,7 +11,12 @@
     <script src="config.js"></script>
     <!-- Supabase Client -->
     <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
+    <!-- Paystack Inline Payment -->
+    <script src="https://js.paystack.co/v1/inline.js"></script>
     <script src="js/auth.js"></script>
+    <!-- Paystack Payment Integration -->
+    <script src="js/paystack-integration.js"></script>
+    <script src="js/appointment-booking.js"></script>
     <!-- jsPDF for PDF export -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
     <!-- No paid APIs needed - using free alternatives -->
@@ -58,7 +63,8 @@
             <div class="row mt-4">
                 <div class="col-md-3">
                     <div class="ai-feature-card text-center p-3">
-                        <div class="ai-icon mb-2">📅</div>
+                        <div class="ai-icon mb-2"> </div>
+                        
                         <h5>AI Appointment Booking</h5>
                         <p class="small">Smart scheduling with practitioners</p>
                         <button class="btn btn-outline-primary btn-sm" onclick="openAppointmentBooking(); console.log('Appointment button clicked');">Book Now</button>
@@ -80,6 +86,8 @@
                         <button class="btn btn-outline-success btn-sm" onclick="startVoiceScribe(); console.log('Voice button clicked');">Start Recording</button>
                     </div>
                 </div>
+            </div>
+            <div class="row mt-3">
                 <div class="col-md-3">
                     <div class="ai-feature-card text-center p-3">
                         <div class="ai-icon mb-2">📋</div>
@@ -88,6 +96,15 @@
                         <button class="btn btn-outline-info btn-sm" onclick="openTriage(); console.log('Triage button clicked');">Assess Patient</button>
                     </div>
                 </div>
+                <div class="col-md-3">
+                    <div class="ai-feature-card text-center p-3">
+                        <div class="ai-icon mb-2">📅</div>
+                        <h5>My Appointments</h5>
+                        <p class="small">View & manage your bookings</p>
+                        <button class="btn btn-outline-primary btn-sm" onclick="openMyAppointments()">View Appointments</button>
+                    </div>
+                </div>
+            </div>
             </div>
             <!-- AI history controls removed per request -->
             
@@ -1181,9 +1198,13 @@
             const dropdown = document.getElementById('selectedPractitioner');
             const selectedPractitionerId = dropdown.value;
             const infoDiv = document.getElementById('practitionerInfo');
+            const feeInfoDiv = document.getElementById('paymentFeeInfo');
             
             if (selectedPractitionerId === '') {
                 infoDiv.style.display = 'none';
+                if (feeInfoDiv) {
+                    feeInfoDiv.innerHTML = `💳 Secure payment via Paystack<br>✅ 80% to practitioner, 20% platform fee`;
+                }
                 return;
             }
             
@@ -1195,6 +1216,43 @@
             if (selectedCard) {
                 const name = selectedCard.querySelector('.card-title').textContent;
                 const profession = selectedCard.querySelector('h6').textContent;
+                
+                // Extract consultation fee from card
+                let consultationFee = 500; // Default
+                let currency = 'ZAR';
+                const feeElement = selectedCard.querySelector('.text-success');
+                if (feeElement) {
+                    const feeText = feeElement.textContent;
+                    const feeMatch = feeText.match(/(\d+(?:\.\d+)?)\s*([A-Z]{3})?/);
+                    if (feeMatch) {
+                        consultationFee = parseFloat(feeMatch[1]) || 500;
+                        currency = feeMatch[2] || 'ZAR';
+                    }
+                }
+                
+                // Calculate Paystack processing fee
+                let paystackFee = 0;
+                if (currency === 'ZAR') {
+                    paystackFee = Math.min(Math.round(consultationFee * 0.015) + 1, 50);
+                } else if (currency === 'NGN') {
+                    paystackFee = Math.min(Math.round(consultationFee * 0.015) + 100, 2000);
+                } else if (currency === 'KES') {
+                    paystackFee = Math.round(consultationFee * 0.015) + 5;
+                } else if (currency === 'GHS') {
+                    paystackFee = Math.round(consultationFee * 0.0195);
+                } else {
+                    paystackFee = Math.round(consultationFee * 0.039 * 100) / 100;
+                    if (currency === 'USD' || currency === 'EUR') {
+                        paystackFee += 0.10;
+                    }
+                }
+                paystackFee = Math.round(paystackFee);
+                
+                const totalAmountToPay = consultationFee + paystackFee;
+                
+                // Calculate split (based on consultation fee only)
+                const practitionerAmount = Math.round(consultationFee * 0.8);
+                const platformAmount = Math.round(consultationFee * 0.2);
                 
                 infoDiv.innerHTML = `
                     <div class="d-flex align-items-center">
@@ -1209,6 +1267,14 @@
                     </div>
                 `;
                 infoDiv.style.display = 'block';
+                
+                // Update payment fee info
+                if (feeInfoDiv) {
+                    feeInfoDiv.innerHTML = `
+                        💳 Consultation Fee: <strong>${consultationFee} ${currency}</strong><br>
+                        ✅ Practitioner gets ${practitionerAmount} ${currency} (80%) • Platform fee ${platformAmount} ${currency} (20%)
+                    `;
+                }
                 
                 // Trigger AI suggestions
                 getAIRecommendations();
@@ -1678,39 +1744,253 @@ Keep your response concise (3-4 sentences) and actionable.`;
             };
             
             try {
+                // Validate email for payment
+                if (!patientEmail || !patientEmail.includes('@')) {
+                    alert('Please enter a valid email address for payment processing');
+                    return;
+                }
+                
                 // Show loading
                 document.getElementById('bookAppointmentBtn').disabled = true;
-                document.getElementById('bookAppointmentBtn').innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Booking...';
+                document.getElementById('bookAppointmentBtn').innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Processing Payment...';
                 
-                // Save appointment
-                const savedAppointment = await saveAppointment(appointmentData);
+                // Get practitioner details for payment
+                const serviceCards = document.querySelectorAll('.practitioner-profile-card');
+                const selectedCard = Array.from(serviceCards).find(card => 
+                    card.getAttribute('data-practitioner-id') === practitionerId
+                );
                 
-                if (savedAppointment) {
-                    // Build confirmation message
-                    let confirmationMessage = `✅ Appointment Request Sent Successfully!\\n\\nBooking ID: ${bookingId}\\nPatient: ${patientName}\\nPractitioner: ${appointmentData.practitioner_name}\\nDate: ${new Date(date).toLocaleDateString()} at ${selectedTimeSlot.time}\\n\\nReason for Visit: ${reason || 'General consultation'}`;
-                    
-                    // Add AI scheduling suggestion if available
-                    if (hasAISuggestion) {
-                        // Extract just the analysis text without the heading
-                        let cleanSuggestion = aiSuggestionText.replace(/🤖 AI Scheduling Recommendations?:?\s*/gi, '').trim();
-                        confirmationMessage += `\\n\\n🤖 AI Scheduling Recommendation:\\n${cleanSuggestion}`;
+                let consultationFee = 500; // Default fallback
+                let practitionerPhone = '';
+                let practitionerEmail = '';
+                let currency = 'ZAR';
+                
+                // Try to get fee from database first
+                try {
+                    const practitioner = await getPractitionerById(practitionerId);
+                    if (practitioner && practitioner.consultation_fee) {
+                        consultationFee = parseFloat(practitioner.consultation_fee);
+                        currency = practitioner.currency || 'ZAR';
+                        practitionerPhone = practitioner.phone_number || '';
+                        practitionerEmail = practitioner.email_address || '';
+                        console.log('✅ Using practitioner fee from database:', consultationFee, currency);
+                    }
+                } catch (dbError) {
+                    console.warn('Could not fetch from database, using card data:', dbError);
+                }
+                
+                // Fallback: Extract from card if database failed
+                if (selectedCard && consultationFee === 500) {
+                    // Extract fee from "Consultation Fee: 3455 ZAR" pattern
+                    const feeElement = selectedCard.querySelector('.text-success');
+                    if (feeElement) {
+                        const feeText = feeElement.textContent;
+                        // Match patterns like "3455 ZAR" or "R3455" or "3455"
+                        const feeMatch = feeText.match(/(\d+(?:\.\d+)?)\s*([A-Z]{3})?/);
+                        if (feeMatch) {
+                            consultationFee = parseFloat(feeMatch[1]) || 500;
+                            currency = feeMatch[2] || currency;
+                            console.log('✅ Using practitioner fee from card:', consultationFee, currency);
+                        }
                     }
                     
-                    confirmationMessage += `\\n\\nStatus: Pending Practitioner Confirmation\\n\\nYou will be notified once the practitioner confirms your appointment. Check your dashboard for updates.`;
-                    
-                    alert(confirmationMessage);
-                    
-                    // Close booking modal
-                    closeAppointmentBooking();
-                } else {
-                    throw new Error('Failed to save appointment');
+                    // Extract contact info from card
+                    const phoneLink = selectedCard.querySelector('a[href^="tel:"]');
+                    const emailLink = selectedCard.querySelector('a[href^="mailto:"]');
+                    if (!practitionerPhone && phoneLink) {
+                        practitionerPhone = phoneLink.getAttribute('href').replace('tel:', '');
+                    }
+                    if (!practitionerEmail && emailLink) {
+                        practitionerEmail = emailLink.getAttribute('href').replace('mailto:', '');
+                    }
                 }
+                
+                // Calculate Paystack processing fee (added on top)
+                // Paystack fees by currency:
+                // ZAR: 1.5% + R1 (capped at R50)
+                // NGN: 1.5% + ₦100 (capped at ₦2000)
+                // KES: 1.5% + KSh5
+                // GHS: 1.95%
+                // USD/Others: 3.9% + $0.10
+                let paystackFee = 0;
+                
+                if (currency === 'ZAR') {
+                    paystackFee = Math.min(Math.round(consultationFee * 0.015) + 1, 50);
+                } else if (currency === 'NGN') {
+                    paystackFee = Math.min(Math.round(consultationFee * 0.015) + 100, 2000);
+                } else if (currency === 'KES') {
+                    paystackFee = Math.round(consultationFee * 0.015) + 5;
+                } else if (currency === 'GHS') {
+                    paystackFee = Math.round(consultationFee * 0.0195);
+                } else {
+                    // USD, EUR, and other international
+                    paystackFee = Math.round(consultationFee * 0.039 * 100) / 100;
+                    if (currency === 'USD' || currency === 'EUR') {
+                        paystackFee += 0.10;
+                    }
+                }
+                
+                paystackFee = Math.round(paystackFee); // Round to nearest unit
+                
+                // Total amount patient pays (consultation fee + Paystack fee)
+                const totalAmountToPay = consultationFee + paystackFee;
+                
+                // Calculate 80/20 split (based on consultation fee only, NOT affected by Paystack fee)
+                const practitionerAmount = Math.round(consultationFee * 0.8);
+                const platformAmount = Math.round(consultationFee * 0.2);
+                
+                console.log('💰 Payment breakdown:', {
+                    consultationFee: consultationFee,
+                    paystackFee: paystackFee,
+                    totalCharged: totalAmountToPay,
+                    practitioner: practitionerAmount + ' (80% of consultation)',
+                    platform: platformAmount + ' (20% of consultation)',
+                    currency: currency
+                });
+                
+                // Update appointment data with payment info
+                appointmentData.consultation_fee = consultationFee;
+                appointmentData.paystack_fee = paystackFee;
+                appointmentData.total_amount = totalAmountToPay;
+                appointmentData.currency = currency;
+                appointmentData.status = 'PENDING_PAYMENT';
+                
+                // Store practitioner contact for reference (not in DB, but useful for payment flow)
+                appointmentData._practitioner_phone = practitionerPhone;
+                appointmentData._practitioner_email = practitionerEmail;
+                
+                // Show payment confirmation with dynamic amounts
+                const confirmPayment = confirm(
+                    `💳 PAYMENT REQUIRED\\n\\n` +
+                    `TOTAL AMOUNT: ${totalAmountToPay} ${currency}\\n` +
+                    `\\nBreakdown:\\n` +
+                    `• Consultation Fee: ${consultationFee} ${currency}\\n` +
+                    `• Processing Fee: ${paystackFee} ${currency}\\n` +
+                    `  - Practitioner receives: ${practitionerAmount} ${currency} (80%)\\n` +
+                    `  - Platform fee: ${platformAmount} ${currency} (20%)\\n\\n` +
+                    `ℹ️ The total amount includes secure payment processing and platform service fees.\\n\\n` +
+                    `Appointment Details:\\n` +
+                    `Practitioner: ${appointmentData.practitioner_name}\\n` +
+                    `Date: ${new Date(date).toLocaleDateString()} at ${selectedTimeSlot.time}\\n` +
+                    `Patient: ${patientName}\\n\\n` +
+                    `Cancellation Policy:\\n` +
+                    `- Cancel ≥24h before: Full refund (${totalAmountToPay} ${currency})\\n` +
+                    `- Cancel <24h before: No refund\\n` +
+                    `- No-show: No refund\\n\\n` +
+                    `Click OK to proceed to secure payment via Paystack.`
+                );
+                
+                if (!confirmPayment) {
+                    document.getElementById('bookAppointmentBtn').disabled = false;
+                    document.getElementById('bookAppointmentBtn').innerHTML = '<i class="fas fa-calendar-check me-2"></i>Confirm Booking';
+                    return;
+                }
+                
+                // Save appointment as PENDING_PAYMENT first
+                const savedAppointment = await saveAppointmentWithPayment(appointmentData);
+                
+                if (!savedAppointment) {
+                    throw new Error('Failed to create appointment record');
+                }
+                
+                // Initialize Paystack payment
+                if (typeof PaystackIntegration === 'undefined') {
+                    console.error('Paystack integration not loaded');
+                    alert('⚠️ Payment system not available. Please refresh the page and try again.');
+                    document.getElementById('bookAppointmentBtn').disabled = false;
+                    document.getElementById('bookAppointmentBtn').innerHTML = '<i class="fas fa-calendar-check me-2"></i>Confirm Booking';
+                    return;
+                }
+                
+                const paystackHandler = new PaystackIntegration();
+                const amountInKobo = totalAmountToPay * 100; // Convert total amount to kobo (includes consultation + Paystack fee)
+                const paymentReference = `PAY_${bookingId}_${Date.now()}`;
+                
+                // Initiate Paystack payment
+                paystackHandler.initiatePayment(
+                    {
+                        amount: amountInKobo,
+                        email: patientEmail,
+                        reference: paymentReference,
+                        id: savedAppointment.id || bookingId,
+                        patient_name: patientName,
+                        practitioner_id: practitionerId,
+                        metadata: {
+                            appointment_id: savedAppointment.id || bookingId,
+                            patient_name: patientName,
+                            practitioner_name: appointmentData.practitioner_name,
+                            appointment_date: date,
+                            appointment_time: selectedTimeSlot.time
+                        }
+                    },
+                    // On payment success
+                    async (response) => {
+                        console.log('✅ Payment successful:', response);
+                        
+                        try {
+                            // Update appointment status to PENDING_CONFIRMATION
+                            await updateAppointmentAfterPayment(
+                                savedAppointment.id || bookingId,
+                                paymentReference,
+                                response.reference,
+                                amountInKobo
+                            );
+                            
+                            let confirmationMessage = 
+                                `✅ PAYMENT SUCCESSFUL! Appointment Booked!\\n\\n` +
+                                `Booking ID: ${bookingId}\\n` +
+                                `Payment Reference: ${response.reference}\\n` +
+                                `Total Paid: ${totalAmountToPay} ${currency}\\n\\n` +
+                                `Payment Breakdown:\\n` +
+                                `• Consultation Fee: ${consultationFee} ${currency}\\n` +
+                                `  - Practitioner receives: ${practitionerAmount} ${currency} (80%)\\n` +
+                                `  - Platform fee: ${platformAmount} ${currency} (20%)\\n` +
+                                `• Processing Fee: ${paystackFee} ${currency}\\n\\n` +
+                                `ℹ️ The total amount includes secure payment processing and platform service fees.\\n\\n` +
+                                `Patient: ${patientName}\\n` +
+                                `Practitioner: ${appointmentData.practitioner_name}\\n` +
+                                `Date: ${new Date(date).toLocaleDateString()} at ${selectedTimeSlot.time}\\n\\n` +
+                                `Reason: ${reason || 'General consultation'}\\n\\n`;
+                            
+                            if (hasAISuggestion) {
+                                let cleanSuggestion = aiSuggestionText.replace(/🤖 AI Scheduling Recommendations?:?\s*/gi, '').trim();
+                                confirmationMessage += `🤖 AI Recommendation:\\n${cleanSuggestion}\\n\\n`;
+                            }
+                            
+                            confirmationMessage += 
+                                `Status: ⏳ Awaiting Practitioner Confirmation\\n` +
+                                `The practitioner has 24 hours to confirm.\\n` +
+                                `If not confirmed, you'll receive automatic refund of ${totalAmountToPay} ${currency}.\\n\\n` +
+                                `Manage this appointment in your dashboard.`;
+                            
+                            alert(confirmationMessage);
+                            closeAppointmentBooking();
+                            
+                            // Refresh to show new appointment
+                            setTimeout(() => location.reload(), 1000);
+                            
+                        } catch (updateError) {
+                            console.error('Failed to update appointment after payment:', updateError);
+                            alert('⚠️ Payment processed but appointment update failed. Please contact support with reference: ' + response.reference);
+                        }
+                    },
+                    // On payment close/cancel
+                    () => {
+                        console.log('Payment cancelled by user');
+                        alert('❌ Payment cancelled. Your appointment has not been booked.');
+                        
+                        // Delete the pending appointment
+                        deletePendingAppointment(savedAppointment.id || bookingId);
+                        
+                        document.getElementById('bookAppointmentBtn').disabled = false;
+                        document.getElementById('bookAppointmentBtn').innerHTML = '<i class="fas fa-calendar-check me-2"></i>Confirm Booking';
+                    }
+                );
                 
             } catch (error) {
                 console.error('Booking error:', error);
-                alert('❌ Booking failed. Please try again or contact support.');
-            } finally {
-                // Reset button
+                alert('❌ Booking failed. Please try again or contact support.\\n\\nError: ' + error.message);
+                
                 document.getElementById('bookAppointmentBtn').disabled = false;
                 document.getElementById('bookAppointmentBtn').innerHTML = '<i class="fas fa-calendar-check me-2"></i>Confirm Booking';
             }
@@ -1763,6 +2043,280 @@ Keep your response concise (3-4 sentences) and actionable.`;
             console.log('Appointment saved to localStorage as fallback:', newAppointment);
             return newAppointment;
         }
+        
+        // Payment-specific appointment functions
+        async function saveAppointmentWithPayment(appointmentData) {
+            if (!supabaseClient) {
+                // Fallback to localStorage
+                return saveAppointmentToLocalStorage(appointmentData);
+            }
+            
+            try {
+                // Remove fields that don't exist in database schema
+                const { _practitioner_phone, _practitioner_email, ...dbAppointmentData } = appointmentData;
+                
+                // Use payment_appointments schema if available
+                const { data, error } = await supabaseClient
+                    .from('appointments')
+                    .insert([{
+                        ...dbAppointmentData,
+                        payment_status: 'pending',  // Valid values: 'pending', 'success', 'failed', 'refunded'
+                        amount_paid: appointmentData.total_amount, // Total amount patient paid (consultation + processing)
+                        created_at: new Date().toISOString()
+                    }])
+                    .select()
+                    .single();
+                
+                if (error) {
+                    console.warn('Database insert failed, using localStorage:', error);
+                    return saveAppointmentToLocalStorage(appointmentData);
+                }
+                
+                console.log('✅ Payment appointment saved:', data);
+                return data;
+            } catch (error) {
+                console.error('Save payment appointment error:', error);
+                return saveAppointmentToLocalStorage(appointmentData);
+            }
+        }
+        
+        async function updateAppointmentAfterPayment(appointmentId, paymentRef, paystackRef, amount) {
+            if (!supabaseClient) {
+                // Update localStorage
+                const appointments = JSON.parse(localStorage.getItem('appointments') || '[]');
+                const index = appointments.findIndex(a => a.id === appointmentId || a.booking_id === appointmentId);
+                if (index !== -1) {
+                    appointments[index].status = 'PENDING_CONFIRMATION';
+                    appointments[index].payment_status = 'PAID';
+                    appointments[index].payment_reference = paystackRef;
+                    appointments[index].payment_date = new Date().toISOString();
+                    localStorage.setItem('appointments', JSON.stringify(appointments));
+                    console.log('✅ Appointment updated in localStorage');
+                }
+                return true;
+            }
+            
+            try {
+                const { data, error } = await supabaseClient
+                    .from('appointments')
+                    .update({
+                        status: 'PENDING_CONFIRMATION',
+                        payment_status: 'success',  // Valid values: 'pending', 'success', 'failed', 'refunded'
+                        payment_reference: paystackRef,
+                        updated_at: new Date().toISOString()
+                    })
+                    .eq('id', appointmentId)
+                    .select();
+                
+                if (error) {
+                    console.error('Failed to update appointment:', error);
+                    return false;
+                }
+                
+                console.log('✅ Appointment updated after payment:', data);
+                
+                // Also create payment transaction record
+                await createPaymentTransaction({
+                    appointment_id: appointmentId,
+                    payment_reference: paystackRef,
+                    amount: amount,
+                    status: 'SUCCESS',
+                    payment_method: 'paystack'
+                });
+                
+                return true;
+            } catch (error) {
+                console.error('Update appointment after payment error:', error);
+                return false;
+            }
+        }
+        
+        async function createPaymentTransaction(transactionData) {
+            if (!supabaseClient) return null;
+            
+            try {
+                const { data, error } = await supabaseClient
+                    .from('payment_transactions')
+                    .insert([{
+                        ...transactionData,
+                        created_at: new Date().toISOString()
+                    }])
+                    .select()
+                    .single();
+                
+                if (error) {
+                    console.warn('Failed to create payment transaction record:', error);
+                    return null;
+                }
+                
+                console.log('✅ Payment transaction recorded:', data);
+                return data;
+            } catch (error) {
+                console.error('Create payment transaction error:', error);
+                return null;
+            }
+        }
+        
+        async function deletePendingAppointment(appointmentId) {
+            if (!supabaseClient) {
+                // Delete from localStorage
+                const appointments = JSON.parse(localStorage.getItem('appointments') || '[]');
+                const filtered = appointments.filter(a => a.id !== appointmentId && a.booking_id !== appointmentId);
+                localStorage.setItem('appointments', JSON.stringify(filtered));
+                console.log('Pending appointment removed from localStorage');
+                return true;
+            }
+            
+            try {
+                const { error } = await supabaseClient
+                    .from('appointments')
+                    .delete()
+                    .eq('id', appointmentId);
+                
+                if (error) {
+                    console.warn('Failed to delete pending appointment:', error);
+                    return false;
+                }
+                
+                console.log('✅ Pending appointment deleted');
+                return true;
+            } catch (error) {
+                console.error('Delete pending appointment error:', error);
+                return false;
+            }
+        }
+        
+        // Appointment management functions (cancel, reschedule)
+        async function cancelAppointment(appointmentId, reason) {
+            if (!supabaseClient) {
+                alert('Cancellation requires database connection. Please try again later.');
+                return false;
+            }
+            
+            try {
+                // Get appointment details
+                const { data: appointment, error: fetchError } = await supabaseClient
+                    .from('appointments')
+                    .select('*')
+                    .eq('id', appointmentId)
+                    .single();
+                
+                if (fetchError || !appointment) {
+                    throw new Error('Appointment not found');
+                }
+                
+                // Check if within 24-hour cancellation window
+                const appointmentDateTime = new Date(appointment.appointment_date + ' ' + appointment.appointment_time);
+                const hoursUntilAppointment = (appointmentDateTime - new Date()) / (1000 * 60 * 60);
+                
+                const isEligibleForRefund = hoursUntilAppointment >= 24;
+                
+                // Get fee and currency (with processing fees)
+                const fee = appointment.consultation_fee || 500;
+                const paystackFee = appointment.paystack_fee || Math.min(Math.round(fee * 0.015) + 1, 50);
+                const totalAmount = appointment.total_amount || (fee + paystackFee);
+                const curr = appointment.currency || 'ZAR';
+                
+                const confirmCancel = confirm(
+                    `Cancel Appointment?\\n\\n` +
+                    `Appointment: ${appointment.practitioner_name}\\n` +
+                    `Date: ${new Date(appointment.appointment_date).toLocaleDateString()} at ${appointment.appointment_time}\\n\\n` +
+                    `Refund Policy:\\n` +
+                    (isEligibleForRefund ? 
+                        `✅ Full refund (${totalAmount} ${curr}) - cancelled ≥24h before\\n` +
+                        `   • Consultation: ${fee} ${curr}\\n` +
+                        `   • Processing: ${paystackFee} ${curr}` :
+                        `❌ No refund - cancelled <24h before appointment`) +
+                    `\\n\\nReason: ${reason}\\n\\nProceed with cancellation?`
+                );
+                
+                if (!confirmCancel) return false;
+                
+                // Update appointment status
+                const { error: updateError } = await supabaseClient
+                    .from('appointments')
+                    .update({
+                        status: 'CANCELLED',
+                        cancellation_reason: reason,
+                        updated_at: new Date().toISOString()
+                    })
+                    .eq('id', appointmentId);
+                
+                if (updateError) throw updateError;
+                
+                if (isEligibleForRefund && appointment.payment_reference) {
+                    // Initiate refund via Paystack (refund total amount including processing fees)
+                    const paystackHandler = new PaystackIntegration();
+                    await paystackHandler.initiateRefund(
+                        appointment.payment_reference,
+                        totalAmount * 100, // Convert total amount to kobo
+                        `Appointment cancelled by patient: ${reason}`
+                    );
+                }
+                
+                alert(
+                    `✅ Appointment Cancelled\\n\\n` +
+                    (isEligibleForRefund ? 
+                        `A refund of ${totalAmount} ${curr} will be processed within 5-7 business days.\\n` +
+                        `  • Consultation: ${fee} ${curr}\\n` +
+                        `  • Processing: ${paystackFee} ${curr}` :
+                        `No refund will be issued (cancelled <24h before appointment).`)
+                );
+                
+                location.reload();
+                return true;
+                
+            } catch (error) {
+                console.error('Cancel appointment error:', error);
+                alert('❌ Cancellation failed: ' + error.message);
+                return false;
+            }
+        }
+        
+        async function rescheduleAppointment(appointmentId, newDate, newTime) {
+            if (!supabaseClient) {
+                alert('Rescheduling requires database connection. Please try again later.');
+                return false;
+            }
+            
+            try {
+                const { error } = await supabaseClient
+                    .from('appointments')
+                    .update({
+                        appointment_date: newDate,
+                        appointment_time: newTime,
+                        rescheduled_at: new Date().toISOString(),
+                        status: 'PENDING_CONFIRMATION', // Require practitioner to confirm new time
+                        updated_at: new Date().toISOString()
+                    })
+                    .eq('id', appointmentId);
+                
+                if (error) throw error;
+                
+                alert(
+                    `✅ Appointment Rescheduled\\n\\n` +
+                    `New Date: ${new Date(newDate).toLocaleDateString()}\\n` +
+                    `New Time: ${newTime}\\n\\n` +
+                    `The practitioner will confirm the new time.`
+                );
+                
+                location.reload();
+                return true;
+                
+            } catch (error) {
+                console.error('Reschedule appointment error:', error);
+                alert('❌ Rescheduling failed: ' + error.message);
+                return false;
+            }
+        }
+        
+        // Make functions globally accessible
+        window.saveAppointmentWithPayment = saveAppointmentWithPayment;
+        window.updateAppointmentAfterPayment = updateAppointmentAfterPayment;
+        window.createPaymentTransaction = createPaymentTransaction;
+        window.deletePendingAppointment = deletePendingAppointment;
+        window.cancelAppointment = cancelAppointment;
+        window.rescheduleAppointment = rescheduleAppointment;
         
         async function sendAppointmentNotifications() {
             console.log('Notifications disabled; use dashboard messaging.');
@@ -3127,8 +3681,12 @@ Keep your response concise and professional. Focus on the medical assessment.`;
                             
                             <div class="d-grid gap-2">
                                 <button id="bookAppointmentBtn" class="btn btn-success btn-lg" onclick="confirmBooking()">
-                                    📅 Confirm Appointment Booking
+                                    <i class="fas fa-credit-card me-2"></i>Confirm Booking & Pay
                                 </button>
+                                <small class="text-muted text-center" id="paymentFeeInfo">
+                                    💳 Secure payment via Paystack<br>
+                                    ✅ 80% to practitioner, 20% platform fee
+                                </small>
                                 <button class="btn btn-outline-primary" onclick="getAIRecommendations()">
                                     🤖 Get AI Scheduling Recommendations
                                 </button>
@@ -3359,6 +3917,280 @@ Keep your response concise and professional. Focus on the medical assessment.`;
             serviceList.appendChild(newService);
             console.log('✅ Added practitioner to listing:', practitionerName);
         }
+    </script>
+
+    <!-- My Appointments Modal -->
+    <div id="myAppointmentsModal" class="modal fade" tabindex="-1">
+        <div class="modal-dialog modal-xl modal-dialog-scrollable">
+            <div class="modal-content">
+                <div class="modal-header bg-primary text-white">
+                    <h5 class="modal-title"><i class="fas fa-calendar-check me-2"></i>My Appointments</h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body p-2 p-md-3">
+                    <div id="appointmentsList" class="appointments-list">
+                        <div class="text-center py-5">
+                            <div class="spinner-border text-primary" role="status">
+                                <span class="visually-hidden">Loading...</span>
+                            </div>
+                            <p class="mt-3 text-muted">Loading your appointments...</p>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // My Appointments functionality
+        async function openMyAppointments() {
+            console.log('Opening My Appointments...');
+            
+            const modalElement = document.getElementById('myAppointmentsModal');
+            const modal = new bootstrap.Modal(modalElement, {
+                backdrop: 'static',
+                keyboard: false
+            });
+            
+            modal.show();
+            
+            // Load appointments
+            await loadMyAppointments();
+        }
+        
+        async function loadMyAppointments() {
+            const container = document.getElementById('appointmentsList');
+            const userId = currentUserId || await resolveUserId();
+            
+            if (!userId) {
+                container.innerHTML = `
+                    <div class="alert alert-warning">
+                        <strong>⚠️ Not logged in</strong><br>
+                        Please log in to view your appointments.
+                    </div>
+                `;
+                return;
+            }
+            
+            try {
+                let appointments = [];
+                
+                if (supabaseClient) {
+                    const { data, error } = await supabaseClient
+                        .from('appointments')
+                        .select('*')
+                        .eq('user_id', userId)
+                        .order('appointment_date', { ascending: false })
+                        .order('appointment_time', { ascending: false });
+                    
+                    if (!error && data) {
+                        appointments = data;
+                    }
+                }
+                
+                // Fallback to localStorage
+                if (appointments.length === 0) {
+                    const localAppointments = JSON.parse(localStorage.getItem('appointments') || '[]');
+                    appointments = localAppointments.filter(a => a.user_id === userId);
+                }
+                
+                if (appointments.length === 0) {
+                    container.innerHTML = `
+                        <div class="alert alert-info">
+                            <strong>📅 No appointments yet</strong><br>
+                            You haven't booked any appointments. Click "AI Appointment Booking" to book your first appointment.
+                        </div>
+                    `;
+                    return;
+                }
+                
+                // Render appointments in mobile-responsive card format
+                let html = appointments.map(apt => {
+                    const statusClass = getStatusClass(apt.status);
+                    const canCancel = canCancelAppointment(apt);
+                    const canReschedule = canRescheduleAppointment(apt);
+                    
+                    // Get fee and currency (use stored values or defaults)
+                    const fee = apt.consultation_fee || 500;
+                    const paystackFee = apt.paystack_fee || Math.min(Math.round(fee * 0.015) + 1, 50);
+                    const totalAmount = apt.total_amount || (fee + paystackFee);
+                    const curr = apt.currency || 'ZAR';
+                    const practitionerAmount = Math.round(fee * 0.8);
+                    const platformAmount = Math.round(fee * 0.2);
+                    
+                    // Show reschedule info if status is rescheduled
+                    const rescheduleInfo = (apt.status === 'rescheduled' || apt.status === 'RESCHEDULED') && apt.rescheduled_date
+                        ? `<div class="alert alert-warning mt-2 mb-0 py-1 px-2 small">
+                             <strong>↻ Rescheduled:</strong> ${new Date(apt.rescheduled_date).toLocaleDateString()} at ${apt.rescheduled_time}
+                           </div>`
+                        : '';
+                    
+                    // Show cancellation reason if cancelled
+                    const cancellationInfo = (apt.status === 'cancelled' || apt.status === 'CANCELLED') && apt.cancellation_reason
+                        ? `<div class="alert alert-danger mt-2 mb-0 py-1 px-2 small">
+                             <strong>✗ Reason:</strong> ${apt.cancellation_reason}
+                           </div>`
+                        : '';
+                    
+                    // Show AI scheduling suggestion if available
+                    const aiSuggestionInfo = apt.ai_scheduling_suggestion
+                        ? `<div class="alert alert-info mt-2 mb-0 py-1 px-2 small">
+                             <strong>🤖 AI Suggestion:</strong> ${apt.ai_scheduling_suggestion}
+                           </div>`
+                        : '';
+                    
+                    return `
+                        <div class="card mb-3 shadow-sm">
+                            <div class="card-body">
+                                <div class="d-flex justify-content-between align-items-start mb-2">
+                                    <div>
+                                        <h6 class="mb-1"><i class="fas fa-user-md text-primary me-1"></i>${apt.practitioner_name || 'N/A'}</h6>
+                                        <small class="text-muted">${apt.reason_for_visit || 'General consultation'}</small>
+                                    </div>
+                                    <span class="badge bg-${statusClass} px-2 py-1">${apt.status || 'PENDING'}</span>
+                                </div>
+                                
+                                <div class="row g-2 mt-2">
+                                    <div class="col-6 col-md-4">
+                                        <div class="small">
+                                            <i class="fas fa-calendar text-muted me-1"></i>
+                                            <strong>${new Date(apt.appointment_date).toLocaleDateString()}</strong>
+                                        </div>
+                                    </div>
+                                    <div class="col-6 col-md-4">
+                                        <div class="small">
+                                            <i class="fas fa-clock text-muted me-1"></i>
+                                            <strong>${apt.appointment_time}</strong>
+                                        </div>
+                                    </div>
+                                    <div class="col-12 col-md-4">
+                                        <div class="small">
+                                            <i class="fas fa-hashtag text-muted me-1"></i>
+                                            <strong>${apt.booking_id || apt.id}</strong>
+                                        </div>
+                                    </div>
+                                </div>
+                                
+                                <div class="mt-2 p-2 bg-light rounded">
+                                    <div class="small">
+                                        <strong class="text-success">💰 ${totalAmount} ${curr}</strong>
+                                    </div>
+                                    <div class="small text-muted">
+                                        Consultation: ${fee} + Processing: ${paystackFee}
+                                    </div>
+                                    <div class="small text-muted">
+                                        <span class="text-success">Practitioner: ${practitionerAmount}</span> | 
+                                        <span class="text-info">Platform: ${platformAmount}</span>
+                                    </div>
+                                </div>
+                                
+                                ${aiSuggestionInfo}
+                                ${rescheduleInfo}
+                                ${cancellationInfo}
+                                
+                                <div class="mt-3 d-flex gap-2 flex-wrap">
+                                    ${canReschedule ? `
+                                        <button class="btn btn-sm btn-outline-warning flex-fill" onclick="openRescheduleModal('${apt.id || apt.booking_id}')">
+                                            <i class="fas fa-calendar-alt"></i> Reschedule
+                                        </button>
+                                    ` : ''}
+                                    ${canCancel ? `
+                                        <button class="btn btn-sm btn-outline-danger flex-fill" onclick="initiateCancelAppointment('${apt.id || apt.booking_id}')">
+                                            <i class="fas fa-times"></i> Cancel
+                                        </button>
+                                    ` : ''}
+                                </div>
+                            </div>
+                        </div>
+                    `;
+                }).join('');
+                
+                container.innerHTML = html;
+                
+            } catch (error) {
+                console.error('Failed to load appointments:', error);
+                container.innerHTML = `
+                    <div class="alert alert-danger">
+                        <strong>❌ Error</strong><br>
+                        Failed to load appointments: ${error.message}
+                    </div>
+                `;
+            }
+        }
+        
+        function getStatusClass(status) {
+            const classes = {
+                'PENDING_PAYMENT': 'warning',
+                'PENDING_CONFIRMATION': 'info',
+                'CONFIRMED': 'success',
+                'COMPLETED': 'secondary',
+                'CANCELLED': 'danger',
+                'REFUNDED': 'dark',
+                'NO_SHOW': 'warning',
+                'pending': 'warning',
+                'confirmed': 'success',
+                'success': 'success',
+                'completed': 'info',
+                'cancelled': 'danger',
+                'failed': 'danger',
+                'rescheduled': 'secondary'
+            };
+            return classes[status] || 'secondary';
+        }
+        
+        function canCancelAppointment(apt) {
+            const validStatuses = ['PENDING_PAYMENT', 'PENDING_CONFIRMATION', 'CONFIRMED', 'pending', 'confirmed', 'success'];
+            if (!validStatuses.includes(apt.status)) return false;
+            
+            const appointmentDateTime = new Date(apt.appointment_date + ' ' + apt.appointment_time);
+            return appointmentDateTime > new Date();
+        }
+        
+        function canRescheduleAppointment(apt) {
+            const validStatuses = ['PENDING_CONFIRMATION', 'CONFIRMED', 'pending', 'confirmed', 'success'];
+            if (!validStatuses.includes(apt.status)) return false;
+            
+            const appointmentDateTime = new Date(apt.appointment_date + ' ' + apt.appointment_time);
+            const hoursUntil = (appointmentDateTime - new Date()) / (1000 * 60 * 60);
+            return hoursUntil >= 24; // Can reschedule if >=24 hours away
+        }
+        
+        async function viewAppointmentDetails(appointmentId) {
+            alert('View appointment details: ' + appointmentId);
+            // TODO: Implement detailed view
+        }
+        
+        async function initiateCancelAppointment(appointmentId) {
+            const reason = prompt('Please provide a reason for cancellation:');
+            if (!reason) return;
+            
+            const confirmed = confirm('Are you sure you want to cancel this appointment?');
+            if (!confirmed) return;
+            
+            await cancelAppointment(appointmentId, reason);
+            await loadMyAppointments(); // Refresh list
+        }
+        
+        async function openRescheduleModal(appointmentId) {
+            const newDate = prompt('Enter new date (YYYY-MM-DD):');
+            if (!newDate) return;
+            
+            const newTime = prompt('Enter new time (HH:MM):');
+            if (!newTime) return;
+            
+            await rescheduleAppointment(appointmentId, newDate, newTime);
+            await loadMyAppointments(); // Refresh list
+        }
+        
+        // Make function globally accessible
+        window.openMyAppointments = openMyAppointments;
+        window.loadMyAppointments = loadMyAppointments;
+        window.viewAppointmentDetails = viewAppointmentDetails;
+        window.initiateCancelAppointment = initiateCancelAppointment;
+        window.openRescheduleModal = openRescheduleModal;
     </script>
 </body>
 </html>
