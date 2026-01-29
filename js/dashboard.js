@@ -397,7 +397,7 @@ async function loadDeliveries(userId, limit = null) {
     // Get total count for badge
     const { count } = await authHelpers.supabaseClient
         .from('medication_orders')
-        .select('id', { count: 'exact', head: true })
+        .select('*', { count: 'exact', head: true })
         .eq('user_id', userId);
     
     document.getElementById('deliveryCount').textContent = count || 0;
@@ -1430,7 +1430,8 @@ async function uploadPrescriptionForPatient() {
             
             alert('✅ Prescription uploaded successfully!');
             bootstrap.Modal.getInstance(document.getElementById('uploadPrescriptionModal')).hide();
-            document.getElementById('uploadPrescriptionForm').reset();
+            const form = document.getElementById('prescriptionUploadForm');
+            if (form) form.reset();
             loadPrescriptions(currentUserId); // Reload prescriptions list
             
         } catch (error) {

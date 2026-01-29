@@ -205,10 +205,8 @@ function initAuthUI() {
 function retrySupabaseInit() {
     if (!supabaseClient && window.LOCAL_CONFIG?.SUPABASE_URL) {
         console.log('🔄 Retrying Supabase initialization with loaded config...');
-        try {Only initialize auth UI if not already done
-                if (!authUIInitialized) {
-                    initAuthUI();
-                }w.LOCAL_CONFIG.SUPABASE_URL;
+        try {
+            const url = window.LOCAL_CONFIG.SUPABASE_URL;
             const key = window.LOCAL_CONFIG.SUPABASE_ANON_KEY;
             
             if (url && url.startsWith('http') && key && key !== 'your_supabase_anon_key_here') {

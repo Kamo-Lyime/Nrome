@@ -1,0 +1,484 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Book Appointment with Payment - Nrome</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <script src="config.js"></script>
+    <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
+    <!-- Paystack Inline JS -->
+    <script src="https://js.paystack.co/v1/inline.js"></script>
+    <script src="js/auth.js"></script>
+    <script src="js/paystack-integration.js"></script>
+    <script src="js/appointment-booking.js"></script>
+    <style>
+        .booking-step {
+            display: none;
+        }
+        .booking-step.active {
+            display: block;
+        }
+        .payment-summary {
+            background: #f8f9fa;
+            border-left: 4px solid #0d6efd;
+            padding: 20px;
+            margin: 20px 0;
+        }
+        .status-badge {
+            padding: 5px 15px;
+            border-radius: 20px;
+            font-size: 0.85em;
+            font-weight: 600;
+        }
+        .status-PENDING_PAYMENT { background: #ffc107; color: #000; }
+        .status-PENDING_CONFIRMATION { background: #17a2b8; color: #fff; }
+        .status-CONFIRMED { background: #28a745; color: #fff; }
+        .status-COMPLETED { background: #6c757d; color: #fff; }
+        .status-REFUNDED { background: #dc3545; color: #fff; }
+        .status-NO_SHOW { background: #fd7e14; color: #fff; }
+    </style>
+</head>
+<body>
+    <div class="container mt-5">
+        <div class="row">
+            <div class="col-md-8 mx-auto">
+                <h2 class="mb-4">Book Appointment with Payment</h2>
+
+                <!-- STEP 1: Select Practitioner & Time -->
+                <div id="step1" class="booking-step active">
+                    <div class="card">
+                        <div class="card-header">
+                            <h5>Step 1: Select Practitioner & Time</h5>
+                        </div>
+                        <div class="card-body">
+                            <div class="mb-3">
+                                <label class="form-label">Select Practitioner</label>
+                                <select id="practitionerSelect" class="form-select">
+                                    <option value="">Loading practitioners...</option>
+                                </select>
+                            </div>
+
+                            <div class="row">
+                                <div class="col-md-6">
+                                    <label class="form-label">Appointment Date</label>
+                                    <input type="date" id="appointmentDate" class="form-control" min="">
+                                </div>
+                                <div class="col-md-6">
+                                    <label class="form-label">Appointment Time</label>
+                                    <select id="appointmentTime" class="form-select">
+                                        <option value="08:00">08:00 AM</option>
+                                        <option value="09:00">09:00 AM</option>
+                                        <option value="10:00">10:00 AM</option>
+                                        <option value="11:00">11:00 AM</option>
+                                        <option value="12:00">12:00 PM</option>
+                                        <option value="14:00">02:00 PM</option>
+                                        <option value="15:00">03:00 PM</option>
+                                        <option value="16:00">04:00 PM</option>
+                                        <option value="17:00">05:00 PM</option>
+                                    </select>
+                                </div>
+                            </div>
+
+                            <div class="mt-3">
+                                <label class="form-label">Reason for Visit</label>
+                                <textarea id="reasonForVisit" class="form-control" rows="3" placeholder="Brief description of your health concern..."></textarea>
+                            </div>
+
+                            <button onclick="proceedToPatientDetails()" class="btn btn-primary mt-3">Next: Patient Details</button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- STEP 2: Patient Details -->
+                <div id="step2" class="booking-step">
+                    <div class="card">
+                        <div class="card-header">
+                            <h5>Step 2: Patient Details</h5>
+                        </div>
+                        <div class="card-body">
+                            <div class="mb-3">
+                                <label class="form-label">Full Name</label>
+                                <input type="text" id="patientName" class="form-control" placeholder="Enter your full name">
+                            </div>
+
+                            <div class="mb-3">
+                                <label class="form-label">Phone Number</label>
+                                <input type="tel" id="patientPhone" class="form-control" placeholder="+27 XX XXX XXXX">
+                            </div>
+
+                            <div class="mb-3">
+                                <label class="form-label">Email Address</label>
+                                <input type="email" id="patientEmail" class="form-control" placeholder="your.email@example.com">
+                            </div>
+
+                            <div class="d-flex gap-2">
+                                <button onclick="showStep(1)" class="btn btn-secondary">Back</button>
+                                <button onclick="proceedToPayment()" class="btn btn-primary">Next: Payment</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- STEP 3: Payment -->
+                <div id="step3" class="booking-step">
+                    <div class="card">
+                        <div class="card-header">
+                            <h5>Step 3: Payment & Confirmation</h5>
+                        </div>
+                        <div class="card-body">
+                            <div class="payment-summary">
+                                <h5>Payment Summary</h5>
+                                <div class="d-flex justify-content-between mb-2">
+                                    <span>Consultation Fee:</span>
+                                    <strong>R 500.00</strong>
+                                </div>
+                                <div class="text-muted small mb-3">
+                                    <div class="d-flex justify-content-between">
+                                        <span>• Practitioner receives:</span>
+                                        <span>R 400.00 (80%)</span>
+                                    </div>
+                                    <div class="d-flex justify-content-between">
+                                        <span>• Platform service fee:</span>
+                                        <span>R 100.00 (20%)</span>
+                                    </div>
+                                </div>
+                                <hr>
+                                <div class="d-flex justify-content-between">
+                                    <strong>Total Amount:</strong>
+                                    <strong class="text-primary">R 500.00</strong>
+                                </div>
+                            </div>
+
+                            <div class="alert alert-info">
+                                <strong>Cancellation Policy:</strong>
+                                <ul class="mb-0 mt-2">
+                                    <li>Cancel ≥24 hours before: Full refund</li>
+                                    <li>Cancel <24 hours: No refund</li>
+                                    <li>Practitioner must confirm within 24 hours or auto-refund</li>
+                                </ul>
+                            </div>
+
+                            <div id="appointmentSummary" class="mb-3">
+                                <!-- Summary will be populated here -->
+                            </div>
+
+                            <div class="d-flex gap-2">
+                                <button onclick="showStep(2)" class="btn btn-secondary">Back</button>
+                                <button onclick="processPayment()" class="btn btn-success btn-lg">
+                                    Pay R 500.00
+                                </button>
+                            </div>
+
+                            <div id="paymentStatus" class="mt-3"></div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- STEP 4: Success/Confirmation -->
+                <div id="step4" class="booking-step">
+                    <div class="card">
+                        <div class="card-body text-center">
+                            <div class="mb-4">
+                                <div style="font-size: 4em; color: #28a745;">✓</div>
+                                <h3 class="text-success">Payment Successful!</h3>
+                            </div>
+
+                            <div id="confirmationDetails"></div>
+
+                            <div class="alert alert-warning mt-4">
+                                <strong>Next Steps:</strong>
+                                <ol class="mb-0 mt-2 text-start">
+                                    <li>Practitioner will confirm your appointment within 24 hours</li>
+                                    <li>You'll receive a confirmation notification</li>
+                                    <li>If not confirmed, you'll receive an automatic refund</li>
+                                </ol>
+                            </div>
+
+                            <div class="d-flex gap-2 justify-content-center mt-4">
+                                <button onclick="viewMyAppointments()" class="btn btn-primary">View My Appointments</button>
+                                <button onclick="bookAnother()" class="btn btn-outline-primary">Book Another</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- My Appointments Section -->
+                <div id="myAppointmentsSection" style="display: none;" class="mt-5">
+                    <h3>My Appointments</h3>
+                    <div id="appointmentsList"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let booking;
+        let currentAppointment = null;
+
+        // Initialize on page load
+        window.addEventListener('DOMContentLoaded', async () => {
+            console.log('Initializing appointment booking...');
+            
+            // Set minimum date to today
+            const today = new Date().toISOString().split('T')[0];
+            document.getElementById('appointmentDate').min = today;
+            document.getElementById('appointmentDate').value = today;
+
+            // Initialize booking system
+            booking = new AppointmentBooking();
+            await booking.init();
+
+            // Load practitioners
+            await loadPractitioners();
+        });
+
+        // Load practitioners from database
+        async function loadPractitioners() {
+            try {
+                const { data, error } = await window.supabase
+                    .from('medical_practitioners')
+                    .select('*')
+                    .eq('verified', true)
+                    .order('name');
+
+                if (error) throw error;
+
+                const select = document.getElementById('practitionerSelect');
+                select.innerHTML = '<option value="">-- Select a practitioner --</option>';
+
+                data.forEach(practitioner => {
+                    const option = document.createElement('option');
+                    option.value = practitioner.id;
+                    option.textContent = `${practitioner.name} - ${practitioner.profession} (R${practitioner.consultation_fee || 500})`;
+                    option.dataset.practitioner = JSON.stringify(practitioner);
+                    select.appendChild(option);
+                });
+
+            } catch (error) {
+                console.error('Error loading practitioners:', error);
+                alert('Error loading practitioners. Please refresh the page.');
+            }
+        }
+
+        // Navigate between steps
+        function showStep(stepNumber) {
+            document.querySelectorAll('.booking-step').forEach(step => {
+                step.classList.remove('active');
+            });
+            document.getElementById(`step${stepNumber}`).classList.add('active');
+        }
+
+        // Proceed to patient details
+        function proceedToPatientDetails() {
+            const practitionerId = document.getElementById('practitionerSelect').value;
+            const appointmentDate = document.getElementById('appointmentDate').value;
+            const appointmentTime = document.getElementById('appointmentTime').value;
+
+            if (!practitionerId) {
+                alert('Please select a practitioner');
+                return;
+            }
+
+            if (!appointmentDate) {
+                alert('Please select a date');
+                return;
+            }
+
+            showStep(2);
+        }
+
+        // Proceed to payment
+        function proceedToPayment() {
+            const patientName = document.getElementById('patientName').value;
+            const patientPhone = document.getElementById('patientPhone').value;
+            const patientEmail = document.getElementById('patientEmail').value;
+
+            if (!patientName || !patientPhone || !patientEmail) {
+                alert('Please fill in all patient details');
+                return;
+            }
+
+            // Show summary
+            const select = document.getElementById('practitionerSelect');
+            const selectedOption = select.options[select.selectedIndex];
+            const practitioner = JSON.parse(selectedOption.dataset.practitioner);
+            const appointmentDate = document.getElementById('appointmentDate').value;
+            const appointmentTime = document.getElementById('appointmentTime').value;
+
+            document.getElementById('appointmentSummary').innerHTML = `
+                <div class="card">
+                    <div class="card-body">
+                        <h6>Appointment Details:</h6>
+                        <p class="mb-1"><strong>Practitioner:</strong> ${practitioner.name}</p>
+                        <p class="mb-1"><strong>Date:</strong> ${appointmentDate}</p>
+                        <p class="mb-1"><strong>Time:</strong> ${appointmentTime}</p>
+                        <p class="mb-1"><strong>Patient:</strong> ${patientName}</p>
+                        <p class="mb-0"><strong>Email:</strong> ${patientEmail}</p>
+                    </div>
+                </div>
+            `;
+
+            showStep(3);
+        }
+
+        // Process payment
+        async function processPayment() {
+            const statusDiv = document.getElementById('paymentStatus');
+            statusDiv.innerHTML = '<div class="alert alert-info">Creating appointment...</div>';
+
+            try {
+                // Get form data
+                const select = document.getElementById('practitionerSelect');
+                const selectedOption = select.options[select.selectedIndex];
+                const practitioner = JSON.parse(selectedOption.dataset.practitioner);
+
+                const appointmentDetails = {
+                    practitionerId: practitioner.id,
+                    practitionerName: practitioner.name,
+                    patientName: document.getElementById('patientName').value,
+                    patientPhone: document.getElementById('patientPhone').value,
+                    patientEmail: document.getElementById('patientEmail').value,
+                    appointmentDate: document.getElementById('appointmentDate').value,
+                    appointmentTime: document.getElementById('appointmentTime').value,
+                    reasonForVisit: document.getElementById('reasonForVisit').value,
+                    appointmentType: 'consultation'
+                };
+
+                // Create appointment with PENDING_PAYMENT status
+                const result = await booking.createPendingAppointment(appointmentDetails);
+
+                if (!result.success) {
+                    throw new Error(result.error);
+                }
+
+                currentAppointment = result.appointment;
+
+                statusDiv.innerHTML = '<div class="alert alert-info">Opening payment window...</div>';
+
+                // Initiate Paystack payment
+                const paymentResult = await booking.initiatePayment(currentAppointment);
+
+                if (paymentResult.success) {
+                    // Payment successful - show confirmation
+                    showConfirmation(paymentResult.appointment);
+                } else {
+                    throw new Error(paymentResult.error);
+                }
+
+            } catch (error) {
+                console.error('Payment error:', error);
+                statusDiv.innerHTML = `<div class="alert alert-danger">Payment failed: ${error.message}</div>`;
+            }
+        }
+
+        // Show confirmation page
+        function showConfirmation(appointment) {
+            document.getElementById('confirmationDetails').innerHTML = `
+                <div class="card mb-3">
+                    <div class="card-body">
+                        <h5 class="card-title">Booking Reference: ${appointment.booking_id}</h5>
+                        <p class="mb-1"><strong>Practitioner:</strong> ${appointment.practitioner_name}</p>
+                        <p class="mb-1"><strong>Date:</strong> ${appointment.appointment_date}</p>
+                        <p class="mb-1"><strong>Time:</strong> ${appointment.appointment_time}</p>
+                        <p class="mb-1"><strong>Amount Paid:</strong> R ${appointment.amount_paid}</p>
+                        <p class="mb-0">
+                            <strong>Status:</strong> 
+                            <span class="status-badge status-${appointment.status}">${appointment.status.replace('_', ' ')}</span>
+                        </p>
+                    </div>
+                </div>
+            `;
+
+            showStep(4);
+        }
+
+        // View my appointments
+        async function viewMyAppointments() {
+            const section = document.getElementById('myAppointmentsSection');
+            const listDiv = document.getElementById('appointmentsList');
+
+            section.style.display = 'block';
+            listDiv.innerHTML = '<div class="text-center"><div class="spinner-border" role="status"></div></div>';
+
+            try {
+                const result = await booking.getUserAppointments();
+
+                if (!result.success) {
+                    throw new Error(result.error);
+                }
+
+                if (result.appointments.length === 0) {
+                    listDiv.innerHTML = '<div class="alert alert-info">No appointments found</div>';
+                    return;
+                }
+
+                let html = '<div class="row">';
+                result.appointments.forEach(apt => {
+                    html += `
+                        <div class="col-md-6 mb-3">
+                            <div class="card">
+                                <div class="card-body">
+                                    <h6>${apt.practitioner_name}</h6>
+                                    <p class="mb-1 small"><strong>Date:</strong> ${apt.appointment_date} at ${apt.appointment_time}</p>
+                                    <p class="mb-1 small"><strong>Booking ID:</strong> ${apt.booking_id}</p>
+                                    <p class="mb-2">
+                                        <span class="status-badge status-${apt.status}">${apt.status.replace('_', ' ')}</span>
+                                    </p>
+                                    ${apt.status === 'CONFIRMED' ? 
+                                        `<button onclick="cancelAppointment('${apt.id}')" class="btn btn-sm btn-danger">Cancel</button>` : 
+                                        ''}
+                                </div>
+                            </div>
+                        </div>
+                    `;
+                });
+                html += '</div>';
+
+                listDiv.innerHTML = html;
+
+            } catch (error) {
+                console.error('Error fetching appointments:', error);
+                listDiv.innerHTML = '<div class="alert alert-danger">Error loading appointments</div>';
+            }
+        }
+
+        // Cancel appointment
+        async function cancelAppointment(appointmentId) {
+            if (!confirm('Are you sure you want to cancel this appointment? Refund policy applies.')) {
+                return;
+            }
+
+            try {
+                const reason = prompt('Please provide a reason for cancellation:');
+                if (!reason) return;
+
+                const result = await booking.handlePatientCancellation(appointmentId, reason);
+
+                if (result.success) {
+                    alert(result.message || 'Appointment cancelled successfully');
+                    viewMyAppointments(); // Refresh list
+                } else {
+                    alert('Cancellation failed: ' + result.error);
+                }
+
+            } catch (error) {
+                console.error('Cancel error:', error);
+                alert('Error cancelling appointment');
+            }
+        }
+
+        // Book another appointment
+        function bookAnother() {
+            // Reset form
+            document.getElementById('practitionerSelect').selectedIndex = 0;
+            document.getElementById('patientName').value = '';
+            document.getElementById('patientPhone').value = '';
+            document.getElementById('patientEmail').value = '';
+            document.getElementById('reasonForVisit').value = '';
+            
+            showStep(1);
+        }
+    </script>
+</body>
+</html>

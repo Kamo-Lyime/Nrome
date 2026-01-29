@@ -1,3 +1,42 @@
 {
-  "version": 2
+  "version": 2,
+  "crons": [
+    {
+      "path": "/api/cron/check-confirmations",
+      "schedule": "0 * * * *"
+    },
+    {
+      "path": "/api/cron/check-no-shows",
+      "schedule": "0 * * * *"
+    },
+    {
+      "path": "/api/cron/send-reminders",
+      "schedule": "0 8 * * *"
+    }
+  ],
+  "rewrites": [
+    {
+      "source": "/api/webhooks/paystack",
+      "destination": "/api/webhooks/paystack.js"
+    }
+  ],
+  "headers": [
+    {
+      "source": "/api/(.*)",
+      "headers": [
+        {
+          "key": "Access-Control-Allow-Origin",
+          "value": "*"
+        },
+        {
+          "key": "Access-Control-Allow-Methods",
+          "value": "GET, POST, PUT, DELETE, OPTIONS"
+        },
+        {
+          "key": "Access-Control-Allow-Headers",
+          "value": "Content-Type, Authorization, x-paystack-signature"
+        }
+      ]
+    }
+  ]
 }
