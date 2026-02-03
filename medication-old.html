@@ -1,0 +1,442 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Nrome - Regulated Medication Logistics Platform</title>
+    <link rel="icon" href="Images/nrome-logo.png" type="image/png" />
+    <!-- Configuration -->
+    <script src="config.js"></script>
+    <!-- Supabase Client -->
+    <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
+    <!-- Paystack -->
+    <script src="https://js.paystack.co/v1/inline.js"></script>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="css/styles.css">
+    <style>
+        :root {
+            --nrome-trust: #0d6efd;
+            --nrome-health: #198754;
+            --nrome-calm: #6c757d;
+            --nrome-teal: #20c997;
+        }
+        .nav-pills .nav-link {
+            color: var(--nrome-calm);
+        }
+        .nav-pills .nav-link.active {
+            background-color: var(--nrome-trust);
+        }
+        .badge-pending { background-color: #ffc107; }
+        .badge-verified { background-color: #198754; }
+        .badge-rejected { background-color: #dc3545; }
+        .pharmacy-card:hover {
+            transform: translateY(-5px);
+            transition: all 0.3s ease;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+        }
+        .locked-field {
+            background-color: #e9ecef;
+            cursor: not-allowed;
+        }
+        .disclaimer-box {
+            border-left: 4px solid #dc3545;
+            background-color: #fff3cd;
+            padding: 1rem;
+        }
+        .state-badge {
+            font-size: 0.75rem;
+            padding: 0.35em 0.65em;
+        }
+        .order-timeline {
+            position: relative;
+            padding-left: 2rem;
+        }
+        .order-timeline::before {
+            content: '';
+            position: absolute;
+            left: 0.5rem;
+            top: 0;
+            bottom: 0;
+            width: 2px;
+            background: var(--nrome-calm);
+        }
+        .timeline-item {
+            position: relative;
+            padding-bottom: 1.5rem;
+        }
+        .timeline-item::before {
+            content: '';
+            position: absolute;
+            left: -1.5rem;
+            top: 0.5rem;
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            background: white;
+            border: 2px solid var(--nrome-calm);
+        }
+        .timeline-item.completed::before {
+            background: var(--nrome-health);
+            border-color: var(--nrome-health);
+        }
+    </style>
+</head>
+<body>
+    <div class="position-center top-2 start-0 p-3 w-500">
+        <img src="Images/nrome-logo.png" alt="Nrome Logo" class="logo" style="height: 130px;">
+    </div>
+    
+    <!-- Main Navigation -->
+    <div class="container mt-5 pt-5">
+        <div class="d-flex justify-content-between align-items-center mb-3">
+            <h1 class="h3 mb-0">
+                <i class="fas fa-capsules me-2" style="color: var(--nrome-health);"></i>
+                Medication Logistics Platform
+            </h1>
+            <a href="index.html" class="btn btn-outline-secondary">
+                <i class="fas fa-home me-2"></i>Home
+            </a>
+        </div>
+        
+        <!-- Regulatory Disclaimer -->
+        <div class="disclaimer-box mb-4">
+            <p class="mb-0">
+                <i class="fas fa-info-circle me-2"></i>
+                <strong>Important:</strong> Nrome is a regulated logistics and orchestration platform. 
+                We do <strong>NOT</strong> sell or dispense medication. All medication dispensing is performed 
+                by licensed SAPC-registered pharmacies only. We facilitate safe delivery and prescription management.
+            </p>
+        </div>
+        
+        <!-- Prescription Management Section -->
+        <div class="card mb-4">
+            <div class="card-header bg-primary text-white">
+                <h4 class="mb-0"><i class="fas fa-file-prescription me-2"></i>Digital Prescription Management</h4>
+            </div>
+            <div class="card-body">
+                <!-- Upload Prescription -->
+                <div class="mb-4">
+                    <h5><i class="fas fa-upload me-2"></i>Upload New Prescription</h5>
+                    <div class="row">
+                        <div class="col-md-6">
+                            <label for="prescriptionFile" class="form-label">Prescription Image/PDF</label>
+                            <input type="file" class="form-control" id="prescriptionFile" accept="image/*,.pdf" multiple>
+                            <small class="text-muted">Accepted formats: JPG, PNG, PDF (Max 5MB per file)</small>
+                        </div>
+                        <div class="col-md-6">
+                            <label for="doctorName" class="form-label">Prescribing Doctor</label>
+                            <input type="text" class="form-control" id="doctorName" placeholder="Dr. John Smith">
+                        </div>
+                    </div>
+                    <div class="row mt-3">
+                        <div class="col-md-4">
+                            <label for="prescriptionDate" class="form-label">Prescription Date</label>
+                            <input type="date" class="form-control" id="prescriptionDate">
+                        </div>
+                        <div class="col-md-4">
+                            <label for="prescriptionExpiry" class="form-label">Expiry Date</label>
+                            <input type="date" class="form-control" id="prescriptionExpiry">
+                            <small class="text-muted">When prescription expires</small>
+                        </div>
+                        <div class="col-md-4">
+                            <label for="refillsAllowed" class="form-label">Refills Allowed</label>
+                            <input type="number" class="form-control" id="refillsAllowed" min="0" max="12" value="0">
+                        </div>
+                    </div>
+                    <div class="row mt-3">
+                        <div class="col-md-12">
+                            <label for="prescriptionNotes" class="form-label">Dosage & Instructions</label>
+                            <textarea class="form-control" id="prescriptionNotes" rows="2" placeholder="E.g., Take 2 tablets daily after meals for 7 days"></textarea>
+                        </div>
+                    </div>
+                    <button type="button" class="btn btn-success mt-3" onclick="uploadPrescription()">
+                        <i class="fas fa-cloud-upload-alt me-2"></i>Upload Prescription
+                    </button>
+                </div>
+                
+                <hr>
+                
+                <!-- My Prescriptions -->
+                <div class="mb-3">
+                    <h5><i class="fas fa-folder-open me-2"></i>My Prescriptions</h5>
+                    <div id="prescriptionList">
+                        <!-- Prescriptions will be listed here -->
+                        <div class="alert alert-info">
+                            <i class="fas fa-info-circle me-2"></i>No prescriptions uploaded yet. Upload your first prescription above.
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Link Prescription to Order -->
+                <div class="mb-3">
+                    <label for="selectedPrescription" class="form-label">
+                        <i class="fas fa-link me-2"></i>Link Prescription to Order (Optional)
+                    </label>
+                    <select class="form-select" id="selectedPrescription">
+                        <option value="">-- No prescription selected --</option>
+                    </select>
+                    <small class="text-muted">Select a prescription if this order requires one</small>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Medication Order Form -->
+        <div class="card">
+            <div class="card-header bg-success text-white">
+                <h4 class="mb-0"><i class="fas fa-pills me-2"></i>Medication Order Form</h4>
+            </div>
+            <div class="card-body">
+        <form id="deliveryForm">
+            <!-- Patient Safety Information -->
+            <div class="alert alert-warning mb-4">
+                <h6><i class="fas fa-exclamation-triangle me-2"></i>Important Safety Information</h6>
+                <small>Please provide accurate information to ensure safe medication delivery and usage.</small>
+            </div>
+            
+            <div class="mb-3">
+                <label for="patientName" class="form-label">Patient Full Name <span class="text-danger">*</span></label>
+                <input type="text" class="form-control" id="patientName" required>
+            </div>
+            
+            <div class="mb-3">
+                <label for="patientAge" class="form-label">Patient Age <span class="text-danger">*</span></label>
+                <input type="number" class="form-control" id="patientAge" min="1" max="120" required>
+                <small class="text-muted">Required for age-appropriate dosing</small>
+            </div>
+            
+            <div class="mb-3">
+                <label for="allergies" class="form-label">
+                    <i class="fas fa-allergies me-2 text-danger"></i>Known Allergies <span class="text-danger">*</span>
+                </label>
+                <textarea class="form-control" id="allergies" rows="2" placeholder="List any medication allergies (e.g., Penicillin, Sulfa drugs) or type 'None'" required></textarea>
+                <small class="text-danger">Critical: This helps prevent allergic reactions</small>
+            </div>
+            
+            <div class="mb-3">
+                <label for="currentMedications" class="form-label">Current Medications</label>
+                <textarea class="form-control" id="currentMedications" rows="2" placeholder="List medications you're currently taking (helps check for drug interactions) or type 'None'"></textarea>
+            </div>
+            
+            <div class="mb-3">
+                <label for="medicalConditions" class="form-label">Medical Conditions</label>
+                <input type="text" class="form-control" id="medicalConditions" placeholder="E.g., Diabetes, High Blood Pressure, Asthma, None">
+            </div>
+            
+            <hr class="my-4">
+            
+            <h5 class="mb-3"><i class="fas fa-pills me-2"></i>Medication Details</h5>
+            
+            <div class="mb-3">
+                <label for="medicationList" class="form-label">Medication Names <span class="text-danger">*</span></label>
+                <ul id="medicationList" class="list-group">
+                    <li class="list-group-item">
+                        <div class="row">
+                            <div class="col-md-5">
+                                <input type="text" class="form-control medication-name" placeholder="Medication name" required>
+                            </div>
+                            <div class="col-md-3">
+                                <input type="text" class="form-control medication-dosage" placeholder="Dosage (e.g., 500mg)">
+                            </div>
+                            <div class="col-md-4">
+                                <input type="number" class="form-control medication-quantity" placeholder="Quantity" min="1" value="1">
+                            </div>
+                        </div>
+                    </li>
+                </ul>
+                <button type="button" class="btn btn-secondary mt-2" id="addMedication">
+                    <i class="fas fa-plus me-2"></i>Add More Medication
+                </button>
+            </div>
+            
+            <div class="row">
+                <div class="col-md-6 mb-3">
+                    <label for="deliveryDate" class="form-label">Preferred Delivery Date <span class="text-danger">*</span></label>
+                    <input type="date" class="form-control" id="deliveryDate" required>
+                </div>
+                <div class="col-md-6 mb-3">
+                    <label for="deliveryTime" class="form-label">Preferred Time Slot</label>
+                    <select class="form-select" id="deliveryTime">
+                        <option value="morning">Morning (8AM - 12PM)</option>
+                        <option value="afternoon">Afternoon (12PM - 4PM)</option>
+                        <option value="evening">Evening (4PM - 8PM)</option>
+                        <option value="anytime">Anytime</option>
+                    </select>
+                </div>
+            </div>
+            
+            <div class="mb-3">
+                <label for="deliveryAddress" class="form-label">Delivery Address <span class="text-danger">*</span></label>
+                <textarea class="form-control" id="deliveryAddress" rows="3" placeholder="House number, Street, City, Postal Code" required></textarea>
+            </div>
+            
+            <div class="row">
+                <div class="col-md-6 mb-3">
+                    <label for="phoneNumber" class="form-label">Phone Number <span class="text-danger">*</span></label>
+                    <input type="tel" class="form-control" id="phoneNumber" placeholder="e.g., +254 700 000000" required>
+                </div>
+                <div class="col-md-6 mb-3">
+                    <label for="emergencyContact" class="form-label">Emergency Contact <span class="text-danger">*</span></label>
+                    <input type="tel" class="form-control" id="emergencyContact" placeholder="Alternative contact person" required>
+                    <small class="text-muted">In case we can't reach you</small>
+                </div>
+            </div>
+            
+            <div class="mb-3">
+                <label for="userEmail" class="form-label">Email Address <span class="text-danger">*</span></label>
+                <input type="email" class="form-control" id="userEmail" placeholder="For account contact" required>
+            </div>
+            
+            <hr class="my-4">
+            
+            <h5 class="mb-3"><i class="fas fa-credit-card me-2"></i>Payment & Insurance</h5>
+            
+            <div class="mb-3">
+                <label for="insuranceProvider" class="form-label">
+                    <i class="fas fa-shield-alt me-2"></i>Insurance Provider (Optional)
+                </label>
+                <input type="text" class="form-control" id="insuranceProvider" placeholder="E.g., AAR, Britam, NHIF, None">
+            </div>
+            
+            <div class="mb-3">
+                <label for="insuranceNumber" class="form-label">Insurance/NHIF Number</label>
+                <input type="text" class="form-control" id="insuranceNumber" placeholder="Enter your policy/NHIF number if applicable">
+            </div>
+            
+            <div class="mb-3">
+                <label for="paymentMethod" class="form-label">Payment Method <span class="text-danger">*</span></label>
+                <select class="form-select" id="paymentMethod" required>
+                    <option value="">-- Select payment method --</option>
+                    <option value="mpesa">M-Pesa</option>
+                    <option value="insurance">Insurance Coverage</option>
+                    <option value="cash">Cash on Delivery</option>
+                    <option value="card">Debit/Credit Card</option>
+                </select>
+            </div>
+            
+            <div class="mb-3">
+                <label for="additionalComments" class="form-label">Additional Comments/Special Instructions</label>
+                <textarea class="form-control" id="additionalComments" rows="3" placeholder="E.g., Gate code, delivery instructions, special requirements"></textarea>
+            </div>
+            
+            <!-- Terms and Conditions -->
+            <div class="mb-3 form-check">
+                <input type="checkbox" class="form-check-input" id="termsAcceptance" required>
+                <label class="form-check-label" for="termsAcceptance">
+                    <small>I confirm that all information provided is accurate and I agree to the <a href="#" data-bs-toggle="modal" data-bs-target="#termsModal">Terms & Conditions</a> and <a href="#" data-bs-toggle="modal" data-bs-target="#privacyModal">Privacy Policy</a> <span class="text-danger">*</span></small>
+                </label>
+            </div>
+            
+            <div class="alert alert-info">
+                <small><i class="fas fa-info-circle me-2"></i><strong>Note:</strong> A pharmacist will review your prescription before processing your order. Track status in your dashboard.</small>
+            </div>
+            
+            <button type="submit" class="btn btn-success btn-lg w-100">
+                <i class="fas fa-shopping-cart me-2"></i>Submit Medication Order
+            </button>
+        </form>
+            </div>
+        </div>
+        
+        <div id="successAlert" class="alert alert-success mt-3 d-none" role="alert">
+            <i class="fas fa-check-circle me-2"></i>Form submitted successfully!
+        </div>
+    </div>
+
+    <!-- Terms & Conditions Modal -->
+    <div class="modal fade" id="termsModal" tabindex="-1" aria-labelledby="termsModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-lg modal-dialog-scrollable">
+            <div class="modal-content">
+                <div class="modal-header bg-primary text-white">
+                    <h5 class="modal-title" id="termsModalLabel">Terms & Conditions</h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <h6>1. Service Agreement</h6>
+                    <p>By using our medication home delivery service, you agree to provide accurate prescription and medical information.</p>
+                    
+                    <h6>2. Prescription Verification</h6>
+                    <p>All prescriptions will be verified by a licensed pharmacist before processing. Invalid or expired prescriptions will be rejected.</p>
+                    
+                    <h6>3. Delivery Terms</h6>
+                    <p>We aim to deliver medications within the specified timeframe. Delays may occur due to weather, traffic, or verification issues.</p>
+                    
+                    <h6>4. Payment</h6>
+                    <p>Payment is required before delivery unless using insurance coverage. Refunds are subject to our return policy.</p>
+                    
+                    <h6>5. Patient Responsibility</h6>
+                    <p>You must provide accurate allergy and medical history information. We are not liable for adverse reactions due to incomplete information.</p>
+                    
+                    <h6>6. Prescription Accuracy</h6>
+                    <p>Please verify all medication details upon delivery. Report any discrepancies immediately.</p>
+                    
+                    <h6>7. Cancellation Policy</h6>
+                    <p>Orders can be cancelled before pharmacist verification. Post-verification cancellations may incur charges.</p>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Privacy Policy Modal -->
+    <div class="modal fade" id="privacyModal" tabindex="-1" aria-labelledby="privacyModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-lg modal-dialog-scrollable">
+            <div class="modal-content">
+                <div class="modal-header bg-success text-white">
+                    <h5 class="modal-title" id="privacyModalLabel">Privacy Policy</h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <h6>Data Collection</h6>
+                    <p>We collect personal information (name, contact details), medical information (allergies, conditions, current medications), and prescription data to provide our services.</p>
+                    
+                    <h6>Data Usage</h6>
+                    <p>Your information is used solely for:</p>
+                    <ul>
+                        <li>Processing and delivering medication orders</li>
+                        <li>Verifying prescriptions with healthcare providers</li>
+                        <li>Ensuring medication safety and preventing drug interactions</li>
+                        <li>Communicating order status and delivery updates</li>
+                        <li>Processing insurance claims where applicable</li>
+                    </ul>
+                    
+                    <h6>Data Protection</h6>
+                    <p>We implement industry-standard security measures to protect your sensitive medical information. All data is encrypted and stored securely.</p>
+                    
+                    <h6>Data Sharing</h6>
+                    <p>We do not sell your data. Information is shared only with:</p>
+                    <ul>
+                        <li>Licensed pharmacists for prescription verification</li>
+                        <li>Healthcare providers for prescription validation</li>
+                        <li>Insurance providers for claims processing (with your consent)</li>
+                        <li>Delivery partners for order fulfillment (limited information only)</li>
+                    </ul>
+                    
+                    <h6>HIPAA Compliance</h6>
+                    <p>We maintain strict confidentiality of your health information in accordance with healthcare privacy regulations.</p>
+                    
+                    <h6>Your Rights</h6>
+                    <p>You have the right to access, correct, or delete your personal information. Contact our support team for assistance.</p>
+                    
+                    <h6>Data Retention</h6>
+                    <p>We retain prescription and medical records as required by law (typically 7 years). Inactive accounts may be archived after 2 years.</p>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="js/auth.js"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            authHelpers.requireAuth();
+        });
+    </script>
+    <script src="js/medication.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>

@@ -16,11 +16,51 @@
 	<div class="container mt-5 pt-4 mb-5">
 		<div class="text-center mb-4">
 			<img src="Images/nrome-logo.png" alt="Nrome Logo" class="img-fluid" style="max-height: 120px;">
-			<h1 class="h3 mt-3">Secure Access</h1>
-			<p class="text-muted">Sign in or create an account to reach your dashboard, appointments, prescriptions, and deliveries.</p>
+			<h1 class="h3 mt-3">Welcome to Nrome</h1>
+			<p class="text-muted">Healthcare AI</p>
 		</div>
 
-		<div class="row g-4">
+		<!-- User Type Selection -->
+		<div class="row g-4 mb-4" id="userTypeSelection">
+			<div class="col-md-6">
+				<div class="card shadow-sm h-100 border-primary" style="cursor: pointer;">
+					<div class="card-body text-center p-4">
+						<i class="fas fa-user-md fa-4x text-primary mb-3"></i>
+						<h4>I'm a Practitioner or Patient</h4>
+						<p class="text-muted">Register medical practice, manage appointment bookings, Order medication, track deliveries, manage prescriptions</p>
+						<button class="btn btn-primary btn-lg" onclick="showPatientAuth()">
+							<i class="fas fa-sign-in-alt me-2"></i>Continue as Practitioner or Patient
+						</button>
+					</div>
+				</div>
+			</div>
+			<div class="col-md-6">
+				<div class="card shadow-sm h-100 border-success" style="cursor: pointer;">
+					<div class="card-body text-center p-4">
+						<i class="fas fa-hospital fa-4x text-success mb-3"></i>
+						<h4>I'm a Pharmacy</h4>
+						<p class="text-muted">Register your pharmacy, manage orders, verify prescriptions</p>
+						<button class="btn btn-success btn-lg" onclick="showPharmacyOptions()">
+							<i class="fas fa-hospital me-2"></i>Pharmacy Options
+						</button>
+					</div>
+				</div>
+			</div>
+		</div>
+
+		<!-- Patient Login/Register (Hidden by default) -->
+		<div class="d-none" id="patientAuthSection">
+			<div class="text-center mb-3">
+				<button class="btn btn-sm btn-outline-secondary" onclick="backToUserType()">
+					<i class="fas fa-arrow-left me-2"></i>Back to User Type Selection
+				</button>
+			</div>
+			<div class="text-center mb-4">
+				<h4 class="text-primary"><i class="fas fa-user me-2"></i>Practitioner or Patient Access</h4>
+				<p class="text-muted">Sign in or create an account to order medication</p>
+			</div>
+
+			<div class="row g-4">
 			<div class="col-lg-6">
 				<div class="card shadow-sm h-100">
 					<div class="card-header bg-primary text-white">
@@ -76,19 +116,228 @@
 				</div>
 			</div>
 		</div>
+		</div>
+
+		<!-- Pharmacy Options Modal (Hidden by default) -->
+		<div class="d-none" id="pharmacyOptionsSection">
+			<div class="text-center mb-3">
+				<button class="btn btn-sm btn-outline-secondary" onclick="backToUserType()">
+					<i class="fas fa-arrow-left me-2"></i>Back to User Type Selection
+				</button>
+			</div>
+			<div class="text-center mb-4">
+				<h4 class="text-success"><i class="fas fa-hospital me-2"></i>Pharmacy Portal</h4>
+				<p class="text-muted">Choose an option below</p>
+			</div>
+
+			<div class="row g-4 justify-content-center">
+				<div class="col-md-5">
+					<div class="card shadow-sm border-primary">
+						<div class="card-body text-center p-4">
+							<i class="fas fa-sign-in-alt fa-3x text-primary mb-3"></i>
+							<h5>Existing Pharmacy Login</h5>
+							<p class="text-muted">Already registered? Access your pharmacy dashboard</p>
+							<button class="btn btn-primary w-100" onclick="showPharmacyLogin()">
+								<i class="fas fa-sign-in-alt me-2"></i>Login to Dashboard
+							</button>
+						</div>
+					</div>
+				</div>
+				<div class="col-md-5">
+					<div class="card shadow-sm border-success">
+						<div class="card-body text-center p-4">
+							<i class="fas fa-hospital-user fa-3x text-success mb-3"></i>
+							<h5>Register New Pharmacy</h5>
+							<p class="text-muted">SAPC-licensed pharmacy? Join our network</p>
+							<a href="pharmacy-register.html" class="btn btn-success w-100">
+								<i class="fas fa-plus-circle me-2"></i>Register Pharmacy
+							</a>
+							<small class="text-muted d-block mt-2">
+								<i class="fas fa-shield-alt me-1"></i>SAPC license required
+							</small>
+						</div>
+					</div>
+				</div>
+			</div>
+
+			<div class="alert alert-info mt-4">
+				<strong><i class="fas fa-info-circle me-2"></i>For Pharmacy Registration:</strong>
+				You'll need: SAPC certificate, business license, tax clearance, and bank details.
+			</div>
+		</div>
+
+		<!-- Pharmacy Login Form (Hidden by default) -->
+		<div class="d-none" id="pharmacyLoginSection">
+			<div class="text-center mb-3">
+				<button class="btn btn-sm btn-outline-secondary" onclick="showPharmacyOptions()">
+					<i class="fas fa-arrow-left me-2"></i>Back to Pharmacy Options
+				</button>
+			</div>
+			<div class="text-center mb-4">
+				<h4 class="text-success"><i class="fas fa-hospital me-2"></i>Pharmacy Manager Login</h4>
+				<p class="text-muted">Access your pharmacy dashboard</p>
+			</div>
+
+			<div class="row justify-content-center">
+				<div class="col-md-6">
+					<div class="card shadow-sm">
+						<div class="card-header bg-success text-white">
+							<i class="fas fa-sign-in-alt me-2"></i>Pharmacy Login
+						</div>
+						<div class="card-body">
+							<form id="pharmacyLoginForm">
+								<div class="mb-3">
+									<label class="form-label">Email</label>
+									<input type="email" class="form-control" id="pharmacyLoginEmail" required>
+								</div>
+								<div class="mb-3">
+									<label class="form-label">Password</label>
+									<input type="password" class="form-control" id="pharmacyLoginPassword" required>
+								</div>
+								<div id="pharmacyLoginFeedback" class="small mb-3 text-muted"></div>
+								<button class="btn btn-success w-100" type="submit">
+									<i class="fas fa-sign-in-alt me-2"></i>Login to Pharmacy Dashboard
+								</button>
+							</form>
+							<hr>
+							<div class="text-center">
+								<small class="text-muted">
+									Not registered yet? 
+									<a href="pharmacy-register.html">Register your pharmacy here</a>
+								</small>
+							</div>
+						</div>
+					</div>
+				</div>
+			</div>
+		</div>
 
 		<div class="text-center mt-4">
-			<p class="text-muted small mb-2">Need access links?</p>
-			<a href="dashboard.html" class="btn btn-outline-secondary me-2">Go to dashboard</a>
-			<a href="nurse.html" class="btn btn-outline-secondary me-2">Practitioners</a>
-			<a href="medication.html" class="btn btn-outline-secondary">Medication</a>
+			<p class="text-muted small mb-2">Quick Access:</p>
+			<a href="dashboard.html" class="btn btn-outline-secondary btn-sm me-2">Dashboard</a>
+			<a href="nurse.html" class="btn btn-outline-secondary btn-sm me-2">Practitioners</a>
+			<a href="medication.html" class="btn btn-outline-secondary btn-sm">Medication</a>
 		</div>
 	</div>
 
 	<script src="js/auth.js"></script>
 	<script>
+		// Show/Hide sections based on user choice
+		function showPatientAuth() {
+			document.getElementById('userTypeSelection').classList.add('d-none');
+			document.getElementById('userTypeSelection').style.display = 'none';
+			document.getElementById('patientAuthSection').classList.remove('d-none');
+			document.getElementById('patientAuthSection').style.display = 'block';
+			document.getElementById('pharmacyOptionsSection').classList.add('d-none');
+			document.getElementById('pharmacyOptionsSection').style.display = 'none';
+			document.getElementById('pharmacyLoginSection').classList.add('d-none');
+			document.getElementById('pharmacyLoginSection').style.display = 'none';
+		}
+
+		function showPharmacyOptions() {
+			const userType = document.getElementById('userTypeSelection');
+			const pharmacyOptions = document.getElementById('pharmacyOptionsSection');
+			
+			// Show pharmacy options
+			if (pharmacyOptions) {
+				pharmacyOptions.className = ''; 
+				pharmacyOptions.style.display = 'block';
+			}
+			
+			// Hide others
+			if (userType) {
+				userType.className = 'row g-4 mb-4 d-none';
+				userType.style.display = 'none';
+			}
+			
+			const patientAuth = document.getElementById('patientAuthSection');
+			const pharmacyLogin = document.getElementById('pharmacyLoginSection');
+			if (patientAuth) {
+				patientAuth.className = 'd-none';
+				patientAuth.style.display = 'none';
+			}
+			if (pharmacyLogin) {
+				pharmacyLogin.className = 'd-none';
+				pharmacyLogin.style.display = 'none';
+			}
+		}
+
+		function showPharmacyLogin() {
+			document.getElementById('userTypeSelection').classList.add('d-none');
+			document.getElementById('userTypeSelection').style.display = 'none';
+			document.getElementById('patientAuthSection').classList.add('d-none');
+			document.getElementById('patientAuthSection').style.display = 'none';
+			document.getElementById('pharmacyOptionsSection').classList.add('d-none');
+			document.getElementById('pharmacyOptionsSection').style.display = 'none';
+			document.getElementById('pharmacyLoginSection').classList.remove('d-none');
+			document.getElementById('pharmacyLoginSection').style.display = 'block';
+		}
+
+		function backToUserType() {
+			document.getElementById('userTypeSelection').classList.remove('d-none');
+			document.getElementById('userTypeSelection').style.display = 'block';
+			document.getElementById('patientAuthSection').classList.add('d-none');
+			document.getElementById('patientAuthSection').style.display = 'none';
+			document.getElementById('pharmacyOptionsSection').classList.add('d-none');
+			document.getElementById('pharmacyOptionsSection').style.display = 'none';
+			document.getElementById('pharmacyLoginSection').classList.add('d-none');
+			document.getElementById('pharmacyLoginSection').style.display = 'none';
+		}
+
+		// Pharmacy login form handler
 		document.addEventListener('DOMContentLoaded', () => {
-			authHelpers.redirectIfAuthenticated('dashboard.html');
+			// Remove redirect parameter from URL if present
+			if (window.location.search.includes('redirect')) {
+				window.history.replaceState({}, document.title, window.location.pathname);
+			}
+
+			const pharmacyLoginForm = document.getElementById('pharmacyLoginForm');
+			if (pharmacyLoginForm) {
+				pharmacyLoginForm.addEventListener('submit', async (e) => {
+					e.preventDefault();
+					const email = document.getElementById('pharmacyLoginEmail').value;
+					const password = document.getElementById('pharmacyLoginPassword').value;
+					const feedback = document.getElementById('pharmacyLoginFeedback');
+
+					feedback.textContent = 'Logging in...';
+					feedback.className = 'small mb-3 text-info';
+
+					try {
+						const { data, error } = await window.supabaseClient.auth.signInWithPassword({
+							email,
+							password
+						});
+
+						if (error) throw error;
+
+						// Check if user has pharmacy_manager role
+						const { data: roleData } = await window.supabaseClient
+							.from('user_role_assignments')
+							.select('role, organization_id')
+							.eq('user_id', data.user.id)
+							.eq('role', 'pharmacy_manager')
+							.single();
+
+						if (!roleData) {
+							await window.supabaseClient.auth.signOut();
+							feedback.textContent = 'Access denied: No pharmacy manager role found';
+							feedback.className = 'small mb-3 text-danger';
+							return;
+						}
+
+						feedback.textContent = 'Success! Redirecting to dashboard...';
+						feedback.className = 'small mb-3 text-success';
+						
+						setTimeout(() => {
+							window.location.href = 'dashboard.html';
+						}, 1000);
+
+					} catch (error) {
+						feedback.textContent = 'Login failed: ' + error.message;
+						feedback.className = 'small mb-3 text-danger';
+					}
+				});
+			}
 		});
 	</script>
 	<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>

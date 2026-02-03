@@ -3,345 +3,668 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Nrome - Medication Delivery & Prescription Management</title>
-     <link rel="icon" href="Images/nrome-logo.png" type="image/png" />
+    <title>Nrome - Regulated Medication Logistics Platform</title>
+    <link rel="icon" href="Images/nrome-logo.png" type="image/png" />
     <!-- Configuration -->
     <script src="config.js"></script>
     <!-- Supabase Client -->
     <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
+    <!-- Paystack -->
+    <script src="https://js.paystack.co/v1/inline.js"></script>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <link rel="stylesheet" href="css/styles.css">
+    <style>
+        :root {
+            --nrome-trust: #0d6efd;
+            --nrome-health: #198754;
+            --nrome-calm: #6c757d;
+            --nrome-teal: #20c997;
+        }
+        .nav-pills .nav-link {
+            color: var(--nrome-calm);
+        }
+        .nav-pills .nav-link.active {
+            background-color: var(--nrome-trust);
+        }
+        .badge-pending { background-color: #ffc107; color: #000; }
+        .badge-verified { background-color: #198754; }
+        .badge-rejected { background-color: #dc3545; }
+        .pharmacy-card {
+            transition: all 0.3s ease;
+            cursor: pointer;
+        }
+        .pharmacy-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+        }
+        .pharmacy-card.selected {
+            border: 2px solid var(--nrome-trust);
+            background-color: #e7f1ff;
+        }
+        .locked-field {
+            background-color: #e9ecef;
+            cursor: not-allowed;
+        }
+        .disclaimer-box {
+            border-left: 4px solid #dc3545;
+            background-color: #fff3cd;
+            padding: 1rem;
+        }
+        .order-timeline {
+            position: relative;
+            padding-left: 2rem;
+        }
+        .order-timeline::before {
+            content: '';
+            position: absolute;
+            left: 0.5rem;
+            top: 0;
+            bottom: 0;
+            width: 2px;
+            background: var(--nrome-calm);
+        }
+        .timeline-item {
+            position: relative;
+            padding-bottom: 1.5rem;
+        }
+        .timeline-item::before {
+            content: '';
+            position: absolute;
+            left: -1.5rem;
+            top: 0.5rem;
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            background: white;
+            border: 2px solid var(--nrome-calm);
+        }
+        .timeline-item.completed::before {
+            background: var(--nrome-health);
+            border-color: var(--nrome-health);
+        }
+        .med-item {
+            border: 1px solid #dee2e6;
+            border-radius: 8px;
+            padding: 1rem;
+            margin-bottom: 0.5rem;
+        }
+    </style>
 </head>
 <body>
-   <div class="position-center top-2 start-0 p-3 w-500">
+    <div class="position-center top-2 start-0 p-3 w-500">
         <img src="Images/nrome-logo.png" alt="Nrome Logo" class="logo" style="height: 130px;">
     </div>
+    
+    <!-- Main Navigation -->
     <div class="container mt-5 pt-5 mb-5">
-         <!-- Link to Nurse Services -->
-<div class="end-0 p-0 text-end mb-2">
-    <a href="index.html" class="btn btn-info">Home</a>
-</div>
-        <!-- Page Description -->
-        <div class="text-center my-4">
-            <h2 class="display-4">Medication Delivery & Prescriptions</h2>
-            <p class="lead text-muted">Order medication from any healthcare hospital/pharmacy/clinic with home delivery. Upload and manage your digital prescriptions securely.</p>
-            <hr class="my-4">
+        <div class="d-flex justify-content-between align-items-center mb-3">
+            <h1 class="h3 mb-0">
+                <i class="fas fa-capsules me-2" style="color: var(--nrome-health);"></i>
+                Medication Logistics Platform
+            </h1>
+            <a href="dashboard.html" class="btn btn-outline-secondary">
+                <i class="fas fa-home me-2"></i>Dashboard
+            </a>
         </div>
         
-        <!-- Prescription Management Section -->
-        <div class="card mb-4">
-            <div class="card-header bg-primary text-white">
-                <h4 class="mb-0"><i class="fas fa-file-prescription me-2"></i>Digital Prescription Management</h4>
-            </div>
-            <div class="card-body">
-                <!-- Upload Prescription -->
-                <div class="mb-4">
-                    <h5><i class="fas fa-upload me-2"></i>Upload New Prescription</h5>
-                    <div class="row">
-                        <div class="col-md-6">
-                            <label for="prescriptionFile" class="form-label">Prescription Image/PDF</label>
-                            <input type="file" class="form-control" id="prescriptionFile" accept="image/*,.pdf" multiple>
-                            <small class="text-muted">Accepted formats: JPG, PNG, PDF (Max 5MB per file)</small>
-                        </div>
-                        <div class="col-md-6">
-                            <label for="doctorName" class="form-label">Prescribing Doctor</label>
-                            <input type="text" class="form-control" id="doctorName" placeholder="Dr. John Smith">
-                        </div>
-                    </div>
-                    <div class="row mt-3">
-                        <div class="col-md-4">
-                            <label for="prescriptionDate" class="form-label">Prescription Date</label>
-                            <input type="date" class="form-control" id="prescriptionDate">
-                        </div>
-                        <div class="col-md-4">
-                            <label for="prescriptionExpiry" class="form-label">Expiry Date</label>
-                            <input type="date" class="form-control" id="prescriptionExpiry">
-                            <small class="text-muted">When prescription expires</small>
-                        </div>
-                        <div class="col-md-4">
-                            <label for="refillsAllowed" class="form-label">Refills Allowed</label>
-                            <input type="number" class="form-control" id="refillsAllowed" min="0" max="12" value="0">
-                        </div>
-                    </div>
-                    <div class="row mt-3">
-                        <div class="col-md-12">
-                            <label for="prescriptionNotes" class="form-label">Dosage & Instructions</label>
-                            <textarea class="form-control" id="prescriptionNotes" rows="2" placeholder="E.g., Take 2 tablets daily after meals for 7 days"></textarea>
-                        </div>
-                    </div>
-                    <button type="button" class="btn btn-success mt-3" onclick="uploadPrescription()">
-                        <i class="fas fa-cloud-upload-alt me-2"></i>Upload Prescription
-                    </button>
-                </div>
-                
-                <hr>
-                
-                <!-- My Prescriptions -->
-                <div class="mb-3">
-                    <h5><i class="fas fa-folder-open me-2"></i>My Prescriptions</h5>
-                    <div id="prescriptionList">
-                        <!-- Prescriptions will be listed here -->
-                        <div class="alert alert-info">
-                            <i class="fas fa-info-circle me-2"></i>No prescriptions uploaded yet. Upload your first prescription above.
-                        </div>
-                    </div>
-                </div>
-                
-                <!-- Link Prescription to Order -->
-                <div class="mb-3">
-                    <label for="selectedPrescription" class="form-label">
-                        <i class="fas fa-link me-2"></i>Link Prescription to Order (Optional)
-                    </label>
-                    <select class="form-select" id="selectedPrescription">
-                        <option value="">-- No prescription selected --</option>
-                    </select>
-                    <small class="text-muted">Select a prescription if this order requires one</small>
-                </div>
-            </div>
+        <!-- Regulatory Disclaimer -->
+        <div class="disclaimer-box mb-4">
+            <p class="mb-0">
+                <i class="fas fa-info-circle me-2"></i>
+                <strong>Important:</strong> Nrome is a regulated logistics and orchestration platform. 
+                We do <strong>NOT</strong> sell or dispense medication. All medication dispensing is performed 
+                by licensed SAPC-registered pharmacies only. We facilitate safe delivery and prescription management.
+            </p>
         </div>
         
-        <!-- Medication Order Form -->
-        <div class="card">
-            <div class="card-header bg-success text-white">
-                <h4 class="mb-0"><i class="fas fa-pills me-2"></i>Medication Order Form</h4>
-            </div>
-            <div class="card-body">
-        <form id="deliveryForm">
-            <!-- Patient Safety Information -->
-            <div class="alert alert-warning mb-4">
-                <h6><i class="fas fa-exclamation-triangle me-2"></i>Important Safety Information</h6>
-                <small>Please provide accurate information to ensure safe medication delivery and usage.</small>
-            </div>
+        <!-- Primary Navigation Tabs -->
+        <ul class="nav nav-pills mb-4" id="mainNav" role="tablist">
+            <li class="nav-item" role="presentation">
+                <button class="nav-link active" id="order-tab" data-bs-toggle="pill" data-bs-target="#order-medication" type="button" role="tab">
+                    <i class="fas fa-pills me-2"></i>Order Medication
+                </button>
+            </li>
+            <li class="nav-item" role="presentation">
+                <button class="nav-link" id="clinics-tab" data-bs-toggle="pill" data-bs-target="#clinics" type="button" role="tab">
+                    <i class="fas fa-clinic-medical me-2"></i>Clinics
+                </button>
+            </li>
+            <li class="nav-item" role="presentation">
+                <button class="nav-link" id="hospitals-tab" data-bs-toggle="pill" data-bs-target="#hospitals" type="button" role="tab">
+                    <i class="fas fa-hospital me-2"></i>Hospitals
+                </button>
+            </li>
+            <li class="nav-item" role="presentation">
+                <button class="nav-link" id="chronic-tab" data-bs-toggle="pill" data-bs-target="#chronic" type="button" role="tab">
+                    <i class="fas fa-calendar-check me-2"></i>Chronic Medication
+                </button>
+            </li>
+            <li class="nav-item" role="presentation">
+                <button class="nav-link" id="my-orders-tab" data-bs-toggle="pill" data-bs-target="#my-orders" type="button" role="tab">
+                    <i class="fas fa-box me-2"></i>My Orders
+                </button>
+            </li>
+            <li class="nav-item" role="presentation">
+                <button class="nav-link" id="profile-tab" data-bs-toggle="pill" data-bs-target="#profile" type="button" role="tab">
+                    <i class="fas fa-user me-2"></i>Profile
+                </button>
+            </li>
+        </ul>
+        
+        <!-- Tab Content -->
+        <div class="tab-content" id="mainTabContent">
             
-            <div class="mb-3">
-                <label for="patientName" class="form-label">Patient Full Name <span class="text-danger">*</span></label>
-                <input type="text" class="form-control" id="patientName" required>
-            </div>
-            
-            <div class="mb-3">
-                <label for="patientAge" class="form-label">Patient Age <span class="text-danger">*</span></label>
-                <input type="number" class="form-control" id="patientAge" min="1" max="120" required>
-                <small class="text-muted">Required for age-appropriate dosing</small>
-            </div>
-            
-            <div class="mb-3">
-                <label for="allergies" class="form-label">
-                    <i class="fas fa-allergies me-2 text-danger"></i>Known Allergies <span class="text-danger">*</span>
-                </label>
-                <textarea class="form-control" id="allergies" rows="2" placeholder="List any medication allergies (e.g., Penicillin, Sulfa drugs) or type 'None'" required></textarea>
-                <small class="text-danger">Critical: This helps prevent allergic reactions</small>
-            </div>
-            
-            <div class="mb-3">
-                <label for="currentMedications" class="form-label">Current Medications</label>
-                <textarea class="form-control" id="currentMedications" rows="2" placeholder="List medications you're currently taking (helps check for drug interactions) or type 'None'"></textarea>
-            </div>
-            
-            <div class="mb-3">
-                <label for="medicalConditions" class="form-label">Medical Conditions</label>
-                <input type="text" class="form-control" id="medicalConditions" placeholder="E.g., Diabetes, High Blood Pressure, Asthma, None">
-            </div>
-            
-            <hr class="my-4">
-            
-            <h5 class="mb-3"><i class="fas fa-pills me-2"></i>Medication Details</h5>
-            
-            <div class="mb-3">
-                <label for="medicationList" class="form-label">Medication Names <span class="text-danger">*</span></label>
-                <ul id="medicationList" class="list-group">
-                    <li class="list-group-item">
+            <!-- ==================== ORDER MEDICATION TAB ==================== -->
+            <div class="tab-pane fade show active" id="order-medication" role="tabpanel">
+                
+                <!-- Step 1: Enter Address -->
+                <div class="card mb-3" id="step1-address">
+                    <div class="card-header bg-primary text-white">
+                        <h5 class="mb-0">
+                            <i class="fas fa-map-marker-alt me-2"></i>Step 1: Delivery Address
+                        </h5>
+                    </div>
+                    <div class="card-body">
                         <div class="row">
-                            <div class="col-md-5">
-                                <input type="text" class="form-control medication-name" placeholder="Medication name" required>
-                            </div>
-                            <div class="col-md-3">
-                                <input type="text" class="form-control medication-dosage" placeholder="Dosage (e.g., 500mg)">
+                            <div class="col-md-8">
+                                <label for="deliveryAddress" class="form-label">Street Address <span class="text-danger">*</span></label>
+                                <input type="text" class="form-control" id="deliveryAddress" placeholder="123 Main Street">
                             </div>
                             <div class="col-md-4">
-                                <input type="number" class="form-control medication-quantity" placeholder="Quantity" min="1" value="1">
+                                <label for="suburb" class="form-label">Suburb</label>
+                                <input type="text" class="form-control" id="suburb" placeholder="Sandton">
                             </div>
                         </div>
-                    </li>
-                </ul>
-                <button type="button" class="btn btn-secondary mt-2" id="addMedication">
-                    <i class="fas fa-plus me-2"></i>Add More Medication
-                </button>
-            </div>
-            
-            <div class="row">
-                <div class="col-md-6 mb-3">
-                    <label for="deliveryDate" class="form-label">Preferred Delivery Date <span class="text-danger">*</span></label>
-                    <input type="date" class="form-control" id="deliveryDate" required>
+                        <div class="row mt-3">
+                            <div class="col-md-4">
+                                <label for="city" class="form-label">City <span class="text-danger">*</span></label>
+                                <input type="text" class="form-control" id="city" placeholder="Johannesburg">
+                            </div>
+                            <div class="col-md-4">
+                                <label for="province" class="form-label">Province <span class="text-danger">*</span></label>
+                                <select class="form-select" id="province">
+                                    <option value="">Select Province</option>
+                                    <option value="Gauteng">Gauteng</option>
+                                    <option value="Western Cape">Western Cape</option>
+                                    <option value="KwaZulu-Natal">KwaZulu-Natal</option>
+                                    <option value="Eastern Cape">Eastern Cape</option>
+                                    <option value="Free State">Free State</option>
+                                    <option value="Limpopo">Limpopo</option>
+                                    <option value="Mpumalanga">Mpumalanga</option>
+                                    <option value="Northern Cape">Northern Cape</option>
+                                    <option value="North West">North West</option>
+                                </select>
+                            </div>
+                            <div class="col-md-4">
+                                <label for="postalCode" class="form-label">Postal Code</label>
+                                <input type="text" class="form-control" id="postalCode" placeholder="2196">
+                            </div>
+                        </div>
+                        <div class="mt-3">
+                            <label for="deliveryInstructions" class="form-label">Special Delivery Instructions</label>
+                            <textarea class="form-control" id="deliveryInstructions" rows="2" placeholder="E.g., Gate code, security instructions, preferred delivery time"></textarea>
+                        </div>
+                        <button class="btn btn-primary mt-3" onclick="proceedToPharmacySelection()">
+                            <i class="fas fa-arrow-right me-2"></i>Find Nearby Pharmacies
+                        </button>
+                    </div>
                 </div>
-                <div class="col-md-6 mb-3">
-                    <label for="deliveryTime" class="form-label">Preferred Time Slot</label>
-                    <select class="form-select" id="deliveryTime">
-                        <option value="morning">Morning (8AM - 12PM)</option>
-                        <option value="afternoon">Afternoon (12PM - 4PM)</option>
-                        <option value="evening">Evening (4PM - 8PM)</option>
-                        <option value="anytime">Anytime</option>
-                    </select>
+                
+                <!-- Step 2: Select Pharmacy -->
+                <div class="card mb-3 d-none" id="step2-pharmacy">
+                    <div class="card-header bg-success text-white">
+                        <h5 class="mb-0">
+                            <i class="fas fa-hospital-user me-2"></i>Step 2: Select Licensed Pharmacy
+                        </h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="alert alert-info">
+                            <i class="fas fa-shield-alt me-2"></i>
+                            All pharmacies are licensed and registered with the South African Pharmacy Council (SAPC)
+                        </div>
+                        <div id="pharmacyList" class="row">
+                            <!-- Pharmacies will be loaded here dynamically -->
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Step 3: Select Medication -->
+                <div class="card mb-3 d-none" id="step3-medication">
+                    <div class="card-header" style="background-color: var(--nrome-teal); color: white;">
+                        <h5 class="mb-0">
+                            <i class="fas fa-pills me-2"></i>Step 3: Select Medication
+                        </h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="row">
+                            <div class="col-md-6">
+                                <h6 class="text-success">
+                                    <i class="fas fa-shopping-basket me-2"></i>Over-the-Counter (OTC)
+                                </h6>
+                                <small class="text-muted">Add directly to cart - no prescription required</small>
+                                <div id="otcMedications" class="mt-3">
+                                    <!-- OTC medications loaded here -->
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <h6 class="text-warning">
+                                    <i class="fas fa-file-prescription me-2"></i>Prescription Required
+                                </h6>
+                                <div class="alert alert-warning">
+                                    <small>
+                                        <i class="fas fa-exclamation-triangle me-2"></i>
+                                        Prescription medications require verification by a licensed pharmacist. Upload will be required in next step.
+                                    </small>
+                                </div>
+                                <div id="rxMedications" class="mt-3">
+                                    <!-- Prescription medications loaded here -->
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- Cart Summary -->
+                        <div class="card mt-4 border-primary">
+                            <div class="card-header bg-light">
+                                <h6 class="mb-0"><i class="fas fa-shopping-cart me-2"></i>Your Order</h6>
+                            </div>
+                            <div class="card-body">
+                                <div id="cartItems">
+                                    <p class="text-muted text-center">
+                                        <i class="fas fa-cart-plus fa-2x mb-2"></i><br>
+                                        No items added yet
+                                    </p>
+                                </div>
+                                <hr>
+                                <div class="d-flex justify-content-between">
+                                    <span>Subtotal (Medication):</span>
+                                    <span id="subtotal">R 0.00</span>
+                                </div>
+                                <div class="d-flex justify-content-between text-muted">
+                                    <span>Delivery Fee:</span>
+                                    <span id="deliveryFee">R 0.00</span>
+                                </div>
+                                <hr>
+                                <div class="d-flex justify-content-between">
+                                    <h5>Total Amount:</h5>
+                                    <h5 class="text-success" id="totalAmount">R 0.00</h5>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <button class="btn btn-primary btn-lg w-100 mt-3" onclick="proceedToUpload()" disabled id="proceedBtn">
+                            <i class="fas fa-arrow-right me-2"></i>Continue
+                        </button>
+                    </div>
+                </div>
+                
+                <!-- Step 4: Prescription Upload (if needed) -->
+                <div class="card mb-3 d-none" id="step4-prescription">
+                    <div class="card-header bg-warning">
+                        <h5 class="mb-0">
+                            <i class="fas fa-upload me-2"></i>Step 4: Upload Prescription (POPIA Consent Required)
+                        </h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="alert alert-danger">
+                            <strong><i class="fas fa-shield-alt me-2"></i>POPIA Compliance:</strong> 
+                            By uploading your prescription, you provide explicit consent for Nrome and the selected 
+                            pharmacy to process your health information solely for medication delivery orchestration purposes.
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label for="prescriptionFile" class="form-label">
+                                Prescription Document <span class="text-danger">*</span>
+                            </label>
+                            <input type="file" class="form-control" id="prescriptionFile" accept="image/*,.pdf">
+                            <small class="text-muted">
+                                <i class="fas fa-info-circle me-1"></i>
+                                Accepted formats: JPG, PNG, PDF (Max 5MB). Ensure prescription is clear and legible.
+                            </small>
+                        </div>
+                        
+                        <div class="form-check mb-3">
+                            <input class="form-check-input" type="checkbox" id="popiaConsent" required>
+                            <label class="form-check-label" for="popiaConsent">
+                                <strong>I consent</strong> to the processing of my prescription and health information 
+                                in accordance with POPIA (Protection of Personal Information Act, 2013)
+                            </label>
+                        </div>
+                        
+                        <div class="alert alert-info">
+                            <i class="fas fa-user-md me-2"></i>
+                            <strong>Pharmacist Verification:</strong> A licensed SAPC-registered pharmacist will verify 
+                            your prescription before dispensing. This is a mandatory regulatory requirement and cannot be bypassed.
+                        </div>
+                        
+                        <button class="btn btn-success btn-lg w-100" onclick="proceedToCheckout()">
+                            <i class="fas fa-arrow-right me-2"></i>Proceed to Checkout & Payment
+                        </button>
+                    </div>
+                </div>
+                
+                <!-- Step 5: Checkout & Payment -->
+                <div class="card mb-3 d-none" id="step5-checkout">
+                    <div class="card-header bg-info text-white">
+                        <h5 class="mb-0">
+                            <i class="fas fa-credit-card me-2"></i>Step 5: Payment & Confirmation
+                        </h5>
+                    </div>
+                    <div class="card-body">
+                        <h6 class="mb-3">Order Summary</h6>
+                        <div id="checkoutSummary" class="mb-3"></div>
+                        
+                        <hr>
+                        
+                        <h6>Payment Information</h6>
+                        <div class="alert alert-info">
+                            <i class="fab fa-paystack me-2"></i>
+                            <strong>Secure Payment via Paystack</strong><br>
+                            <small>Your payment will be automatically split between the pharmacy (for medication) 
+                            and Nrome (for delivery service). All transactions are encrypted and POPIA-compliant.</small>
+                        </div>
+                        
+                        <div class="row mb-3">
+                            <div class="col-md-6">
+                                <label for="contactPhone" class="form-label">Contact Phone <span class="text-danger">*</span></label>
+                                <input type="tel" class="form-control" id="contactPhone" placeholder="+27 XX XXX XXXX" required>
+                            </div>
+                            <div class="col-md-6">
+                                <label for="contactEmail" class="form-label">Email Address <span class="text-danger">*</span></label>
+                                <input type="email" class="form-control" id="contactEmail" placeholder="your@email.com" required>
+                            </div>
+                        </div>
+                        
+                        <div class="form-check mb-3">
+                            <input class="form-check-input" type="checkbox" id="termsAccept" required>
+                            <label class="form-check-label" for="termsAccept">
+                                I accept the <a href="#" data-bs-toggle="modal" data-bs-target="#termsModal">Terms & Conditions</a>
+                                and confirm all information is accurate
+                            </label>
+                        </div>
+                        
+                        <div class="alert alert-warning">
+                            <small>
+                                <strong>Note:</strong> Payment does not guarantee prescription approval. 
+                                If the pharmacist rejects your prescription, you will receive a full refund within 5-7 business days.
+                            </small>
+                        </div>
+                        
+                        <button class="btn btn-success btn-lg w-100" onclick="initiatePayment()">
+                            <i class="fas fa-lock me-2"></i>Pay Securely with Paystack
+                        </button>
+                    </div>
+                </div>
+                
+            </div>
+            
+            <!-- ==================== CLINICS TAB ==================== -->
+            <div class="tab-pane fade" id="clinics" role="tabpanel">
+                <div class="card">
+                    <div class="card-header bg-primary text-white">
+                        <h5 class="mb-0">
+                            <i class="fas fa-clinic-medical me-2"></i>Clinic Prescriptions
+                        </h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="alert alert-info">
+                            <i class="fas fa-info-circle me-2"></i>
+                            View prescriptions issued by clinics. <strong>Clinics do NOT dispense medication</strong> - 
+                            they only issue prescriptions which must be fulfilled by licensed pharmacies.
+                        </div>
+                        
+                        <h6 class="mb-3">My Clinics</h6>
+                        <div id="myClinics">
+                            <!-- Clinics loaded here -->
+                        </div>
+                        
+                        <hr>
+                        
+                        <h6 class="mb-3">Active Clinic Prescriptions</h6>
+                        <div id="clinicPrescriptions">
+                            <!-- Clinic prescriptions loaded here -->
+                        </div>
+                    </div>
                 </div>
             </div>
             
-            <div class="mb-3">
-                <label for="deliveryAddress" class="form-label">Delivery Address <span class="text-danger">*</span></label>
-                <textarea class="form-control" id="deliveryAddress" rows="3" placeholder="House number, Street, City, Postal Code" required></textarea>
-            </div>
-            
-            <div class="row">
-                <div class="col-md-6 mb-3">
-                    <label for="phoneNumber" class="form-label">Phone Number <span class="text-danger">*</span></label>
-                    <input type="tel" class="form-control" id="phoneNumber" placeholder="e.g., +254 700 000000" required>
+            <!-- ==================== HOSPITALS TAB ==================== -->
+            <div class="tab-pane fade" id="hospitals" role="tabpanel">
+                <div class="card">
+                    <div class="card-header bg-danger text-white">
+                        <h5 class="mb-0">
+                            <i class="fas fa-hospital me-2"></i>Hospital Discharge & Long-term Care
+                        </h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="alert alert-warning">
+                            <i class="fas fa-lock me-2"></i>
+                            <strong>Locked UX:</strong> Hospital discharge prescriptions cannot be edited or modified. 
+                            No medication browsing or substitutions allowed.
+                        </div>
+                        
+                        <h6 class="mb-3">Discharge Orders</h6>
+                        <div id="dischargeOrders">
+                            <!-- Hospital discharge orders loaded here -->
+                        </div>
+                        
+                        <hr>
+                        
+                        <h6 class="mb-3">Caregiver Assignments</h6>
+                        <div id="caregiverAssignments">
+                            <!-- Caregiver info loaded here -->
+                        </div>
+                    </div>
                 </div>
-                <div class="col-md-6 mb-3">
-                    <label for="emergencyContact" class="form-label">Emergency Contact <span class="text-danger">*</span></label>
-                    <input type="tel" class="form-control" id="emergencyContact" placeholder="Alternative contact person" required>
-                    <small class="text-muted">In case we can't reach you</small>
+            </div>
+            
+            <!-- ==================== CHRONIC MEDICATION TAB ==================== -->
+            <div class="tab-pane fade" id="chronic" role="tabpanel">
+                <div class="card">
+                    <div class="card-header" style="background-color: var(--nrome-health); color: white;">
+                        <h5 class="mb-0">
+                            <i class="fas fa-calendar-check me-2"></i>Chronic Medication Program
+                        </h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="alert alert-info">
+                            <i class="fas fa-info-circle me-2"></i>
+                            Chronic medication enrollments are initiated by your pharmacy, clinic, or hospital. 
+                            Orders are automatically generated monthly based on your delivery schedule.
+                        </div>
+                        
+                        <h6 class="mb-3">
+                            <i class="fas fa-pills me-2"></i>Active Chronic Medications
+                        </h6>
+                        <div id="chronicMedications">
+                            <!-- Chronic enrollments loaded here -->
+                        </div>
+                        
+                        <div class="alert alert-warning mt-4">
+                            <strong>Pause/Resume Rules:</strong>
+                            <ul class="mb-0">
+                                <li>You can pause deliveries for up to 3 months</li>
+                                <li>Cancellation requires pharmacist approval</li>
+                                <li>Prescription must remain valid</li>
+                            </ul>
+                        </div>
+                    </div>
                 </div>
             </div>
             
-            <div class="mb-3">
-                <label for="userEmail" class="form-label">Email Address <span class="text-danger">*</span></label>
-                <input type="email" class="form-control" id="userEmail" placeholder="For account contact" required>
+            <!-- ==================== MY ORDERS TAB ==================== -->
+            <div class="tab-pane fade" id="my-orders" role="tabpanel">
+                <div class="card">
+                    <div class="card-header bg-secondary text-white">
+                        <h5 class="mb-0">
+                            <i class="fas fa-box me-2"></i>My Orders & Tracking
+                        </h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="mb-3">
+                            <button class="btn btn-sm btn-outline-secondary me-2 filter-btn active" data-filter="all">All Orders</button>
+                            <button class="btn btn-sm btn-outline-warning filter-btn" data-filter="pending">Pending Verification</button>
+                            <button class="btn btn-sm btn-outline-info filter-btn" data-filter="in-progress">In Progress</button>
+                            <button class="btn btn-sm btn-outline-success filter-btn" data-filter="delivered">Delivered</button>
+                        </div>
+                        
+                        <div id="ordersList">
+                            <!-- Orders loaded here -->
+                        </div>
+                    </div>
+                </div>
             </div>
             
-            <hr class="my-4">
-            
-            <h5 class="mb-3"><i class="fas fa-credit-card me-2"></i>Payment & Insurance</h5>
-            
-            <div class="mb-3">
-                <label for="insuranceProvider" class="form-label">
-                    <i class="fas fa-shield-alt me-2"></i>Insurance Provider (Optional)
-                </label>
-                <input type="text" class="form-control" id="insuranceProvider" placeholder="E.g., AAR, Britam, NHIF, None">
+            <!-- ==================== PROFILE TAB ==================== -->
+            <div class="tab-pane fade" id="profile" role="tabpanel">
+                <div class="card">
+                    <div class="card-header bg-dark text-white">
+                        <h5 class="mb-0">
+                            <i class="fas fa-user me-2"></i>My Profile
+                        </h5>
+                    </div>
+                    <div class="card-body">
+                        <form id="profileForm">
+                            <div class="row">
+                                <div class="col-md-6 mb-3">
+                                    <label class="form-label">Full Name</label>
+                                    <input type="text" class="form-control" id="profileFullName">
+                                </div>
+                                <div class="col-md-6 mb-3">
+                                    <label class="form-label">Phone Number</label>
+                                    <input type="tel" class="form-control" id="profilePhone">
+                                </div>
+                            </div>
+                            
+                            <div class="mb-3">
+                                <label class="form-label">Email Address</label>
+                                <input type="email" class="form-control" id="profileEmail" readonly class="locked-field">
+                                <small class="text-muted">Email cannot be changed directly. Contact support.</small>
+                            </div>
+                            
+                            <div class="row">
+                                <div class="col-md-6 mb-3">
+                                    <label class="form-label">ID Number (SA)</label>
+                                    <input type="text" class="form-control" id="profileIdNumber">
+                                </div>
+                                <div class="col-md-6 mb-3">
+                                    <label class="form-label">Date of Birth</label>
+                                    <input type="date" class="form-control" id="profileDOB">
+                                </div>
+                            </div>
+                            
+                            <h6 class="mt-4 mb-3">Default Delivery Address</h6>
+                            <div class="mb-3">
+                                <label class="form-label">Street Address</label>
+                                <input type="text" class="form-control" id="profileAddress">
+                            </div>
+                            <div class="row">
+                                <div class="col-md-4 mb-3">
+                                    <label class="form-label">City</label>
+                                    <input type="text" class="form-control" id="profileCity">
+                                </div>
+                                <div class="col-md-4 mb-3">
+                                    <label class="form-label">Province</label>
+                                    <select class="form-select" id="profileProvince">
+                                        <option value="Gauteng">Gauteng</option>
+                                        <option value="Western Cape">Western Cape</option>
+                                        <option value="KwaZulu-Natal">KwaZulu-Natal</option>
+                                        <option value="Eastern Cape">Eastern Cape</option>
+                                        <option value="Free State">Free State</option>
+                                        <option value="Limpopo">Limpopo</option>
+                                        <option value="Mpumalanga">Mpumalanga</option>
+                                        <option value="Northern Cape">Northern Cape</option>
+                                        <option value="North West">North West</option>
+                                    </select>
+                                </div>
+                                <div class="col-md-4 mb-3">
+                                    <label class="form-label">Postal Code</label>
+                                    <input type="text" class="form-control" id="profilePostalCode">
+                                </div>
+                            </div>
+                            
+                            <hr>
+                            
+                            <h6 class="mb-3">POPIA Consent Management</h6>
+                            <div class="form-check mb-2">
+                                <input class="form-check-input" type="checkbox" id="consentProcessing" checked disabled>
+                                <label class="form-check-label" for="consentProcessing">
+                                    Data processing for medication delivery (Required)
+                                </label>
+                            </div>
+                            <div class="form-check mb-3">
+                                <input class="form-check-input" type="checkbox" id="consentMarketing">
+                                <label class="form-check-label" for="consentMarketing">
+                                    Marketing communications (Optional)
+                                </label>
+                            </div>
+                            
+                            <button type="button" class="btn btn-primary" onclick="updateProfile()">
+                                <i class="fas fa-save me-2"></i>Save Changes
+                            </button>
+                        </form>
+                    </div>
+                </div>
             </div>
             
-            <div class="mb-3">
-                <label for="insuranceNumber" class="form-label">Insurance/NHIF Number</label>
-                <input type="text" class="form-control" id="insuranceNumber" placeholder="Enter your policy/NHIF number if applicable">
-            </div>
-            
-            <div class="mb-3">
-                <label for="paymentMethod" class="form-label">Payment Method <span class="text-danger">*</span></label>
-                <select class="form-select" id="paymentMethod" required>
-                    <option value="">-- Select payment method --</option>
-                    <option value="mpesa">M-Pesa</option>
-                    <option value="insurance">Insurance Coverage</option>
-                    <option value="cash">Cash on Delivery</option>
-                    <option value="card">Debit/Credit Card</option>
-                </select>
-            </div>
-            
-            <div class="mb-3">
-                <label for="additionalComments" class="form-label">Additional Comments/Special Instructions</label>
-                <textarea class="form-control" id="additionalComments" rows="3" placeholder="E.g., Gate code, delivery instructions, special requirements"></textarea>
-            </div>
-            
-            <!-- Terms and Conditions -->
-            <div class="mb-3 form-check">
-                <input type="checkbox" class="form-check-input" id="termsAcceptance" required>
-                <label class="form-check-label" for="termsAcceptance">
-                    <small>I confirm that all information provided is accurate and I agree to the <a href="#" data-bs-toggle="modal" data-bs-target="#termsModal">Terms & Conditions</a> and <a href="#" data-bs-toggle="modal" data-bs-target="#privacyModal">Privacy Policy</a> <span class="text-danger">*</span></small>
-                </label>
-            </div>
-            
-            <div class="alert alert-info">
-                <small><i class="fas fa-info-circle me-2"></i><strong>Note:</strong> A pharmacist will review your prescription before processing your order. Track status in your dashboard.</small>
-            </div>
-            
-            <button type="submit" class="btn btn-success btn-lg w-100">
-                <i class="fas fa-shopping-cart me-2"></i>Submit Medication Order
-            </button>
-        </form>
-            </div>
         </div>
-        
-        <div id="successAlert" class="alert alert-success mt-3 d-none" role="alert">
-            <i class="fas fa-check-circle me-2"></i>Form submitted successfully!
+    </div>
+
+    <!-- Order Tracking Modal -->
+    <div class="modal fade" id="orderTrackingModal" tabindex="-1">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header bg-primary text-white">
+                    <h5 class="modal-title">
+                        <i class="fas fa-route me-2"></i>Order Tracking
+                    </h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <div id="trackingContent">
+                        <!-- Order timeline loaded here -->
+                    </div>
+                </div>
+            </div>
         </div>
     </div>
 
     <!-- Terms & Conditions Modal -->
-    <div class="modal fade" id="termsModal" tabindex="-1" aria-labelledby="termsModalLabel" aria-hidden="true">
+    <div class="modal fade" id="termsModal" tabindex="-1">
         <div class="modal-dialog modal-lg modal-dialog-scrollable">
             <div class="modal-content">
                 <div class="modal-header bg-primary text-white">
-                    <h5 class="modal-title" id="termsModalLabel">Terms & Conditions</h5>
-                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+                    <h5 class="modal-title">Terms & Conditions</h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
                 </div>
                 <div class="modal-body">
-                    <h6>1. Service Agreement</h6>
-                    <p>By using our medication home delivery service, you agree to provide accurate prescription and medical information.</p>
+                    <h6>1. Platform Role</h6>
+                    <p>Nrome is a regulated logistics and orchestration platform. We do NOT sell, prescribe, or dispense medication. 
+                    All dispensing is performed exclusively by licensed SAPC-registered pharmacies.</p>
                     
                     <h6>2. Prescription Verification</h6>
-                    <p>All prescriptions will be verified by a licensed pharmacist before processing. Invalid or expired prescriptions will be rejected.</p>
+                    <p>All prescription medications require mandatory verification by a licensed pharmacist before dispensing. 
+                    This process cannot be bypassed. Invalid or expired prescriptions will be rejected.</p>
                     
-                    <h6>3. Delivery Terms</h6>
-                    <p>We aim to deliver medications within the specified timeframe. Delays may occur due to weather, traffic, or verification issues.</p>
+                    <h6>3. State Machine - No Skipping Steps</h6>
+                    <p>Orders follow a strict state machine: Created → Rx Uploaded → Rx Verified → Prepared → Driver Assigned 
+                    → Picked Up → Delivered → Closed. Steps cannot be skipped or rolled back.</p>
                     
-                    <h6>4. Payment</h6>
-                    <p>Payment is required before delivery unless using insurance coverage. Refunds are subject to our return policy.</p>
+                    <h6>4. Payment & Refunds</h6>
+                    <p>Payments are processed via Paystack and split between the pharmacy and delivery service. 
+                    If a prescription is rejected, full refunds are issued within 5-7 business days.</p>
                     
-                    <h6>5. Patient Responsibility</h6>
-                    <p>You must provide accurate allergy and medical history information. We are not liable for adverse reactions due to incomplete information.</p>
+                    <h6>5. POPIA Compliance</h6>
+                    <p>By using this platform, you consent to processing of your personal and health information in accordance 
+                    with the Protection of Personal Information Act (POPIA, 2013). All data is encrypted and access is logged.</p>
                     
-                    <h6>6. Prescription Accuracy</h6>
-                    <p>Please verify all medication details upon delivery. Report any discrepancies immediately.</p>
+                    <h6>6. User Roles & Boundaries</h6>
+                    <p>Patients can order and track. Caregivers can track and receive. Drivers deliver but cannot see medication details. 
+                    Only pharmacists can verify and dispense. These boundaries are strictly enforced.</p>
                     
-                    <h6>7. Cancellation Policy</h6>
-                    <p>Orders can be cancelled before pharmacist verification. Post-verification cancellations may incur charges.</p>
-                </div>
-                <div class="modal-footer">
-                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <!-- Privacy Policy Modal -->
-    <div class="modal fade" id="privacyModal" tabindex="-1" aria-labelledby="privacyModalLabel" aria-hidden="true">
-        <div class="modal-dialog modal-lg modal-dialog-scrollable">
-            <div class="modal-content">
-                <div class="modal-header bg-success text-white">
-                    <h5 class="modal-title" id="privacyModalLabel">Privacy Policy</h5>
-                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
-                </div>
-                <div class="modal-body">
-                    <h6>Data Collection</h6>
-                    <p>We collect personal information (name, contact details), medical information (allergies, conditions, current medications), and prescription data to provide our services.</p>
-                    
-                    <h6>Data Usage</h6>
-                    <p>Your information is used solely for:</p>
-                    <ul>
-                        <li>Processing and delivering medication orders</li>
-                        <li>Verifying prescriptions with healthcare providers</li>
-                        <li>Ensuring medication safety and preventing drug interactions</li>
-                        <li>Communicating order status and delivery updates</li>
-                        <li>Processing insurance claims where applicable</li>
-                    </ul>
-                    
-                    <h6>Data Protection</h6>
-                    <p>We implement industry-standard security measures to protect your sensitive medical information. All data is encrypted and stored securely.</p>
-                    
-                    <h6>Data Sharing</h6>
-                    <p>We do not sell your data. Information is shared only with:</p>
-                    <ul>
-                        <li>Licensed pharmacists for prescription verification</li>
-                        <li>Healthcare providers for prescription validation</li>
-                        <li>Insurance providers for claims processing (with your consent)</li>
-                        <li>Delivery partners for order fulfillment (limited information only)</li>
-                    </ul>
-                    
-                    <h6>HIPAA Compliance</h6>
-                    <p>We maintain strict confidentiality of your health information in accordance with healthcare privacy regulations.</p>
-                    
-                    <h6>Your Rights</h6>
-                    <p>You have the right to access, correct, or delete your personal information. Contact our support team for assistance.</p>
-                    
-                    <h6>Data Retention</h6>
-                    <p>We retain prescription and medical records as required by law (typically 7 years). Inactive accounts may be archived after 2 years.</p>
+                    <h6>7. Liability Disclaimer</h6>
+                    <p>Nrome is not liable for: (a) medication interactions or adverse reactions, (b) dispensing errors by pharmacies, 
+                    (c) delays beyond our control, or (d) incomplete or inaccurate patient information.</p>
                 </div>
                 <div class="modal-footer">
                     <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
@@ -352,11 +675,553 @@
 
     <script src="js/auth.js"></script>
     <script>
-        document.addEventListener('DOMContentLoaded', () => {
+        // Supabase client is already initialized in auth.js as window.supabaseClient
+        // We'll use window.supabaseClient throughout this script
+        
+        let currentOrder = {
+            patient_id: null,
+            delivery_address: '',
+            pharmacy_id: null,
+            prescription_id: null,
+            items: [],
+            requires_prescription: false,
+            subtotal: 0,
+            delivery_fee: 35.00, // Default ZAR delivery fee
+            total: 0
+        };
+        
+        // Require authentication
+        document.addEventListener('DOMContentLoaded', async () => {
             authHelpers.requireAuth();
+            const user = await getCurrentUser();
+            if (user) {
+                currentOrder.patient_id = user.id;
+                loadUserData();
+                loadPharmacies();
+                loadMedications();
+                loadOrders();
+                loadChronicMedications();
+            }
         });
+        
+        async function getCurrentUser() {
+            const { data: { user } } = await supabaseClient.auth.getUser();
+            return user;
+        }
+        
+        async function loadUserData() {
+            const user = await getCurrentUser();
+            if (!user) return;
+            
+            const { data: profile } = await supabaseClient
+                .from('user_profiles')
+                .select('*')
+                .eq('id', user.id)
+                .single();
+            
+            if (profile) {
+                document.getElementById('profileFullName').value = profile.full_name || '';
+                document.getElementById('profilePhone').value = profile.phone_number || '';
+                document.getElementById('profileEmail').value = profile.email || '';
+                document.getElementById('profileIdNumber').value = profile.id_number || '';
+                document.getElementById('profileDOB').value = profile.date_of_birth || '';
+                document.getElementById('profileAddress').value = profile.street_address || '';
+                document.getElementById('profileCity').value = profile.city || '';
+                document.getElementById('profileProvince').value = profile.province || '';
+                document.getElementById('profilePostalCode').value = profile.postal_code || '';
+                document.getElementById('consentMarketing').checked = profile.marketing_consent || false;
+            }
+        }
+        
+        async function loadPharmacies() {
+            const { data: pharmacies } = await supabaseClient
+                .from('pharmacies')
+                .select('*')
+                .eq('is_active', true)
+                .eq('is_verified', true);
+            
+            const container = document.getElementById('pharmacyList');
+            if (!pharmacies || pharmacies.length === 0) {
+                container.innerHTML = '<p class="text-muted">No pharmacies available in your area</p>';
+                return;
+            }
+            
+            container.innerHTML = pharmacies.map(pharmacy => `
+                <div class="col-md-6 mb-3">
+                    <div class="card pharmacy-card" onclick="selectPharmacy('${pharmacy.id}')">
+                        <div class="card-body">
+                            <h6 class="card-title">${pharmacy.name}</h6>
+                            <p class="mb-1"><small><i class="fas fa-certificate me-2 text-success"></i>SAPC: ${pharmacy.sapc_number}</small></p>
+                            <p class="mb-1"><small><i class="fas fa-map-marker-alt me-2"></i>${pharmacy.city}, ${pharmacy.province}</small></p>
+                            <p class="mb-0"><small><i class="fas fa-phone me-2"></i>${pharmacy.phone}</small></p>
+                            ${pharmacy.operating_hours ? `<p class="mb-0 mt-2"><small class="text-muted">Operating hours available</small></p>` : ''}
+                        </div>
+                    </div>
+                </div>
+            `).join('');
+        }
+        
+        async function loadMedications() {
+            const { data: meds } = await supabaseClient
+                .from('medications')
+                .select('*')
+                .eq('is_active', true);
+            
+            const otcContainer = document.getElementById('otcMedications');
+            const rxContainer = document.getElementById('rxMedications');
+            
+            const otcMeds = meds?.filter(m => m.medication_type === 'otc') || [];
+            const rxMeds = meds?.filter(m => m.requires_prescription) || [];
+            
+            otcContainer.innerHTML = otcMeds.map(med => `
+                <div class="med-item">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <strong>${med.name}</strong><br>
+                            <small class="text-muted">${med.dosage_form || ''} ${med.strength || ''}</small><br>
+                            <span class="text-success fw-bold">R ${med.indicative_price?.toFixed(2) || '0.00'}</span>
+                        </div>
+                        <button class="btn btn-sm btn-outline-success" onclick="addToCart('${med.id}', '${med.name}', ${med.indicative_price}, false)">
+                            <i class="fas fa-plus"></i> Add
+                        </button>
+                    </div>
+                </div>
+            `).join('') || '<p class="text-muted">No OTC medications available</p>';
+            
+            rxContainer.innerHTML = rxMeds.map(med => `
+                <div class="med-item border-warning">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <strong>${med.name}</strong><br>
+                            <small class="text-muted">${med.dosage_form || ''} ${med.strength || ''}</small><br>
+                            <span class="text-warning"><i class="fas fa-prescription me-1"></i>Prescription Required</span>
+                        </div>
+                        <button class="btn btn-sm btn-outline-warning" onclick="addToCart('${med.id}', '${med.name}', ${med.indicative_price}, true)">
+                            <i class="fas fa-plus"></i> Add
+                        </button>
+                    </div>
+                </div>
+            `).join('') || '<p class="text-muted">No prescription medications available</p>';
+        }
+        
+        function proceedToPharmacySelection() {
+            const address = document.getElementById('deliveryAddress').value;
+            const city = document.getElementById('city').value;
+            const province = document.getElementById('province').value;
+            
+            if (!address || !city || !province) {
+                alert('Please enter your complete delivery address');
+                return;
+            }
+            
+            currentOrder.delivery_address = `${address}, ${city}, ${province}`;
+            
+            document.getElementById('step1-address').classList.add('d-none');
+            document.getElementById('step2-pharmacy').classList.remove('d-none');
+        }
+        
+        function selectPharmacy(pharmacyId) {
+            currentOrder.pharmacy_id = pharmacyId;
+            
+            document.querySelectorAll('.pharmacy-card').forEach(card => {
+                card.classList.remove('selected');
+            });
+            event.currentTarget.classList.add('selected');
+            
+            setTimeout(() => {
+                document.getElementById('step2-pharmacy').classList.add('d-none');
+                document.getElementById('step3-medication').classList.remove('d-none');
+            }, 500);
+        }
+        
+        function addToCart(medId, medName, price, requiresRx) {
+            const existing = currentOrder.items.find(item => item.medication_id === medId);
+            if (existing) {
+                existing.quantity++;
+            } else {
+                currentOrder.items.push({
+                    medication_id: medId,
+                    medication_name: medName,
+                    unit_price: price,
+                    quantity: 1,
+                    requires_prescription: requiresRx
+                });
+            }
+            
+            if (requiresRx) {
+                currentOrder.requires_prescription = true;
+            }
+            
+            updateCart();
+        }
+        
+        function updateCart() {
+            const cartContainer = document.getElementById('cartItems');
+            
+            if (currentOrder.items.length === 0) {
+                cartContainer.innerHTML = '<p class="text-muted text-center"><i class="fas fa-cart-plus fa-2x mb-2"></i><br>No items added yet</p>';
+                document.getElementById('proceedBtn').disabled = true;
+                return;
+            }
+            
+            cartContainer.innerHTML = currentOrder.items.map((item, index) => `
+                <div class="d-flex justify-content-between align-items-center mb-2">
+                    <div>
+                        <strong>${item.medication_name}</strong>
+                        ${item.requires_prescription ? '<span class="badge badge-pending ms-2">Rx</span>' : ''}
+                        <br>
+                        <small>R ${item.unit_price.toFixed(2)} x ${item.quantity}</small>
+                    </div>
+                    <div>
+                        <button class="btn btn-sm btn-outline-danger" onclick="removeFromCart(${index})">
+                            <i class="fas fa-trash"></i>
+                        </button>
+                    </div>
+                </div>
+            `).join('');
+            
+            currentOrder.subtotal = currentOrder.items.reduce((sum, item) => sum + (item.unit_price * item.quantity), 0);
+            currentOrder.total = currentOrder.subtotal + currentOrder.delivery_fee;
+            
+            document.getElementById('subtotal').textContent = `R ${currentOrder.subtotal.toFixed(2)}`;
+            document.getElementById('deliveryFee').textContent = `R ${currentOrder.delivery_fee.toFixed(2)}`;
+            document.getElementById('totalAmount').textContent = `R ${currentOrder.total.toFixed(2)}`;
+            
+            document.getElementById('proceedBtn').disabled = false;
+        }
+        
+        function removeFromCart(index) {
+            currentOrder.items.splice(index, 1);
+            if (currentOrder.items.length === 0 || !currentOrder.items.some(item => item.requires_prescription)) {
+                currentOrder.requires_prescription = false;
+            }
+            updateCart();
+        }
+        
+        function proceedToUpload() {
+            if (currentOrder.requires_prescription) {
+                document.getElementById('step3-medication').classList.add('d-none');
+                document.getElementById('step4-prescription').classList.remove('d-none');
+            } else {
+                proceedToCheckout();
+            }
+        }
+        
+        async function proceedToCheckout() {
+            const user = await getCurrentUser();
+            if (!user) {
+                alert('Please log in to continue');
+                return;
+            }
+
+            if (currentOrder.requires_prescription) {
+                const file = document.getElementById('prescriptionFile').files[0];
+                const consent = document.getElementById('popiaConsent').checked;
+                
+                if (!file || !consent) {
+                    alert('Please upload prescription and provide POPIA consent');
+                    return;
+                }
+
+                try {
+                    // Upload prescription to Supabase Storage
+                    const fileName = `${user.id}/${Date.now()}_${file.name}`;
+                    const { data: uploadData, error: uploadError } = await window.supabaseClient.storage
+                        .from('prescriptions')
+                        .upload(fileName, file);
+
+                    if (uploadError) {
+                        alert('Error uploading prescription: ' + uploadError.message);
+                        return;
+                    }
+
+                    // Get public URL
+                    const { data: urlData } = window.supabaseClient.storage
+                        .from('prescriptions')
+                        .getPublicUrl(fileName);
+
+                    // Create prescription record in database
+                    const prescriptionNumber = `RX-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`.toUpperCase();
+                    
+                    const { data: prescription, error: prescriptionError } = await window.supabaseClient
+                        .from('prescriptions')
+                        .insert({
+                            prescription_number: prescriptionNumber,
+                            patient_id: user.id,
+                            uploaded_by: user.id,
+                            upload_source: 'patient_upload',
+                            issue_date: new Date().toISOString().split('T')[0],
+                            valid_from: new Date().toISOString().split('T')[0],
+                            valid_until: new Date(Date.now() + 90*24*60*60*1000).toISOString().split('T')[0], // 90 days default
+                            prescription_document_url: urlData.publicUrl,
+                            prescription_document_type: file.type,
+                            status: 'pending_verification',
+                            can_be_used_for_orders: true
+                        })
+                        .select()
+                        .single();
+
+                    if (prescriptionError) {
+                        alert('Error saving prescription: ' + prescriptionError.message);
+                        return;
+                    }
+
+                    // Store prescription ID for order creation
+                    currentOrder.prescription_id = prescription.id;
+                    
+                    alert('✅ Prescription uploaded successfully! A pharmacist will verify it.');
+                    
+                } catch (error) {
+                    console.error('Upload error:', error);
+                    alert('Error uploading prescription: ' + error.message);
+                    return;
+                }
+            }
+            
+            document.getElementById('step4-prescription')?.classList.add('d-none');
+            document.getElementById('step3-medication')?.classList.add('d-none');
+            document.getElementById('step5-checkout').classList.remove('d-none');
+            
+            document.getElementById('checkoutSummary').innerHTML = `
+                <div class="alert alert-secondary">
+                    <strong>Delivery to:</strong> ${currentOrder.delivery_address}<br>
+                    <strong>Total Items:</strong> ${currentOrder.items.length}<br>
+                    <strong>Amount to Pay:</strong> R ${currentOrder.total.toFixed(2)}
+                </div>
+            `;
+        }
+        
+        async function initiatePayment() {
+            const phone = document.getElementById('contactPhone').value;
+            const email = document.getElementById('contactEmail').value;
+            const termsAccepted = document.getElementById('termsAccept').checked;
+            
+            if (!phone || !email || !termsAccepted) {
+                alert('Please fill all required fields and accept terms');
+                return;
+            }
+            
+            // Create order in database first
+            const orderNumber = 'NRM-' + Date.now();
+            
+            const { data: order, error } = await window.supabaseClient
+                .from('orders')
+                .insert({
+                    order_number: orderNumber,
+                    patient_id: currentOrder.patient_id,
+                    ordered_by: currentOrder.patient_id,
+                    pharmacy_id: currentOrder.pharmacy_id,
+                    prescription_id: currentOrder.prescription_id || null,
+                    is_prescription_order: currentOrder.requires_prescription,
+                    is_otc_order: !currentOrder.requires_prescription,
+                    delivery_address: currentOrder.delivery_address,
+                    delivery_contact_phone: phone,
+                    delivery_contact_name: document.getElementById('profileFullName').value,
+                    subtotal: currentOrder.subtotal,
+                    delivery_fee: currentOrder.delivery_fee,
+                    total_amount: currentOrder.total,
+                    status: currentOrder.prescription_id ? 'rx_uploaded' : 'created'
+                })
+                .select()
+                .single();
+            
+            if (error) {
+                alert('Error creating order: ' + error.message);
+                return;
+            }
+            
+            // Insert order items
+            for (const item of currentOrder.items) {
+                await supabaseClient
+                    .from('order_items')
+                    .insert({
+                        order_id: order.id,
+                        medication_id: item.medication_id,
+                        medication_name: item.medication_name,
+                        medication_type: item.requires_prescription ? 'prescription' : 'otc',
+                        quantity: item.quantity,
+                        unit_price: item.unit_price,
+                        total_price: item.unit_price * item.quantity
+                    });
+            }
+            
+            // Initialize Paystack payment
+            const handler = PaystackPop.setup({
+                key: window.CONFIG.PAYSTACK_PUBLIC_KEY,
+                email: email,
+                amount: currentOrder.total * 100, // Convert to kobo
+                currency: 'ZAR',
+                ref: orderNumber,
+                callback: function(response) {
+                    alert('Payment successful! Reference: ' + response.reference);
+                    window.location.href = 'medication.html';
+                },
+                onClose: function() {
+                    alert('Payment window closed');
+                }
+            });
+            
+            handler.openIframe();
+        }
+        
+        async function loadOrders() {
+            const user = await getCurrentUser();
+            if (!user) return;
+            
+            const { data: orders } = await supabaseClient
+                .from('orders')
+                .select(`
+                    *,
+                    pharmacies(name),
+                    order_items(*)
+                `)
+                .eq('patient_id', user.id)
+                .order('created_at', { ascending: false });
+            
+            const container = document.getElementById('ordersList');
+            
+            if (!orders || orders.length === 0) {
+                container.innerHTML = '<p class="text-muted">No orders yet</p>';
+                return;
+            }
+            
+            container.innerHTML = orders.map(order => `
+                <div class="card mb-3">
+                    <div class="card-body">
+                        <div class="d-flex justify-content-between">
+                            <div>
+                                <h6>${order.order_number}</h6>
+                                <p class="mb-1"><small>Pharmacy: ${order.pharmacies?.name || 'N/A'}</small></p>
+                                <p class="mb-1"><small>Amount: R ${order.total_amount.toFixed(2)}</small></p>
+                                <span class="badge ${getStatusBadgeClass(order.status)}">${order.status.replace(/_/g, ' ').toUpperCase()}</span>
+                            </div>
+                            <div>
+                                <button class="btn btn-sm btn-outline-primary" onclick="trackOrder('${order.id}')">
+                                    <i class="fas fa-route me-1"></i>Track
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            `).join('');
+        }
+        
+        function getStatusBadgeClass(status) {
+            const statusMap = {
+                'created': 'bg-secondary',
+                'rx_uploaded': 'bg-info',
+                'rx_verified': 'bg-success',
+                'prepared': 'bg-primary',
+                'driver_assigned': 'bg-warning',
+                'picked_up': 'bg-info',
+                'out_for_delivery': 'bg-primary',
+                'delivered': 'bg-success',
+                'closed': 'bg-dark',
+                'cancelled': 'bg-danger',
+                'rx_rejected': 'bg-danger'
+            };
+            return statusMap[status] || 'bg-secondary';
+        }
+        
+        async function trackOrder(orderId) {
+            const { data: order } = await supabaseClient
+                .from('orders')
+                .select('*, order_status_history(*)')
+                .eq('id', orderId)
+                .single();
+            
+            const timeline = `
+                <div class="order-timeline">
+                    ${order.order_status_history?.map(h => `
+                        <div class="timeline-item ${h.to_status === order.status ? 'completed' : ''}">
+                            <strong>${h.to_status.replace(/_/g, ' ').toUpperCase()}</strong><br>
+                            <small class="text-muted">${new Date(h.created_at).toLocaleString()}</small>
+                        </div>
+                    `).join('') || '<p>No tracking history</p>'}
+                </div>
+            `;
+            
+            document.getElementById('trackingContent').innerHTML = timeline;
+            new bootstrap.Modal(document.getElementById('orderTrackingModal')).show();
+        }
+        
+        async function loadChronicMedications() {
+            const user = await getCurrentUser();
+            if (!user) return;
+            
+            const { data: enrollments } = await supabaseClient
+                .from('chronic_enrollments')
+                .select('*')
+                .eq('patient_id', user.id)
+                .eq('status', 'active');
+            
+            const container = document.getElementById('chronicMedications');
+            
+            if (!enrollments || enrollments.length === 0) {
+                container.innerHTML = '<p class="text-muted">No active chronic medication enrollments</p>';
+                return;
+            }
+            
+            container.innerHTML = enrollments.map(enrollment => `
+                <div class="card mb-3">
+                    <div class="card-body">
+                        <h6>${enrollment.medication_name}</h6>
+                        <p class="mb-1"><small>Dosage: ${enrollment.dosage}</small></p>
+                        <p class="mb-1"><small>Frequency: ${enrollment.frequency}</small></p>
+                        <p class="mb-1"><small>Next Delivery: ${enrollment.next_delivery_date}</small></p>
+                        <button class="btn btn-sm btn-warning" onclick="pauseChronicMed('${enrollment.id}')">
+                            <i class="fas fa-pause me-1"></i>Pause
+                        </button>
+                    </div>
+                </div>
+            `).join('');
+        }
+        
+        async function pauseChronicMed(enrollmentId) {
+            if (!confirm('Are you sure you want to pause this chronic medication delivery?')) return;
+            
+            const pauseUntil = prompt('Pause until date (YYYY-MM-DD):');
+            if (!pauseUntil) return;
+            
+            await supabaseClient
+                .from('chronic_enrollments')
+                .update({
+                    status: 'paused',
+                    paused_until: pauseUntil,
+                    pause_reason: 'Patient request'
+                })
+                .eq('id', enrollmentId);
+            
+            alert('Chronic medication paused successfully');
+            loadChronicMedications();
+        }
+        
+        async function updateProfile() {
+            const user = await getCurrentUser();
+            if (!user) return;
+            
+            const { error } = await supabaseClient
+                .from('user_profiles')
+                .update({
+                    full_name: document.getElementById('profileFullName').value,
+                    phone_number: document.getElementById('profilePhone').value,
+                    id_number: document.getElementById('profileIdNumber').value,
+                    date_of_birth: document.getElementById('profileDOB').value,
+                    street_address: document.getElementById('profileAddress').value,
+                    city: document.getElementById('profileCity').value,
+                    province: document.getElementById('profileProvince').value,
+                    postal_code: document.getElementById('profilePostalCode').value,
+                    marketing_consent: document.getElementById('consentMarketing').checked
+                })
+                .eq('id', user.id);
+            
+            if (error) {
+                alert('Error updating profile: ' + error.message);
+            } else {
+                alert('Profile updated successfully!');
+            }
+        }
     </script>
-    <script src="js/medication.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 </body>
 </html>

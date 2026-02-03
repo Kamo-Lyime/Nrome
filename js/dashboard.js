@@ -29,6 +29,9 @@ async function initDashboard() {
         userRole = 'practitioner';
     }
 
+    // Check if user is admin and show pharmacy review link
+    await checkAdminRole(userId);
+
     wirePractitionerForm(userId);
     await Promise.all([
         loadAppointments(userId),
@@ -45,6 +48,33 @@ async function initDashboard() {
     
     // Subscribe to global message updates for badge updates
     subscribeToGlobalMessages();
+}
+
+async function checkAdminRole(userId) {
+    try {
+        console.log('Checking admin role for user:', userId);
+        const { data, error } = await authHelpers.supabaseClient
+            .from('user_role_assignments')
+            .select('role')
+            .eq('user_id', userId)
+            .eq('role', 'admin');
+
+        console.log('Admin check result:', data, error);
+
+        if (data && data.length > 0) {
+            // User is admin, show pharmacy review link
+            const adminLink = document.getElementById('adminPharmacyLink');
+            console.log('Admin link element:', adminLink);
+            if (adminLink) {
+                adminLink.classList.remove('d-none');
+                console.log('Admin link shown!');
+            }
+        } else {
+            console.log('User is not admin or RLS blocking');
+        }
+    } catch (error) {
+        console.log('Admin check error:', error);
+    }
 }
 
 async function loadAppointments(userId, limit = null) {
@@ -283,12 +313,12 @@ async function loadPrescriptions(userId, limit = null) {
     // If practitioner, show prescriptions they uploaded
     // If patient, show prescriptions for them
     if (userRole === 'practitioner' && practitionerRecord) {
-        query = query.eq('practitioner_id', practitionerRecord.id);
+        query = query.eq('uploaded_by', practitionerRecord.user_id);
     } else {
-        query = query.eq('user_id', userId);
+        query = query.eq('patient_id', userId);
     }
     
-    query = query.order('upload_date', { ascending: false });
+    query = query.order('uploaded_at', { ascending: false });
     
     // Apply limit if showing latest only
     if (limit || viewState.prescriptions === 'latest') {
@@ -305,9 +335,9 @@ async function loadPrescriptions(userId, limit = null) {
     // Get total count for badge
     let countQuery = authHelpers.supabaseClient.from('prescriptions').select('id', { count: 'exact', head: true });
     if (userRole === 'practitioner' && practitionerRecord) {
-        countQuery = countQuery.eq('practitioner_id', practitionerRecord.id);
+        countQuery = countQuery.eq('uploaded_by', practitionerRecord.user_id);
     } else {
-        countQuery = countQuery.eq('user_id', userId);
+        countQuery = countQuery.eq('patient_id', userId);
     }
     const { count } = await countQuery;
     
@@ -327,7 +357,7 @@ async function loadPrescriptions(userId, limit = null) {
                <div class="small text-muted">Doctor: ${rx.doctor_name}</div>
                ${rx.patient_email ? `<div class="small text-muted">Email: ${rx.patient_email}</div>` : ''}`
             : `<strong>Dr. ${rx.doctor_name}</strong>
-               ${rx.practitioner_id ? `<div class="small text-muted">Uploaded by practitioner</div>` : ''}
+               ${rx.uploaded_by ? `<div class="small text-muted">Uploaded by practitioner</div>` : ''}
                <div class="small text-muted">${new Date(rx.prescription_date).toLocaleDateString()}</div>`;
         
         const viewButton = `<button class="btn btn-sm btn-outline-primary mt-2" onclick="viewPrescription('${rx.id}')">👁️ View</button>`;
@@ -1183,11 +1213,11 @@ async function viewPrescription(prescriptionId) {
         statusBadge.textContent = data.status || 'Unknown';
         statusBadge.className = 'badge ' + (data.verified ? 'bg-success' : 'bg-warning');
         
-        document.getElementById('viewRxUploadDate').textContent = data.upload_date ? new Date(data.upload_date).toLocaleDateString() : 'N/A';
+        document.getElementById('viewRxUploadDate').textContent = data.uploaded_at ? new Date(data.uploaded_at).toLocaleDateString() : 'N/A';
         
         // Show practitioner info if uploaded by practitioner
         const practitionerInfo = document.getElementById('viewRxPractitionerInfo');
-        if (data.practitioner_id) {
+        if (data.uploaded_by) {
             practitionerInfo.style.display = 'block';
         } else {
             practitionerInfo.style.display = 'none';
@@ -1407,18 +1437,19 @@ async function uploadPrescriptionForPatient() {
             file_name: file.name,
             file_data: fileData,
             doctor_name: doctorName,
-            prescription_date: prescriptionDate,
-            prescription_expiry: expiryDate || null,
-            refills_allowed: refills,
-            notes: notes,
-            status: 'Verified', // Practitioner-uploaded prescriptions are auto-verified
-            verified: true,
-            user_id: selectedPatientForPrescription.userId,
-            practitioner_id: practitionerRecord.id,
-            uploaded_by_user_id: currentUserId,
+            issue_date: prescriptionDate,
+            valid_until: expiryDate || null,
+            repeats_allowed: refills,
+            special_instructions: notes,
+            status: 'verified', // Practitioner-uploaded prescriptions are auto-verified
+            patient_id: selectedPatientForPrescription.userId,
+            uploaded_by: currentUserId,
+            issued_by: currentUserId,
+            upload_source: 'practitioner_upload',
             patient_name: selectedPatientForPrescription.patientName,
             patient_email: selectedPatientForPrescription.patientEmail,
-            upload_date: new Date().toISOString()
+            uploaded_at: new Date().toISOString(),
+            prescription_number: `RX-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`.toUpperCase()
         };
         
         try {
