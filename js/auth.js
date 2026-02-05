@@ -6,7 +6,10 @@ const SUPABASE_ANON_KEY = window.LOCAL_CONFIG?.SUPABASE_ANON_KEY || 'your_supaba
 // Initialize a single shared client with error handling
 let supabaseClient = null;
 try {
-    if (SUPABASE_URL && SUPABASE_URL.startsWith('http') && SUPABASE_ANON_KEY && SUPABASE_ANON_KEY !== 'your_supabase_anon_key_here') {
+    if (typeof supabase === 'undefined') {
+        console.warn('⚠️ Supabase library not loaded yet. Waiting for CDN...');
+        window.supabaseClient = null;
+    } else if (SUPABASE_URL && SUPABASE_URL.startsWith('http') && SUPABASE_ANON_KEY && SUPABASE_ANON_KEY !== 'your_supabase_anon_key_here') {
         supabaseClient = window.supabaseClient || supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
         window.supabaseClient = supabaseClient;
         console.log('✅ Supabase client initialized successfully');
@@ -78,7 +81,11 @@ function authStatusListener() {
             btn.disabled = !session;
         });
 
-        if (!session && !window.location.pathname.endsWith('/index.html') && !window.location.pathname.endsWith('/nurse.html')) {
+        // Allow access to registration and public pages without authentication
+        const publicPages = ['/index.html', '/nurse.html', '/pharmacy-register.html', '/pharmacy-register-test.html', '/pharmacy-register-minimal.html'];
+        const isPublicPage = publicPages.some(page => window.location.pathname.endsWith(page));
+        
+        if (!session && !isPublicPage) {
             window.location.replace('index.html');
         }
     });
@@ -206,6 +213,11 @@ function retrySupabaseInit() {
     if (!supabaseClient && window.LOCAL_CONFIG?.SUPABASE_URL) {
         console.log('🔄 Retrying Supabase initialization with loaded config...');
         try {
+            if (typeof supabase === 'undefined') {
+                console.warn('⚠️ Supabase library still not loaded. Skipping retry.');
+                return;
+            }
+            
             const url = window.LOCAL_CONFIG.SUPABASE_URL;
             const key = window.LOCAL_CONFIG.SUPABASE_ANON_KEY;
             
