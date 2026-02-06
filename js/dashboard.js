@@ -21,6 +21,20 @@ async function initDashboard() {
     const userId = session.user.id;
     currentUserId = userId;
 
+    // Check if user is pharmacy manager - redirect to pharmacy dashboard
+    const { data: pharmacyRole } = await authHelpers.supabaseClient
+        .from('user_role_assignments')
+        .select('role, organization_id')
+        .eq('user_id', userId)
+        .eq('role', 'pharmacy_manager')
+        .single();
+
+    if (pharmacyRole) {
+        // Redirect to pharmacy dashboard
+        window.location.href = 'pharmacy-dashboard.html';
+        return;
+    }
+
     // Load practitioner profile first to determine role
     await loadPractitionerProfile(userId);
     

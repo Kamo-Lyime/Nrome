@@ -82,7 +82,7 @@ function authStatusListener() {
         });
 
         // Allow access to registration and public pages without authentication
-        const publicPages = ['/index.html', '/nurse.html', '/pharmacy-register.html', '/pharmacy-register-test.html', '/pharmacy-register-minimal.html'];
+        const publicPages = ['/index.html', '/nurse.html', '/pharmacy-register.html', '/pharmacy-register-test.html', '/pharmacy-register-minimal.html', '/pharmacy-profile-setup.html'];
         const isPublicPage = publicPages.some(page => window.location.pathname.endsWith(page));
         
         if (!session && !isPublicPage) {

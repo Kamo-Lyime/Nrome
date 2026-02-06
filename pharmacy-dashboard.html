@@ -1,0 +1,923 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Nrome - Pharmacy Dashboard</title>
+    <link rel="icon" href="Images/nrome-logo.png" type="image/png" />
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="css/styles.css">
+</head>
+<body class="bg-light">
+    <!-- Navigation -->
+    <nav class="navbar navbar-expand-lg navbar-dark bg-success">
+        <div class="container-fluid">
+            <a class="navbar-brand" href="#">
+                <i class="fas fa-hospital me-2"></i>Nrome Pharmacy
+            </a>
+            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+            <div class="collapse navbar-collapse" id="navbarNav">
+                <ul class="navbar-nav ms-auto">
+                    <li class="nav-item">
+                        <span class="nav-link" id="pharmacyNameDisplay">Loading...</span>
+                    </li>
+                    <li class="nav-item">
+                        <button class="btn btn-outline-light btn-sm" data-auth="signout">
+                            <i class="fas fa-sign-out-alt me-1"></i>Sign Out
+                        </button>
+                    </li>
+                </ul>
+            </div>
+        </div>
+    </nav>
+
+    <div class="container-fluid mt-4">
+        <!-- Verification Status Alert -->
+        <div id="verificationAlert" class="alert alert-warning d-none">
+            <h5><i class="fas fa-exclamation-triangle me-2"></i>Pharmacy Pending Verification</h5>
+            <p class="mb-0">Your pharmacy is currently under review. You'll receive full access once verified by our team.</p>
+        </div>
+
+        <!-- Pharmacy Info Card -->
+        <div class="row mb-4">
+            <div class="col-12">
+                <div class="card">
+                    <div class="card-header bg-success text-white">
+                        <h5 class="mb-0"><i class="fas fa-hospital me-2"></i>Pharmacy Information</h5>
+                    </div>
+                    <div class="card-body">
+                        <div id="pharmacyInfo">
+                            <p class="text-center"><i class="fas fa-spinner fa-spin"></i> Loading pharmacy information...</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Quick Stats -->
+        <div class="row mb-4">
+            <div class="col-md-3">
+                <div class="card text-center">
+                    <div class="card-body">
+                        <i class="fas fa-prescription fa-3x text-primary mb-2"></i>
+                        <h3 id="pendingPrescriptions">0</h3>
+                        <p class="text-muted mb-0">Pending Prescriptions</p>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="card text-center">
+                    <div class="card-body">
+                        <i class="fas fa-pills fa-3x text-success mb-2"></i>
+                        <h3 id="activeOrders">0</h3>
+                        <p class="text-muted mb-0">Active Orders</p>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="card text-center">
+                    <div class="card-body">
+                        <i class="fas fa-truck fa-3x text-info mb-2"></i>
+                        <h3 id="readyForDelivery">0</h3>
+                        <p class="text-muted mb-0">Ready for Delivery</p>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="card text-center">
+                    <div class="card-body">
+                        <i class="fas fa-check-circle fa-3x text-success mb-2"></i>
+                        <h3 id="completedToday">0</h3>
+                        <p class="text-muted mb-0">Completed Today</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Main Content Tabs -->
+        <ul class="nav nav-tabs mb-3" role="tablist">
+            <li class="nav-item" role="presentation">
+                <button class="nav-link active" data-bs-toggle="tab" data-bs-target="#prescriptions" type="button">
+                    <i class="fas fa-file-prescription me-1"></i>Prescriptions
+                </button>
+            </li>
+            <li class="nav-item" role="presentation">
+                <button class="nav-link" data-bs-toggle="tab" data-bs-target="#orders" type="button">
+                    <i class="fas fa-shopping-cart me-1"></i>Orders
+                </button>
+            </li>
+            <li class="nav-item" role="presentation">
+                <button class="nav-link" data-bs-toggle="tab" data-bs-target="#inventory" type="button">
+                    <i class="fas fa-boxes me-1"></i>Inventory
+                </button>
+            </li>
+            <li class="nav-item" role="presentation">
+                <button class="nav-link" data-bs-toggle="tab" data-bs-target="#settings" type="button">
+                    <i class="fas fa-cog me-1"></i>Settings
+                </button>
+            </li>
+        </ul>
+
+        <div class="tab-content">
+            <!-- Prescriptions Tab -->
+            <div class="tab-pane fade show active" id="prescriptions">
+                <div class="card">
+                    <div class="card-header">
+                        <h6 class="mb-0">Prescriptions to Verify</h6>
+                    </div>
+                    <div class="card-body">
+                        <div id="prescriptionsList">
+                            <p class="text-center text-muted">No pending prescriptions</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Orders Tab -->
+            <div class="tab-pane fade" id="orders">
+                <div class="card">
+                    <div class="card-header">
+                        <h6 class="mb-0">Medication Orders</h6>
+                    </div>
+                    <div class="card-body">
+                        <div id="ordersList">
+                            <p class="text-center text-muted">No active orders</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Inventory Tab -->
+            <div class="tab-pane fade" id="inventory">
+                <div class="card">
+                    <div class="card-header">
+                        <h6 class="mb-0">Medication Inventory</h6>
+                    </div>
+                    <div class="card-body">
+                        <p class="text-muted">Inventory management coming soon...</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Settings Tab -->
+            <div class="tab-pane fade" id="settings">
+                <div class="card mb-3">
+                    <div class="card-header">
+                        <h6 class="mb-0"><i class="fas fa-file-upload me-2"></i>Documents & Verification</h6>
+                    </div>
+                    <div class="card-body">
+                        <div class="alert alert-info">
+                            <strong><i class="fas fa-info-circle me-2"></i>Required Documents:</strong>
+                            <p class="mb-0">Upload the following documents for verification. Accepted formats: PDF, JPG, PNG (Max 5MB each)</p>
+                        </div>
+
+                        <form id="documentsForm">
+                            <!-- SAPC Registration -->
+                            <div class="mb-4">
+                                <label class="form-label"><strong>1. SAPC Registration Certificate</strong> <span class="text-danger">*</span></label>
+                                <p class="text-muted small">Your South African Pharmacy Council registration certificate</p>
+                                <input type="file" class="form-control" id="sapcDoc" accept=".pdf,.jpg,.jpeg,.png" required>
+                                <div id="sapcStatus" class="mt-2"></div>
+                            </div>
+
+                            <!-- Business License -->
+                            <div class="mb-4">
+                                <label class="form-label"><strong>2. Business License & Tax Clearance</strong> <span class="text-danger">*</span></label>
+                                <p class="text-muted small">Valid business license and tax clearance certificate</p>
+                                <input type="file" class="form-control" id="licenseDoc" accept=".pdf,.jpg,.jpeg,.png" required>
+                                <div id="licenseStatus" class="mt-2"></div>
+                            </div>
+
+                            <!-- Bank Account Details -->
+                            <div class="mb-4">
+                                <label class="form-label"><strong>3. Bank Account Confirmation</strong> <span class="text-danger">*</span></label>
+                                <p class="text-muted small">Bank statement or letter confirming South African business bank account</p>
+                                <input type="file" class="form-control" id="bankDoc" accept=".pdf,.jpg,.jpeg,.png" required>
+                                <div id="bankStatus" class="mt-2"></div>
+                            </div>
+
+                            <!-- Bank Account Info -->
+                            <div class="row mb-3">
+                                <div class="col-md-6">
+                                    <label class="form-label">Bank Name <span class="text-danger">*</span></label>
+                                    <input type="text" class="form-control" id="bankName" required>
+                                </div>
+                                <div class="col-md-6">
+                                    <label class="form-label">Account Number <span class="text-danger">*</span></label>
+                                    <input type="text" class="form-control" id="accountNumber" required>
+                                </div>
+                            </div>
+
+                            <div id="uploadFeedback" class="mb-3"></div>
+
+                            <button type="submit" class="btn btn-success btn-lg">
+                                <i class="fas fa-upload me-2"></i>Submit Documents for Verification
+                            </button>
+                        </form>
+
+                        <!-- Document Status Display -->
+                        <div id="documentsStatusDisplay" class="mt-4 d-none">
+                            <hr>
+                            <h6>Uploaded Documents Status</h6>
+                            <div id="documentsStatusContent"></div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Pharmacy Details Update -->
+                <div class="card">
+                    <div class="card-header">
+                        <h6 class="mb-0"><i class="fas fa-hospital me-2"></i>Update Pharmacy Information</h6>
+                    </div>
+                    <div class="card-body">
+                        <form id="updatePharmacyForm">
+                            <div class="row g-3">
+                                <div class="col-md-6">
+                                    <label class="form-label">Phone</label>
+                                    <input type="tel" class="form-control" id="updatePhone">
+                                </div>
+                                <div class="col-md-6">
+                                    <label class="form-label">Email</label>
+                                    <input type="email" class="form-control" id="updateEmail">
+                                </div>
+                            </div>
+                            <div id="updateFeedback" class="mt-3"></div>
+                            <button type="submit" class="btn btn-primary mt-3">
+                                <i class="fas fa-save me-2"></i>Update Information
+                            </button>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="config.js"></script>
+    <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="js/auth.js"></script>
+    <script>
+        let pharmacyData = null;
+        let currentUserId = null;
+
+        async function initPharmacyDashboard() {
+            const session = await authHelpers.requireAuth();
+            if (!session) return;
+
+            currentUserId = session.user.id;
+
+            // Load pharmacy data
+            await loadPharmacyInfo();
+            await loadStats();
+        }
+
+        async function loadPharmacyInfo() {
+            try {
+                // Get pharmacy from role assignment
+                const { data: roleData } = await window.supabaseClient
+                    .from('user_role_assignments')
+                    .select('organization_id')
+                    .eq('user_id', currentUserId)
+                    .eq('role', 'pharmacy_manager')
+                    .single();
+
+                if (!roleData) {
+                    document.getElementById('pharmacyInfo').innerHTML = '<div class="alert alert-danger">No pharmacy assigned to this account</div>';
+                    return;
+                }
+
+                // Get pharmacy details
+                const { data: pharmacy, error } = await window.supabaseClient
+                    .from('pharmacies')
+                    .select('*')
+                    .eq('id', roleData.organization_id)
+                    .single();
+
+                if (error) throw error;
+
+                pharmacyData = pharmacy;
+
+                // Update pharmacy name in nav
+                document.getElementById('pharmacyNameDisplay').textContent = pharmacy.name;
+
+                // Show verification alert if not verified
+                if (!pharmacy.is_verified) {
+                    document.getElementById('verificationAlert').classList.remove('d-none');
+                }
+
+                // Display pharmacy info
+                document.getElementById('pharmacyInfo').innerHTML = `
+                    <div class="row">
+                        <div class="col-md-6">
+                            <p><strong>Pharmacy Name:</strong> ${pharmacy.name}</p>
+                            <p><strong>SAPC Number:</strong> ${pharmacy.sapc_number}</p>
+                            <p><strong>Email:</strong> ${pharmacy.email}</p>
+                            <p><strong>Phone:</strong> ${pharmacy.phone}</p>
+                        </div>
+                        <div class="col-md-6">
+                            <p><strong>Address:</strong> ${pharmacy.street_address}, ${pharmacy.city}, ${pharmacy.province}</p>
+                            <p><strong>Status:</strong> ${pharmacy.is_verified ? '<span class="badge bg-success">Verified</span>' : '<span class="badge bg-warning">Pending Verification</span>'}</p>
+                            <p><strong>Active:</strong> ${pharmacy.is_active ? '<span class="badge bg-success">Yes</span>' : '<span class="badge bg-secondary">No</span>'}</p>
+                        </div>
+                    </div>
+                `;
+            } catch (error) {
+                console.error('Error loading pharmacy:', error);
+                document.getElementById('pharmacyInfo').innerHTML = '<div class="alert alert-danger">Error loading pharmacy information</div>';
+            }
+        }
+
+        async function loadStats() {
+            if (!pharmacyData) return;
+            
+            // Load actual stats from database
+            const { data: orders } = await window.supabaseClient
+                .from('orders')
+                .select('*')
+                .eq('pharmacy_id', pharmacyData.id);
+            
+            const pendingPrescriptions = orders?.filter(o => o.status === 'rx_uploaded').length || 0;
+            const activeOrders = orders?.filter(o => ['pending_confirmation', 'confirmed', 'processing', 'created'].includes(o.status) && o.payment_reference).length || 0;
+            const readyForDelivery = orders?.filter(o => o.status === 'ready_for_delivery').length || 0;
+            const today = new Date().toISOString().split('T')[0];
+            const completedToday = orders?.filter(o => o.status === 'delivered' && o.updated_at?.startsWith(today)).length || 0;
+            
+            document.getElementById('pendingPrescriptions').textContent = pendingPrescriptions;
+            document.getElementById('activeOrders').textContent = activeOrders;
+            document.getElementById('readyForDelivery').textContent = readyForDelivery;
+            document.getElementById('completedToday').textContent = completedToday;
+            
+            // Load orders list
+            await loadOrders();
+        }
+        
+        async function loadOrders() {
+            if (!pharmacyData) return;
+            
+            const { data: orders, error } = await window.supabaseClient
+                .from('orders')
+                .select(`
+                    *,
+                    order_items(*)
+                `)
+                .eq('pharmacy_id', pharmacyData.id)
+                .order('created_at', { ascending: false })
+                .limit(50);
+            
+            if (error) {
+                console.error('Error loading orders:', error);
+                document.getElementById('ordersList').innerHTML = '<p class="text-danger">Error loading orders</p>';
+                return;
+            }
+            
+            const container = document.getElementById('ordersList');
+            
+            if (!orders || orders.length === 0) {
+                container.innerHTML = '<p class="text-center text-muted">No orders yet</p>';
+                return;
+            }
+            
+            container.innerHTML = orders.map(order => {
+                const statusBadge = getStatusBadge(order.status);
+                const itemCount = order.order_items?.length || 0;
+                
+                return `
+                    <div class="card mb-3">
+                        <div class="card-body">
+                            <div class="row">
+                                <div class="col-md-8">
+                                    <h6>${order.order_number}</h6>
+                                    <p class="mb-1"><small><i class="fas fa-pills me-1"></i>${itemCount} item(s)</small></p>
+                                    <p class="mb-1"><small><i class="fas fa-map-marker-alt me-1"></i>${order.delivery_address || 'N/A'}</small></p>
+                                    <p class="mb-1"><small><i class="fas fa-phone me-1"></i>${order.delivery_contact_phone || 'N/A'}</small></p>
+                                    <p class="mb-2">
+                                        <small>
+                                            <strong>Subtotal:</strong> R${order.subtotal?.toFixed(2) || '0.00'} | 
+                                            <strong>Platform Fee (10%):</strong> R${order.platform_fee?.toFixed(2) || '0.00'} | 
+                                            <strong>You Receive:</strong> R${order.pharmacy_amount?.toFixed(2) || '0.00'}
+                                        </small>
+                                    </p>
+                                    ${statusBadge}
+                                    ${order.payment_reference ? '<span class="badge bg-success ms-2"><i class="fas fa-check-circle"></i> PAID</span>' : '<span class="badge bg-warning ms-2"><i class="fas fa-exclamation-circle"></i> UNPAID</span>'}
+                                </div>
+                                <div class="col-md-4 text-end">
+                                    <p class="mb-1"><strong>R${order.total_amount?.toFixed(2) || '0.00'}</strong></p>
+                                    <small class="text-muted">${new Date(order.created_at).toLocaleString()}</small>
+                                    <div class="mt-2">
+                                        ${!order.payment_reference ? `
+                                            <button class="btn btn-sm btn-warning" disabled>
+                                                <i class="fas fa-clock me-1"></i>Awaiting Payment
+                                            </button>
+                                        ` : order.status === 'pending_confirmation' || order.status === 'created' ? `
+                                            <button class="btn btn-sm btn-success" onclick="updateOrderStatus('${order.id}', 'confirmed')">
+                                                <i class="fas fa-check me-1"></i>Confirm
+                                            </button>
+                                        ` : order.status === 'confirmed' ? `
+                                            <button class="btn btn-sm btn-primary" onclick="updateOrderStatus('${order.id}', 'processing')">
+                                                <i class="fas fa-cog me-1"></i>Start Processing
+                                            </button>
+                                        ` : order.status === 'processing' ? `
+                                            <button class="btn btn-sm btn-info" onclick="updateOrderStatus('${order.id}', 'ready_for_delivery')">
+                                                <i class="fas fa-box me-1"></i>Mark Ready
+                                            </button>
+                                        ` : order.status === 'ready_for_delivery' ? `
+                                            <button class="btn btn-sm btn-info" onclick="assignDriver('${order.id}')">
+                                                <i class="fas fa-truck me-1"></i>Assign Driver
+                                            </button>
+                                        ` : order.status === 'out_for_delivery' ? `
+                                            <span class="badge bg-info"><i class="fas fa-shipping-fast"></i> Driver En Route</span>
+                                        ` : ''}
+                                        <button class="btn btn-sm btn-outline-primary" onclick="viewOrderDetails('${order.id}')">
+                                            <i class="fas fa-eye me-1"></i>Details
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+        }
+        
+        function getStatusBadge(status) {
+            const badges = {
+                'created': '<span class="badge bg-secondary">Created</span>',
+                'rx_uploaded': '<span class="badge bg-info">Prescription Uploaded</span>',
+                'pending_confirmation': '<span class="badge bg-warning">Awaiting Confirmation</span>',
+                'confirmed': '<span class="badge bg-primary">Confirmed</span>',
+                'processing': '<span class="badge bg-primary">Processing</span>',
+                'ready_for_delivery': '<span class="badge bg-info">Ready for Delivery</span>',
+                'out_for_delivery': '<span class="badge bg-info">Out for Delivery</span>',
+                'delivered': '<span class="badge bg-success">Delivered</span>',
+                'cancelled': '<span class="badge bg-danger">Cancelled</span>'
+            };
+            return badges[status] || '<span class="badge bg-secondary">Unknown</span>';
+        }
+        
+        async function updateOrderStatus(orderId, newStatus) {
+            const statusMessages = {
+                'confirmed': 'Confirm and accept this order?',
+                'processing': 'Mark order as being processed?',
+                'ready_for_delivery': 'Mark order as ready for delivery?',
+                'out_for_delivery': 'Mark order as out for delivery?',
+                'delivered': 'Confirm order has been delivered?'
+            };
+            
+            if (!confirm(statusMessages[newStatus] || 'Update order status?')) return;
+            
+            // Get order details for notification
+            const { data: order } = await window.supabaseClient
+                .from('orders')
+                .select('*, order_items(*)')
+                .eq('id', orderId)
+                .single();
+            
+            if (!order) {
+                alert('Order not found');
+                return;
+            }
+            
+            // Update order status
+            const { error } = await window.supabaseClient
+                .from('orders')
+                .update({ 
+                    status: newStatus,
+                    updated_at: new Date().toISOString()
+                })
+                .eq('id', orderId);
+            
+            if (error) {
+                alert('Error updating order: ' + error.message);
+                return;
+            }
+            
+            // Send notification to patient
+            await sendOrderNotification(order, newStatus);
+            
+            alert('Order status updated successfully!');
+            await loadStats();
+        }
+        
+        async function sendOrderNotification(order, newStatus) {
+            const statusNotifications = {
+                'confirmed': '✅ Your order has been confirmed and is being prepared',
+                'processing': '🔄 Your medication is being processed',
+                'ready_for_delivery': '📦 Your order is ready for delivery',
+                'out_for_delivery': '🚚 Your order is out for delivery',
+                'delivered': '✅ Your order has been delivered'
+            };
+            
+            try {
+                // Insert notification into database
+                await window.supabaseClient
+                    .from('notifications')
+                    .insert({
+                        user_id: order.patient_id,
+                        type: 'order_update',
+                        title: 'Order Update: ' + order.order_number,
+                        message: statusNotifications[newStatus] || 'Order status updated',
+                        related_id: order.id,
+                        is_read: false
+                    });
+                
+                console.log('Notification sent to patient');
+            } catch (error) {
+                console.error('Error sending notification:', error);
+            }
+        }
+        
+        async function assignDriver(orderId) {
+            const driverEmail = prompt('Enter driver email or phone number:');
+            if (!driverEmail) return;
+            
+            // Get order details
+            const { data: order } = await window.supabaseClient
+                .from('orders')
+                .select('*')
+                .eq('id', orderId)
+                .single();
+            
+            if (!order) {
+                alert('Order not found');
+                return;
+            }
+            
+            // Update order status
+            const { error } = await window.supabaseClient
+                .from('orders')
+                .update({ 
+                    status: 'out_for_delivery',
+                    driver_contact: driverEmail,
+                    delivery_started_at: new Date().toISOString()
+                })
+                .eq('id', orderId);
+            
+            if (error) {
+                alert('Error assigning driver: ' + error.message);
+                return;
+            }
+            
+            // Send notification to patient
+            await sendOrderNotification(order, 'out_for_delivery');
+            
+            // TODO: Send SMS/email to driver with pickup details
+            alert(`Driver assigned! Delivery details sent to ${driverEmail}\n\nPickup: ${pharmacyData.address}\nDeliver to: ${order.delivery_address}`);
+            
+            await loadStats();
+        }
+        
+        async function viewOrderDetails(orderId) {
+            const { data: order, error } = await window.supabaseClient
+                .from('orders')
+                .select(`
+                    *,
+                    order_items(*)
+                `)
+                .eq('id', orderId)
+                .single();
+            
+            if (error || !order) {
+                alert('Error loading order details: ' + (error?.message || 'Order not found'));
+                return;
+            }
+            
+            // Create modal content
+            const itemsHtml = order.order_items.map(item => `
+                <tr>
+                    <td>${item.medication_name}</td>
+                    <td>${item.quantity}</td>
+                    <td>R${item.unit_price?.toFixed(2) || '0.00'}</td>
+                    <td>R${item.total_price?.toFixed(2) || '0.00'}</td>
+                </tr>
+            `).join('');
+            
+            const modalHtml = `
+                <div class="modal fade" id="orderDetailsModal" tabindex="-1">
+                    <div class="modal-dialog modal-lg">
+                        <div class="modal-content">
+                            <div class="modal-header">
+                                <h5 class="modal-title">Order Details - ${order.order_number}</h5>
+                                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                            </div>
+                            <div class="modal-body">
+                                <div class="row mb-3">
+                                    <div class="col-md-6">
+                                        <p><strong>Status:</strong> ${getStatusBadge(order.status)}</p>
+                                        <p><strong>Payment:</strong> ${order.payment_status === 'paid' ? '<span class="badge bg-success">PAID</span>' : '<span class="badge bg-warning">PENDING</span>'}</p>
+                                        <p><strong>Payment Ref:</strong> ${order.payment_reference || 'N/A'}</p>
+                                        <p><strong>Order Type:</strong> ${order.is_prescription_order ? 'Prescription' : 'OTC'}</p>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <p><strong>Customer:</strong> ${order.delivery_contact_name || 'N/A'}</p>
+                                        <p><strong>Phone:</strong> ${order.delivery_contact_phone || 'N/A'}</p>
+                                        <p><strong>Delivery Address:</strong><br>${order.delivery_address || 'N/A'}</p>
+                                    </div>
+                                </div>
+                                
+                                <h6 class="mb-3">Order Items</h6>
+                                <table class="table table-sm">
+                                    <thead>
+                                        <tr>
+                                            <th>Medication</th>
+                                            <th>Qty</th>
+                                            <th>Unit Price</th>
+                                            <th>Total</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        ${itemsHtml}
+                                    </tbody>
+                                </table>
+                                
+                                <div class="row mt-3">
+                                    <div class="col-md-6 offset-md-6">
+                                        <table class="table table-sm">
+                                            <tr>
+                                                <td><strong>Medication Subtotal:</strong></td>
+                                                <td class="text-end">R${order.subtotal?.toFixed(2) || '0.00'}</td>
+                                            </tr>
+                                            <tr>
+                                                <td><strong>Delivery Fee:</strong></td>
+                                                <td class="text-end">R${order.delivery_fee?.toFixed(2) || '0.00'}</td>
+                                            </tr>
+                                            <tr>
+                                                <td><strong>Paystack Fee (Customer Paid):</strong></td>
+                                                <td class="text-end">R${order.paystack_fee?.toFixed(2) || '0.00'}</td>
+                                            </tr>
+                                            <tr class="table-warning">
+                                                <td><strong>Platform Fee (10%):</strong></td>
+                                                <td class="text-end">- R${order.platform_fee?.toFixed(2) || '0.00'}</td>
+                                            </tr>
+                                            <tr class="table-success">
+                                                <td><strong>You Receive:</strong></td>
+                                                <td class="text-end"><strong>R${order.pharmacy_amount?.toFixed(2) || '0.00'}</strong></td>
+                                            </tr>
+                                            <tr>
+                                                <td><strong>Customer Paid Total:</strong></td>
+                                                <td class="text-end"><strong>R${order.total_amount?.toFixed(2) || '0.00'}</strong></td>
+                                            </tr>
+                                        </table>
+                                    </div>
+                                </div>
+                                
+                                <p class="text-muted small mt-3">Created: ${new Date(order.created_at).toLocaleString()}</p>
+                            </div>
+                            <div class="modal-footer">
+                                ${order.status === 'pending_confirmation' && order.payment_status === 'paid' ? `
+                                    <button class="btn btn-success" onclick="confirmOrder('${order.id}'); bootstrap.Modal.getInstance(document.getElementById('orderDetailsModal')).hide();">
+                                        <i class="fas fa-check me-1"></i>Confirm Order
+                                    </button>
+                                ` : ''}
+                                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            `;
+            
+            // Remove existing modal if any
+            const existingModal = document.getElementById('orderDetailsModal');
+            if (existingModal) existingModal.remove();
+            
+            // Add modal to body
+            document.body.insertAdjacentHTML('beforeend', modalHtml);
+            
+            // Show modal
+            const modal = new bootstrap.Modal(document.getElementById('orderDetailsModal'));
+            modal.show();
+        }
+
+        // Document upload handling with Supabase Storage
+        const documentsForm = document.getElementById('documentsForm');
+        if (documentsForm) {
+            documentsForm.addEventListener('submit', async (e) => {
+                e.preventDefault();
+                
+                if (!pharmacyData) {
+                    alert('Pharmacy data not loaded. Please refresh the page.');
+                    return;
+                }
+
+                const feedback = document.getElementById('uploadFeedback');
+                feedback.innerHTML = '<div class="alert alert-info"><i class="fas fa-spinner fa-spin me-2"></i>Uploading documents... This may take a moment.</div>';
+
+                try {
+                    const sapcFile = document.getElementById('sapcDoc').files[0];
+                    const licenseFile = document.getElementById('licenseDoc').files[0];
+                    const bankFile = document.getElementById('bankDoc').files[0];
+                    const bankName = document.getElementById('bankName').value.trim();
+                    const accountNumber = document.getElementById('accountNumber').value.trim();
+
+                    // Validate file sizes (5MB max)
+                    const maxSize = 5 * 1024 * 1024;
+                    if (sapcFile.size > maxSize || licenseFile.size > maxSize || bankFile.size > maxSize) {
+                        throw new Error('File size must be less than 5MB');
+                    }
+
+                    // Create folder path: userId/pharmacyId/
+                    const folderPath = `${currentUserId}/${pharmacyData.id}`;
+                    const timestamp = Date.now();
+
+                    // Upload files to Supabase Storage
+                    feedback.innerHTML = '<div class="alert alert-info"><i class="fas fa-spinner fa-spin me-2"></i>Uploading SAPC certificate...</div>';
+                    const sapcPath = `${folderPath}/sapc_${timestamp}_${sapcFile.name}`;
+                    const { data: sapcData, error: sapcError } = await window.supabaseClient.storage
+                        .from('pharmacy-documents')
+                        .upload(sapcPath, sapcFile, {
+                            cacheControl: '3600',
+                            upsert: false
+                        });
+
+                    if (sapcError) throw sapcError;
+
+                    feedback.innerHTML = '<div class="alert alert-info"><i class="fas fa-spinner fa-spin me-2"></i>Uploading business license...</div>';
+                    const licensePath = `${folderPath}/license_${timestamp}_${licenseFile.name}`;
+                    const { data: licenseData, error: licenseError } = await window.supabaseClient.storage
+                        .from('pharmacy-documents')
+                        .upload(licensePath, licenseFile, {
+                            cacheControl: '3600',
+                            upsert: false
+                        });
+
+                    if (licenseError) throw licenseError;
+
+                    feedback.innerHTML = '<div class="alert alert-info"><i class="fas fa-spinner fa-spin me-2"></i>Uploading bank confirmation...</div>';
+                    const bankPath = `${folderPath}/bank_${timestamp}_${bankFile.name}`;
+                    const { data: bankData, error: bankError } = await window.supabaseClient.storage
+                        .from('pharmacy-documents')
+                        .upload(bankPath, bankFile, {
+                            cacheControl: '3600',
+                            upsert: false
+                        });
+
+                    if (bankError) throw bankError;
+
+                    // Get public URLs
+                    const { data: sapcUrl } = window.supabaseClient.storage
+                        .from('pharmacy-documents')
+                        .getPublicUrl(sapcPath);
+
+                    const { data: licenseUrl } = window.supabaseClient.storage
+                        .from('pharmacy-documents')
+                        .getPublicUrl(licensePath);
+
+                    const { data: bankUrl } = window.supabaseClient.storage
+                        .from('pharmacy-documents')
+                        .getPublicUrl(bankPath);
+
+                    feedback.innerHTML = '<div class="alert alert-info"><i class="fas fa-spinner fa-spin me-2"></i>Saving document information...</div>';
+
+                    // Document metadata
+                    const documentInfo = {
+                        sapc_document: sapcFile.name,
+                        license_document: licenseFile.name,
+                        bank_document: bankFile.name,
+                        sapc_path: sapcPath,
+                        license_path: licensePath,
+                        bank_path: bankPath,
+                        bank_name: bankName,
+                        account_number: accountNumber,
+                        submitted_at: new Date().toISOString()
+                    };
+
+                    // Update pharmacy with bank details
+                    const { error: updateError } = await window.supabaseClient
+                        .from('pharmacies')
+                        .update({
+                            bank_name: bankName,
+                            bank_account_number: accountNumber
+                        })
+                        .eq('id', pharmacyData.id);
+
+                    if (updateError) throw updateError;
+
+                    // Update verification record with document URLs
+                    const { error: verifyError } = await window.supabaseClient
+                        .from('pharmacy_verifications')
+                        .update({
+                            verification_status: 'documents_submitted',
+                            documents_metadata: documentInfo,
+                            sapc_document_url: sapcUrl.publicUrl,
+                            license_document_url: licenseUrl.publicUrl,
+                            bank_document_url: bankUrl.publicUrl,
+                            updated_at: new Date().toISOString()
+                        })
+                        .eq('pharmacy_id', pharmacyData.id);
+
+                    if (verifyError) throw verifyError;
+
+                    feedback.innerHTML = `
+                        <div class="alert alert-success">
+                            <h6><i class="fas fa-check-circle me-2"></i>Documents Uploaded Successfully!</h6>
+                            <p class="mb-2">Your documents have been securely uploaded and submitted for admin review.</p>
+                            <ul class="mb-0">
+                                <li>SAPC Certificate: <strong>${sapcFile.name}</strong></li>
+                                <li>Business License: <strong>${licenseFile.name}</strong></li>
+                                <li>Bank Confirmation: <strong>${bankFile.name}</strong></li>
+                            </ul>
+                            <p class="mt-2 mb-0"><small>You'll be notified once verification is complete.</small></p>
+                        </div>
+                    `;
+
+                    documentsForm.reset();
+                    
+                    // Show status display
+                    showDocumentStatus(documentInfo);
+
+                } catch (error) {
+                    console.error('Upload error:', error);
+                    feedback.innerHTML = `<div class="alert alert-danger"><i class="fas fa-exclamation-circle me-2"></i><strong>Upload Failed:</strong> ${error.message}</div>`;
+                }
+            });
+        }
+
+        function showDocumentStatus(docInfo) {
+            const statusDisplay = document.getElementById('documentsStatusDisplay');
+            const statusContent = document.getElementById('documentsStatusContent');
+            
+            statusContent.innerHTML = `
+                <div class="table-responsive">
+                    <table class="table table-sm">
+                        <tbody>
+                            <tr>
+                                <td><i class="fas fa-file-pdf text-danger me-2"></i>SAPC Registration</td>
+                                <td>${docInfo.sapc_document}</td>
+                                <td><span class="badge bg-warning">Pending Review</span></td>
+                            </tr>
+                            <tr>
+                                <td><i class="fas fa-file-pdf text-danger me-2"></i>Business License</td>
+                                <td>${docInfo.license_document}</td>
+                                <td><span class="badge bg-warning">Pending Review</span></td>
+                            </tr>
+                            <tr>
+                                <td><i class="fas fa-file-pdf text-danger me-2"></i>Bank Confirmation</td>
+                                <td>${docInfo.bank_document}</td>
+                                <td><span class="badge bg-warning">Pending Review</span></td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+                <p class="text-muted small mb-0"><i class="fas fa-info-circle me-1"></i>Submitted: ${new Date(docInfo.submitted_at).toLocaleString()}</p>
+            `;
+            
+            statusDisplay.classList.remove('d-none');
+        }
+
+        // Update pharmacy info form
+        const updateForm = document.getElementById('updatePharmacyForm');
+        if (updateForm) {
+            updateForm.addEventListener('submit', async (e) => {
+                e.preventDefault();
+                
+                if (!pharmacyData) return;
+
+                const feedback = document.getElementById('updateFeedback');
+                feedback.innerHTML = '<div class="alert alert-info">Updating...</div>';
+
+                try {
+                    const updates = {};
+                    const phone = document.getElementById('updatePhone').value.trim();
+                    const email = document.getElementById('updateEmail').value.trim();
+
+                    if (phone) updates.phone = phone;
+                    if (email) updates.email = email;
+
+                    if (Object.keys(updates).length === 0) {
+                        feedback.innerHTML = '<div class="alert alert-warning">No changes to update</div>';
+                        return;
+                    }
+
+                    const { error } = await window.supabaseClient
+                        .from('pharmacies')
+                        .update(updates)
+                        .eq('id', pharmacyData.id);
+
+                    if (error) throw error;
+
+                    feedback.innerHTML = '<div class="alert alert-success">Information updated successfully!</div>';
+                    
+                    // Reload pharmacy info
+                    setTimeout(() => {
+                        loadPharmacyInfo();
+                        feedback.innerHTML = '';
+                    }, 2000);
+
+                } catch (error) {
+                    console.error('Update error:', error);
+                    feedback.innerHTML = `<div class="alert alert-danger">Error: ${error.message}</div>`;
+                }
+            });
+        }
+
+        // Initialize dashboard when page loads
+        if (window.supabaseClient) {
+            initPharmacyDashboard();
+        } else {
+            setTimeout(initPharmacyDashboard, 500);
+        }
+    </script>
+</body>
+</html>

@@ -6,8 +6,8 @@
 
 class PaystackIntegration {
     constructor() {
-        // Test keys provided by user
-        this.publicKey = 'pk_test_74336bdb2862bdcde9f71f4c2e3243fc3a2fedf6';
+        // Use key from config.js (same as medication ordering)
+        this.publicKey = window.CONFIG?.PAYSTACK_PUBLIC_KEY || 'pk_test_4ce27df0ac8e3de5c846f0ec47b7fb5c83b1c5df';
         this.secretKey = 'sk_test_ce04e3466d797c150e1b7c81ce8d3a5c51bbc098';
         this.baseUrl = 'https://api.paystack.co';
         

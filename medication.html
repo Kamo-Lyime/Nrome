@@ -101,7 +101,7 @@
         <div class="d-flex justify-content-between align-items-center mb-3">
             <h1 class="h3 mb-0">
                 <i class="fas fa-capsules me-2" style="color: var(--nrome-health);"></i>
-                Medication Logistics Platform
+                Medication delivery
             </h1>
             <a href="dashboard.html" class="btn btn-outline-secondary">
                 <i class="fas fa-home me-2"></i>Dashboard
@@ -229,72 +229,151 @@
                     </div>
                 </div>
                 
-                <!-- Step 3: Select Medication -->
+                <!-- Step 3: Order Type Selection -->
                 <div class="card mb-3 d-none" id="step3-medication">
                     <div class="card-header" style="background-color: var(--nrome-teal); color: white;">
                         <h5 class="mb-0">
-                            <i class="fas fa-pills me-2"></i>Step 3: Select Medication
+                            <i class="fas fa-pills me-2"></i>Step 3: How would you like to order?
                         </h5>
                     </div>
                     <div class="card-body">
-                        <div class="row">
+                        <!-- Order Type Selection -->
+                        <div class="row mb-4">
                             <div class="col-md-6">
-                                <h6 class="text-success">
-                                    <i class="fas fa-shopping-basket me-2"></i>Over-the-Counter (OTC)
-                                </h6>
-                                <small class="text-muted">Add directly to cart - no prescription required</small>
-                                <div id="otcMedications" class="mt-3">
-                                    <!-- OTC medications loaded here -->
+                                <div class="card pharmacy-card h-100" id="otcOrderOption" onclick="selectOrderType('otc')">
+                                    <div class="card-body text-center">
+                                        <i class="fas fa-shopping-basket fa-4x text-success mb-3"></i>
+                                        <h5>Over-the-Counter (OTC)</h5>
+                                        <p class="text-muted">Browse and select medications manually</p>
+                                        <span class="badge bg-success">No prescription required</span>
+                                    </div>
                                 </div>
                             </div>
                             <div class="col-md-6">
-                                <h6 class="text-warning">
-                                    <i class="fas fa-file-prescription me-2"></i>Prescription Required
-                                </h6>
-                                <div class="alert alert-warning">
-                                    <small>
-                                        <i class="fas fa-exclamation-triangle me-2"></i>
-                                        Prescription medications require verification by a licensed pharmacist. Upload will be required in next step.
-                                    </small>
-                                </div>
-                                <div id="rxMedications" class="mt-3">
-                                    <!-- Prescription medications loaded here -->
+                                <div class="card pharmacy-card h-100" id="prescriptionOrderOption" onclick="selectOrderType('prescription')">
+                                    <div class="card-body text-center">
+                                        <i class="fas fa-file-prescription fa-4x text-primary mb-3"></i>
+                                        <h5>Upload Prescription</h5>
+                                        <p class="text-muted">Upload your prescription and let pharmacy fulfill it</p>
+                                        <span class="badge bg-primary">Pharmacist will verify</span>
+                                    </div>
                                 </div>
                             </div>
                         </div>
-                        
-                        <!-- Cart Summary -->
-                        <div class="card mt-4 border-primary">
-                            <div class="card-header bg-light">
-                                <h6 class="mb-0"><i class="fas fa-shopping-cart me-2"></i>Your Order</h6>
+
+                        <!-- OTC Medication Selection (shown when OTC selected) -->
+                        <div id="otcSelectionSection" class="d-none">
+                            <h6 class="mb-3"><i class="fas fa-list me-2"></i>Select Medications</h6>
+                            <div class="row">
+                                <div class="col-md-6">
+                                    <h6 class="text-success">
+                                        <i class="fas fa-shopping-basket me-2"></i>Over-the-Counter (OTC)
+                                    </h6>
+                                    <small class="text-muted">Add directly to cart - no prescription required</small>
+                                    <div id="otcMedications" class="mt-3">
+                                        <!-- OTC medications loaded here -->
+                                    </div>
+                                </div>
+                                <div class="col-md-6">
+                                    <h6 class="text-warning">
+                                        <i class="fas fa-file-prescription me-2"></i>Prescription Required
+                                    </h6>
+                                    <div class="alert alert-warning">
+                                        <small>
+                                            <i class="fas fa-exclamation-triangle me-2"></i>
+                                            Prescription medications require verification by a licensed pharmacist. Upload will be required in next step.
+                                        </small>
+                                    </div>
+                                    <div id="rxMedications" class="mt-3">
+                                        <!-- Prescription medications loaded here -->
+                                    </div>
+                                </div>
                             </div>
-                            <div class="card-body">
-                                <div id="cartItems">
-                                    <p class="text-muted text-center">
-                                        <i class="fas fa-cart-plus fa-2x mb-2"></i><br>
-                                        No items added yet
-                                    </p>
+                            
+                            <!-- Cart Summary -->
+                            <div class="card mt-4 border-primary">
+                                <div class="card-header bg-light">
+                                    <h6 class="mb-0"><i class="fas fa-shopping-cart me-2"></i>Your Order</h6>
                                 </div>
-                                <hr>
-                                <div class="d-flex justify-content-between">
-                                    <span>Subtotal (Medication):</span>
-                                    <span id="subtotal">R 0.00</span>
-                                </div>
-                                <div class="d-flex justify-content-between text-muted">
-                                    <span>Delivery Fee:</span>
-                                    <span id="deliveryFee">R 0.00</span>
-                                </div>
-                                <hr>
-                                <div class="d-flex justify-content-between">
-                                    <h5>Total Amount:</h5>
-                                    <h5 class="text-success" id="totalAmount">R 0.00</h5>
+                                <div class="card-body">
+                                    <div id="cartItems">
+                                        <p class="text-muted text-center">
+                                            <i class="fas fa-cart-plus fa-2x mb-2"></i><br>
+                                            No items added yet
+                                        </p>
+                                    </div>
+                                    <hr>
+                                    <div class="d-flex justify-content-between">
+                                        <span>Subtotal (Medication):</span>
+                                        <span id="subtotal">R 0.00</span>
+                                    </div>
+                                    <div class="d-flex justify-content-between text-muted">
+                                        <span>Delivery Fee:</span>
+                                        <span id="deliveryFee">R 0.00</span>
+                                    </div>
+                                    <div class="d-flex justify-content-between text-muted">
+                                        <span>Paystack Processing Fee:</span>
+                                        <span id="paystackFee">R 0.00</span>
+                                    </div>
+                                    <hr>
+                                    <div class="d-flex justify-content-between">
+                                        <h5>Total Amount:</h5>
+                                        <h5 class="text-success" id="totalAmount">R 0.00</h5>
+                                    </div>
                                 </div>
                             </div>
+                            
+                            <button class="btn btn-primary btn-lg w-100 mt-3" onclick="proceedToUpload()" disabled id="proceedBtn">
+                                <i class="fas fa-arrow-right me-2"></i>Continue
+                            </button>
                         </div>
-                        
-                        <button class="btn btn-primary btn-lg w-100 mt-3" onclick="proceedToUpload()" disabled id="proceedBtn">
-                            <i class="fas fa-arrow-right me-2"></i>Continue
-                        </button>
+
+                        <!-- Prescription Upload Section (shown when prescription selected) -->
+                        <div id="prescriptionUploadSection" class="d-none">
+                            <div class="alert alert-info">
+                                <h6><i class="fas fa-info-circle me-2"></i>How it works:</h6>
+                                <ol class="mb-0">
+                                    <li>Upload your prescription from a licensed practitioner</li>
+                                    <li>Our pharmacist will verify and prepare your medication</li>
+                                    <li>We'll deliver to your specified address</li>
+                                </ol>
+                            </div>
+
+                            <div class="alert alert-danger">
+                                <strong><i class="fas fa-shield-alt me-2"></i>POPIA Compliance:</strong> 
+                                By uploading your prescription, you provide explicit consent for Nrome and the selected 
+                                pharmacy to process your health information solely for medication delivery purposes.
+                            </div>
+                            
+                            <div class="mb-3">
+                                <label for="prescriptionFileStep3" class="form-label">
+                                    Prescription Document <span class="text-danger">*</span>
+                                </label>
+                                <input type="file" class="form-control" id="prescriptionFileStep3" accept="image/*,.pdf" required>
+                                <small class="text-muted">
+                                    <i class="fas fa-info-circle me-1"></i>
+                                    Accepted formats: JPG, PNG, PDF (Max 5MB). Ensure prescription is clear and legible.
+                                </small>
+                            </div>
+                            
+                            <div class="form-check mb-3">
+                                <input class="form-check-input" type="checkbox" id="popiaConsentStep3" required>
+                                <label class="form-check-label" for="popiaConsentStep3">
+                                    <strong>I consent</strong> to the processing of my prescription and health information 
+                                    in accordance with POPIA (Protection of Personal Information Act, 2013)
+                                </label>
+                            </div>
+                            
+                            <div class="alert alert-info">
+                                <i class="fas fa-user-md me-2"></i>
+                                <strong>Pharmacist Verification:</strong> A licensed SAPC-registered pharmacist will verify 
+                                your prescription before dispensing. This is a mandatory regulatory requirement.
+                            </div>
+                            
+                            <button class="btn btn-success btn-lg w-100" onclick="proceedWithPrescription()" id="uploadPrescriptionBtn">
+                                <i class="fas fa-arrow-right me-2"></i>Proceed to Checkout & Payment
+                            </button>
+                        </div>
                     </div>
                 </div>
                 
@@ -833,6 +912,53 @@
                 document.getElementById('step3-medication').classList.remove('d-none');
             }, 500);
         }
+
+        // Order type selection
+        let orderType = null; // 'otc' or 'prescription'
+        
+        function selectOrderType(type) {
+            orderType = type;
+            
+            // Visual feedback on cards
+            document.getElementById('otcOrderOption').classList.remove('selected');
+            document.getElementById('prescriptionOrderOption').classList.remove('selected');
+            
+            if (type === 'otc') {
+                document.getElementById('otcOrderOption').classList.add('selected');
+                document.getElementById('otcSelectionSection').classList.remove('d-none');
+                document.getElementById('prescriptionUploadSection').classList.add('d-none');
+                loadMedications(); // Load medication catalog for OTC
+            } else if (type === 'prescription') {
+                document.getElementById('prescriptionOrderOption').classList.add('selected');
+                document.getElementById('prescriptionUploadSection').classList.remove('d-none');
+                document.getElementById('otcSelectionSection').classList.add('d-none');
+            }
+        }
+
+        // New function to proceed with prescription upload
+        async function proceedWithPrescription() {
+            const fileInput = document.getElementById('prescriptionFileStep3');
+            const consentCheckbox = document.getElementById('popiaConsentStep3');
+            
+            if (!fileInput.files[0]) {
+                alert('Please upload your prescription');
+                return;
+            }
+            
+            if (!consentCheckbox.checked) {
+                alert('Please provide consent to process your health information');
+                return;
+            }
+            
+            // Store prescription file for later upload
+            currentOrder.prescriptionFile = fileInput.files[0];
+            currentOrder.requires_prescription = true;
+            currentOrder.prescription_only = true; // Flag for prescription-only orders
+            
+            // Skip to checkout since we don't have manual medication selection
+            document.getElementById('step3-medication').classList.add('d-none');
+            document.getElementById('step5-checkout').classList.remove('d-none');
+        }
         
         function addToCart(medId, medName, price, requiresRx) {
             const existing = currentOrder.items.find(item => item.medication_id === medId);
@@ -880,11 +1006,24 @@
                 </div>
             `).join('');
             
+            // Calculate fees
             currentOrder.subtotal = currentOrder.items.reduce((sum, item) => sum + (item.unit_price * item.quantity), 0);
-            currentOrder.total = currentOrder.subtotal + currentOrder.delivery_fee;
+            
+            // Paystack fee: 1.5% + R2.00 (customer pays this)
+            const paystackPercentage = 0.015;
+            const paystackFixed = 2.00;
+            currentOrder.paystack_fee = ((currentOrder.subtotal + currentOrder.delivery_fee) * paystackPercentage) + paystackFixed;
+            
+            // Nrome platform fee: 10% of medication subtotal (deducted from pharmacy portion)
+            currentOrder.platform_fee = currentOrder.subtotal * 0.10;
+            currentOrder.pharmacy_amount = currentOrder.subtotal - currentOrder.platform_fee;
+            
+            // Total customer pays (medication + delivery + Paystack fee)
+            currentOrder.total = currentOrder.subtotal + currentOrder.delivery_fee + currentOrder.paystack_fee;
             
             document.getElementById('subtotal').textContent = `R ${currentOrder.subtotal.toFixed(2)}`;
             document.getElementById('deliveryFee').textContent = `R ${currentOrder.delivery_fee.toFixed(2)}`;
+            document.getElementById('paystackFee').textContent = `R ${currentOrder.paystack_fee.toFixed(2)}`;
             document.getElementById('totalAmount').textContent = `R ${currentOrder.total.toFixed(2)}`;
             
             document.getElementById('proceedBtn').disabled = false;
@@ -1001,6 +1140,9 @@
                 return;
             }
             
+            // Ensure cart calculations are up to date
+            updateCart();
+            
             // Create order in database first
             const orderNumber = 'NRM-' + Date.now();
             
@@ -1019,7 +1161,11 @@
                     delivery_contact_name: document.getElementById('profileFullName').value,
                     subtotal: currentOrder.subtotal,
                     delivery_fee: currentOrder.delivery_fee,
+                    paystack_fee: currentOrder.paystack_fee,
+                    platform_fee: currentOrder.platform_fee,
+                    pharmacy_amount: currentOrder.pharmacy_amount,
                     total_amount: currentOrder.total,
+                    payment_status: 'pending',
                     status: currentOrder.prescription_id ? 'rx_uploaded' : 'created'
                 })
                 .select()
@@ -1029,6 +1175,12 @@
                 alert('Error creating order: ' + error.message);
                 return;
             }
+            
+            console.log('Order created successfully:', order);
+            
+            // Store order ID globally for payment callback
+            window.currentOrderId = order.id;
+            window.currentOrderNumber = orderNumber;
             
             // Insert order items
             for (const item of currentOrder.items) {
@@ -1045,21 +1197,96 @@
                     });
             }
             
+            console.log('Order items inserted. Order ID:', order.id);
+            
             // Initialize Paystack payment
-            const handler = PaystackPop.setup({
+            console.log('Paystack Key:', window.CONFIG.PAYSTACK_PUBLIC_KEY);
+            console.log('Amount (ZAR):', currentOrder.total);
+            console.log('Amount (cents):', Math.round(currentOrder.total * 100));
+            console.log('Email:', email);
+            console.log('Reference:', orderNumber);
+            
+            const paystackConfig = {
                 key: window.CONFIG.PAYSTACK_PUBLIC_KEY,
                 email: email,
-                amount: currentOrder.total * 100, // Convert to kobo
+                amount: Math.round(currentOrder.total * 100), // Convert to cents and round to integer
                 currency: 'ZAR',
                 ref: orderNumber,
                 callback: function(response) {
-                    alert('Payment successful! Reference: ' + response.reference);
-                    window.location.href = 'medication.html';
+                    console.log('=== PAYSTACK CALLBACK STARTED ===');
+                    console.log('Payment Response:', response);
+                    console.log('Order ID to update:', window.currentOrderId);
+                    console.log('Order Number:', window.currentOrderNumber);
+                    
+                    if (!window.currentOrderId) {
+                        alert('ERROR: Order ID not found! Payment reference: ' + response.reference);
+                        return;
+                    }
+                    
+                    // Update order payment status
+                    console.log('Attempting to update order...');
+                    console.log('Order ID:', window.currentOrderId);
+                    console.log('Payment Reference:', response.reference);
+                    
+                    // Update payment_reference and status
+                    window.supabaseClient
+                        .from('orders')
+                        .update({
+                            payment_reference: response.reference,
+                            payment_status: 'paid',
+                            status: 'pending_confirmation'
+                        })
+                        .eq('id', window.currentOrderId)
+                        .then(({ data, error }) => {
+                            console.log('=== UPDATE RESPONSE ===');
+                            console.log('Error:', error);
+                            console.log('Data:', data);
+                            
+                            if (error) {
+                                console.error('❌ Full error:', error);
+                                alert('⚠️ Payment successful but order update failed!\n\n' +
+                                      'Payment Reference: ' + response.reference + '\n' +
+                                      'Order ID: ' + window.currentOrderId + '\n\n' +
+                                      'Error: ' + error.message + '\n\n' +
+                                      'URGENT: Run FIX_ALL_ENUMS.sql in Supabase SQL Editor!\n' +
+                                      'This will fix the database columns.');
+                                      
+                                // Redirect anyway so user can see their order
+                                setTimeout(() => {
+                                    window.location.href = 'medication.html';
+                                }, 3000);
+                            } else {
+                                console.log('✅ Order updated successfully!');
+                                alert('✅ Payment Successful!\n\n' +
+                                      'Reference: ' + response.reference + '\n' +
+                                      'Order Number: ' + window.currentOrderNumber + '\n\n' +
+                                      'Your order is now awaiting pharmacy confirmation.');
+                                
+                                setTimeout(() => {
+                                    window.location.href = 'medication.html';
+                                }, 1500);
+                            }
+                        })
+                        .catch((err) => {
+                            console.error('❌ Catch error:', err);
+                            alert('⚠️ Payment successful!\n\n' +
+                                  'Reference: ' + response.reference + '\n\n' +
+                                  'Note: Database update failed, but your payment was processed.\n' +
+                                  'Run FIX_ALL_ENUMS.sql to fix the issue.');
+                            setTimeout(() => {
+                                window.location.href = 'medication.html';
+                            }, 3000);
+                        });
                 },
                 onClose: function() {
-                    alert('Payment window closed');
+                    console.log('Paystack modal closed');
+                    alert('Payment window closed. Your order has been saved but payment is pending.');
                 }
-            });
+            };
+            
+            console.log('Paystack Config:', paystackConfig);
+            
+            const handler = PaystackPop.setup(paystackConfig);
             
             handler.openIframe();
         }
@@ -1085,42 +1312,244 @@
                 return;
             }
             
-            container.innerHTML = orders.map(order => `
-                <div class="card mb-3">
+            container.innerHTML = orders.map(order => {
+                const itemCount = order.order_items?.length || 0;
+                const statusInfo = getOrderStatusInfo(order.status);
+                const paymentBadge = order.payment_reference 
+                    ? '<span class="badge bg-success ms-2"><i class="fas fa-check-circle"></i> PAID</span>' 
+                    : '<span class="badge bg-warning ms-2"><i class="fas fa-exclamation-circle"></i> UNPAID</span>';
+                
+                return `
+                <div class="card mb-3 border-${statusInfo.color}">
                     <div class="card-body">
-                        <div class="d-flex justify-content-between">
-                            <div>
-                                <h6>${order.order_number}</h6>
-                                <p class="mb-1"><small>Pharmacy: ${order.pharmacies?.name || 'N/A'}</small></p>
-                                <p class="mb-1"><small>Amount: R ${order.total_amount.toFixed(2)}</small></p>
-                                <span class="badge ${getStatusBadgeClass(order.status)}">${order.status.replace(/_/g, ' ').toUpperCase()}</span>
+                        <div class="row">
+                            <div class="col-md-8">
+                                <h6 class="mb-2">${order.order_number} ${paymentBadge}</h6>
+                                <p class="mb-1"><small><i class="fas fa-hospital me-1"></i><strong>Pharmacy:</strong> ${order.pharmacies?.name || 'N/A'}</small></p>
+                                <p class="mb-1"><small><i class="fas fa-pills me-1"></i><strong>Items:</strong> ${itemCount} medication(s)</small></p>
+                                <p class="mb-1"><small><i class="fas fa-calendar me-1"></i><strong>Ordered:</strong> ${new Date(order.created_at).toLocaleString()}</small></p>
+                                <p class="mb-2"><small><i class="fas fa-map-marker-alt me-1"></i><strong>Delivery:</strong> ${order.delivery_address}</small></p>
+                                
+                                <!-- Order Progress Tracker -->
+                                <div class="progress mb-2" style="height: 8px;">
+                                    <div class="progress-bar bg-${statusInfo.color}" role="progressbar" style="width: ${statusInfo.progress}%" aria-valuenow="${statusInfo.progress}" aria-valuemin="0" aria-valuemax="100"></div>
+                                </div>
+                                <span class="badge bg-${statusInfo.color}">${statusInfo.icon} ${statusInfo.text}</span>
                             </div>
-                            <div>
-                                <button class="btn btn-sm btn-outline-primary" onclick="trackOrder('${order.id}')">
-                                    <i class="fas fa-route me-1"></i>Track
+                            <div class="col-md-4 text-end">
+                                <h5 class="text-success mb-2">R ${order.total_amount?.toFixed(2) || '0.00'}</h5>
+                                <button class="btn btn-sm btn-primary mb-2 w-100" onclick="trackOrder('${order.id}')">
+                                    <i class="fas fa-route me-1"></i>Track Order
                                 </button>
+                                ${order.status === 'delivered' ? `
+                                    <button class="btn btn-sm btn-outline-success w-100" onclick="rateOrder('${order.id}')">
+                                        <i class="fas fa-star me-1"></i>Rate Order
+                                    </button>
+                                ` : !order.payment_reference ? `
+                                    <button class="btn btn-sm btn-warning w-100" onclick="completePayment('${order.order_number}', ${order.total_amount})">
+                                        <i class="fas fa-credit-card me-1"></i>Complete Payment
+                                    </button>
+                                ` : ''}
                             </div>
                         </div>
                     </div>
                 </div>
-            `).join('');
+            `;
+            }).join('');
         }
         
-        function getStatusBadgeClass(status) {
+        function getOrderStatusInfo(status) {
             const statusMap = {
-                'created': 'bg-secondary',
-                'rx_uploaded': 'bg-info',
-                'rx_verified': 'bg-success',
-                'prepared': 'bg-primary',
-                'driver_assigned': 'bg-warning',
-                'picked_up': 'bg-info',
-                'out_for_delivery': 'bg-primary',
-                'delivered': 'bg-success',
-                'closed': 'bg-dark',
-                'cancelled': 'bg-danger',
-                'rx_rejected': 'bg-danger'
+                'created': { text: 'Order Placed', icon: '📝', color: 'secondary', progress: 10 },
+                'pending_confirmation': { text: 'Awaiting Pharmacy Confirmation', icon: '⏳', color: 'warning', progress: 20 },
+                'confirmed': { text: 'Confirmed by Pharmacy', icon: '✅', color: 'success', progress: 40 },
+                'processing': { text: 'Preparing Your Medication', icon: '⚙️', color: 'primary', progress: 60 },
+                'ready_for_delivery': { text: 'Ready for Pickup', icon: '📦', color: 'info', progress: 75 },
+                'out_for_delivery': { text: 'Out for Delivery', icon: '🚚', color: 'primary', progress: 90 },
+                'delivered': { text: 'Delivered', icon: '✅', color: 'success', progress: 100 },
+                'cancelled': { text: 'Cancelled', icon: '❌', color: 'danger', progress: 0 },
+                'rx_uploaded': { text: 'Prescription Under Review', icon: '📋', color: 'info', progress: 30 }
             };
-            return statusMap[status] || 'bg-secondary';
+            return statusMap[status] || { text: status, icon: 'ℹ️', color: 'secondary', progress: 0 };
+        }
+        
+        async function trackOrder(orderId) {
+            const { data: order, error } = await supabaseClient
+                .from('orders')
+                .select(`
+                    *,
+                    pharmacies(name, phone, address),
+                    order_items(*)
+                `)
+                .eq('id', orderId)
+                .single();
+            
+            if (error || !order) {
+                alert('Error loading order details');
+                return;
+            }
+            
+            const statusInfo = getOrderStatusInfo(order.status);
+            const itemsHtml = order.order_items.map(item => `
+                <tr>
+                    <td>${item.medication_name}</td>
+                    <td>${item.quantity}</td>
+                    <td>R${item.unit_price?.toFixed(2)}</td>
+                    <td>R${item.total_price?.toFixed(2)}</td>
+                </tr>
+            `).join('');
+            
+            const modalHtml = `
+                <div class="modal fade" id="trackOrderModal" tabindex="-1">
+                    <div class="modal-dialog modal-lg">
+                        <div class="modal-content">
+                            <div class="modal-header bg-${statusInfo.color} text-white">
+                                <h5 class="modal-title">Track Order: ${order.order_number}</h5>
+                                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                            </div>
+                            <div class="modal-body">
+                                <!-- Order Timeline -->
+                                <h6 class="mb-3">Order Status</h6>
+                                <div class="mb-4">
+                                    ${generateTimeline(order.status)}
+                                </div>
+                                
+                                <!-- Current Status -->
+                                <div class="alert alert-${statusInfo.color} mb-3">
+                                    <h5>${statusInfo.icon} ${statusInfo.text}</h5>
+                                    ${order.status === 'out_for_delivery' && order.driver_contact ? `
+                                        <p class="mb-0"><small>Driver Contact: ${order.driver_contact}</small></p>
+                                    ` : ''}
+                                </div>
+                                
+                                <!-- Pharmacy Info -->
+                                <div class="row mb-3">
+                                    <div class="col-md-6">
+                                        <h6>Pharmacy Details</h6>
+                                        <p class="mb-1"><strong>${order.pharmacies?.name || 'N/A'}</strong></p>
+                                        <p class="mb-1"><small>${order.pharmacies?.phone || ''}</small></p>
+                                        <p class="mb-0"><small>${order.pharmacies?.address || ''}</small></p>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <h6>Delivery Address</h6>
+                                        <p class="mb-1">${order.delivery_contact_name || ''}</p>
+                                        <p class="mb-1"><small>${order.delivery_contact_phone || ''}</small></p>
+                                        <p class="mb-0"><small>${order.delivery_address || ''}</small></p>
+                                    </div>
+                                </div>
+                                
+                                <!-- Order Items -->
+                                <h6 class="mb-2">Order Items</h6>
+                                <table class="table table-sm">
+                                    <thead>
+                                        <tr>
+                                            <th>Medication</th>
+                                            <th>Qty</th>
+                                            <th>Unit Price</th>
+                                            <th>Total</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        ${itemsHtml}
+                                    </tbody>
+                                    <tfoot>
+                                        <tr>
+                                            <th colspan="3">Subtotal</th>
+                                            <td>R${order.subtotal?.toFixed(2) || '0.00'}</td>
+                                        </tr>
+                                        <tr>
+                                            <th colspan="3">Delivery Fee</th>
+                                            <td>R${order.delivery_fee?.toFixed(2) || '0.00'}</td>
+                                        </tr>
+                                        <tr>
+                                            <th colspan="3">Processing Fee</th>
+                                            <td>R${order.paystack_fee?.toFixed(2) || '0.00'}</td>
+                                        </tr>
+                                        <tr class="table-success">
+                                            <th colspan="3">Total Paid</th>
+                                            <th>R${order.total_amount?.toFixed(2) || '0.00'}</th>
+                                        </tr>
+                                    </tfoot>
+                                </table>
+                                
+                                ${order.payment_reference ? `
+                                    <p class="text-muted small">Payment Reference: ${order.payment_reference}</p>
+                                ` : ''}
+                            </div>
+                            <div class="modal-footer">
+                                ${order.status !== 'delivered' && order.status !== 'cancelled' ? `
+                                    <button class="btn btn-danger" onclick="cancelOrder('${order.id}')">
+                                        <i class="fas fa-times me-1"></i>Cancel Order
+                                    </button>
+                                ` : ''}
+                                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            `;
+            
+            const existingModal = document.getElementById('trackOrderModal');
+            if (existingModal) existingModal.remove();
+            
+            document.body.insertAdjacentHTML('beforeend', modalHtml);
+            const modal = new bootstrap.Modal(document.getElementById('trackOrderModal'));
+            modal.show();
+        }
+        
+        function generateTimeline(currentStatus) {
+            const steps = [
+                { status: 'created', label: 'Order Placed', icon: '📝' },
+                { status: 'pending_confirmation', label: 'Awaiting Confirmation', icon: '⏳' },
+                { status: 'confirmed', label: 'Confirmed', icon: '✅' },
+                { status: 'processing', label: 'Processing', icon: '⚙️' },
+                { status: 'ready_for_delivery', label: 'Ready', icon: '📦' },
+                { status: 'out_for_delivery', label: 'Out for Delivery', icon: '🚚' },
+                { status: 'delivered', label: 'Delivered', icon: '✅' }
+            ];
+            
+            const currentIndex = steps.findIndex(s => s.status === currentStatus);
+            
+            return `
+                <div class="d-flex justify-content-between align-items-center position-relative">
+                    <div class="position-absolute w-100" style="height: 4px; background: #e0e0e0; top: 20px; z-index: 0;"></div>
+                    ${steps.map((step, index) => `
+                        <div class="text-center position-relative" style="z-index: 1;">
+                            <div class="rounded-circle d-inline-flex align-items-center justify-content-center mb-2" 
+                                 style="width: 40px; height: 40px; background: ${index <= currentIndex ? '#28a745' : '#e0e0e0'}; color: white;">
+                                ${step.icon}
+                            </div>
+                            <p class="small mb-0" style="max-width: 80px;">${step.label}</p>
+                        </div>
+                    `).join('')}
+                </div>
+            `;
+        }
+        
+        async function cancelOrder(orderId) {
+            if (!confirm('Are you sure you want to cancel this order? This action cannot be undone.')) return;
+            
+            const { error } = await supabaseClient
+                .from('orders')
+                .update({ status: 'cancelled' })
+                .eq('id', orderId);
+            
+            if (error) {
+                alert('Error cancelling order: ' + error.message);
+                return;
+            }
+            
+            alert('Order cancelled successfully');
+            bootstrap.Modal.getInstance(document.getElementById('trackOrderModal')).hide();
+            await loadOrders();
+        }
+        
+        function rateOrder(orderId) {
+            alert('Rating feature coming soon! Order ID: ' + orderId);
+        }
+        
+        function completePayment(orderNumber, amount) {
+            alert(`Payment for order ${orderNumber} (R${amount.toFixed(2)}) - Paystack integration here`);
         }
         
         async function trackOrder(orderId) {
