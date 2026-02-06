@@ -774,6 +774,13 @@
             authHelpers.requireAuth();
             const user = await getCurrentUser();
             if (user) {
+                // Ensure user profile exists before proceeding
+                const profileReady = await ensureUserProfile();
+                if (!profileReady) {
+                    alert('Unable to initialize user profile. Please refresh the page or contact support.');
+                    return;
+                }
+                
                 currentOrder.patient_id = user.id;
                 loadUserData();
                 loadPharmacies();
@@ -786,6 +793,58 @@
         async function getCurrentUser() {
             const { data: { user } } = await supabaseClient.auth.getUser();
             return user;
+        }
+        
+        async function ensureUserProfile() {
+            const user = await getCurrentUser();
+            if (!user) return false;
+            
+            // Check if user profile exists
+            const { data: profile, error: fetchError } = await supabaseClient
+                .from('user_profiles')
+                .select('*')
+                .eq('id', user.id)
+                .single();
+            
+            // If profile doesn't exist, create it
+            if (fetchError && fetchError.code === 'PGRST116') {
+                console.log('User profile not found, creating one...');
+                
+                // Get user metadata from auth
+                const fullName = user.user_metadata?.full_name || user.email?.split('@')[0] || 'User';
+                const email = user.email || '';
+                const phone = user.user_metadata?.phone || user.phone || '';
+                
+                const { data: newProfile, error: createError } = await supabaseClient
+                    .from('user_profiles')
+                    .insert({
+                        id: user.id,
+                        full_name: fullName,
+                        email: email,
+                        phone_number: phone || 'Not provided',
+                        consent_given: true,
+                        consent_date: new Date().toISOString(),
+                        profile_complete: false
+                    })
+                    .select()
+                    .single();
+                
+                if (createError) {
+                    console.error('Error creating user profile:', createError);
+                    alert('Unable to create user profile. Please contact support. Error: ' + createError.message);
+                    return false;
+                }
+                
+                console.log('User profile created successfully:', newProfile);
+                return true;
+            }
+            
+            if (fetchError) {
+                console.error('Error fetching user profile:', fetchError);
+                return false;
+            }
+            
+            return true;
         }
         
         async function loadUserData() {
