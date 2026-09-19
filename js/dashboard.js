@@ -94,24 +94,73 @@ async function checkAdminRole(userId) {
 async function loadAppointments(userId, limit = null) {
     const list = document.getElementById('appointmentList');
     
+    console.log('=== LOADING APPOINTMENTS ===');
+    console.log('User ID:', userId);
+    console.log('User Role:', userRole);
+    console.log('Practitioner Record:', practitionerRecord);
+    
+    // Check localStorage for appointments (fallback storage)
+    const localAppointments = JSON.parse(localStorage.getItem('appointments') || '[]');
+    console.log('LocalStorage appointments:', localAppointments);
+    
     let query = authHelpers.supabaseClient.from('appointments').select('*');
     
     // If user is a practitioner, show appointments booked WITH them
     // If user is a patient, show appointments MADE BY them
     if (userRole === 'practitioner' && practitionerRecord) {
+        console.log('Querying as PRACTITIONER with practitioner_id:', practitionerRecord.id);
         query = query.eq('practitioner_id', practitionerRecord.id);
     } else {
+        console.log('Querying as PATIENT with user_id:', userId);
         query = query.eq('user_id', userId);
     }
     
-    query = query.order('appointment_date', { ascending: false });
+    // Order by newest first
+    query = query.order('appointment_date', { ascending: true });
     
-    // Apply limit if showing latest only
+    // Apply limit if showing latest only (show 1 newest result)
     if (limit || viewState.appointments === 'latest') {
         query = query.limit(limit || 1);
     }
     
     const { data, error } = await query;
+    
+    console.log('Query result - Database Data:', data);
+    console.log('Query result - Error:', error);
+    
+    // If no database appointments but localStorage has appointments, use those
+    if ((!data || data.length === 0) && localAppointments.length > 0) {
+        console.log('⚠️ No database appointments found. Using localStorage appointments.');
+        
+        // Display localStorage appointments with migration notice
+        list.innerHTML = `
+            <div class="alert alert-warning mb-3">
+                <strong>⚠️ Notice:</strong> Your appointments are stored locally in your browser. 
+                They should be saved to the database for better reliability.
+                <button class="btn btn-sm btn-primary ms-2" onclick="migrateLocalAppointmentsToDatabase()">
+                    <i class="fas fa-upload me-1"></i>Save to Database
+                </button>
+            </div>
+            ${localAppointments.slice(0, limit || 10).map(item => `
+                <div class="border rounded p-3 mb-2 bg-light">
+                    <div class="d-flex justify-content-between">
+                        <div>
+                            <strong>${item.practitioner_name || 'Practitioner'}</strong>
+                            <div class="small text-muted">${item.patient_name}</div>
+                        </div>
+                        <span class="badge bg-warning text-dark">${item.status || 'pending'} (Local)</span>
+                    </div>
+                    <div class="small mt-2"><strong>📅 ${new Date(item.appointment_date).toLocaleDateString()} at ${item.appointment_time}</strong></div>
+                    <div class="small text-muted">Type: ${item.appointment_type || 'consultation'}</div>
+                    <div class="small text-muted">Booking ID: ${item.booking_id}</div>
+                    ${item.reason_for_visit ? `<div class="small mt-1"><strong>Reason:</strong> ${item.reason_for_visit}</div>` : ''}
+                </div>
+            `).join('')}
+        `;
+        
+        document.getElementById('appointmentCount').textContent = localAppointments.length;
+        return;
+    }
 
     if (error) {
         list.innerHTML = `<div class="text-danger">${error.message}</div>`;
@@ -149,11 +198,36 @@ async function loadAppointments(userId, limit = null) {
             : `<strong>${item.practitioner_name}</strong>
                <div class="small text-muted">${item.reason_for_visit || 'General consult'}</div>`;
         
+        // Check if it's medical aid booking
+        const isMedicalAid = item.is_medical_aid || false;
+        const fee = item.consultation_fee || 500;
+        const curr = item.currency || 'ZAR';
+        const platformAmount = Math.round(fee * 0.05); // 5% platform fee
+        const practitionerAmount = Math.round(fee * 0.95); // 95% to practitioner
+        const medicalAidFee = 10; // R10 fee for medical aid
+        
+        // Payment info display
+        const paymentInfo = isMedicalAid
+            ? `<div class="alert alert-success border-0 mt-2 mb-0 py-1 px-2 small">
+                 <strong>🏥 MEDICAL AID:</strong> Patient pays R0 | ${userRole === 'practitioner' ? 'You pay R' + medicalAidFee + ' to accept | Bill medical aid directly' : 'Practitioner bills medical aid'}
+               </div>`
+            : `<div class="alert alert-primary border-0 mt-2 mb-0 py-1 px-2 small">
+                 <strong>💳 STANDARD:</strong> ${userRole === 'practitioner' ? 'Patient paid ' + (item.total_amount || fee) + ' ' + curr + ' | You receive ' + practitionerAmount + ' ' + curr + ' (95%)' : 'You paid ' + (item.total_amount || fee) + ' ' + curr}
+               </div>`;
+        
         const actionButtons = userRole === 'practitioner'
-            ? `<button class="btn btn-sm btn-success mt-2 me-1" onclick="updateAppointmentStatus('${item.id}', 'confirmed')">✓ Confirm</button>
-               <button class="btn btn-sm btn-warning mt-2 me-1" onclick="updateAppointmentStatus('${item.id}', 'rescheduled')">↻ Reschedule</button>
-               <button class="btn btn-sm btn-danger mt-2" onclick="updateAppointmentStatus('${item.id}', 'cancelled')">✗ Cancel</button>`
-            : '';
+            ? (item.status === 'pending' || item.status === 'PENDING_PRACTITIONER_ACCEPTANCE' || item.status === 'PENDING_CONFIRMATION'
+                ? `<button class="btn btn-sm btn-success mt-2 me-1" onclick="updateAppointmentStatus('${item.id}', 'confirmed', ${isMedicalAid})">✓ Confirm${isMedicalAid ? ' (Pay R' + medicalAidFee + ')' : ''}</button>
+                   <button class="btn btn-sm btn-danger mt-2" onclick="updateAppointmentStatus('${item.id}', 'cancelled', ${isMedicalAid})">✗ Reject</button>`
+                : `<button class="btn btn-sm btn-warning mt-2 me-1" onclick="updateAppointmentStatus('${item.id}', 'rescheduled', ${isMedicalAid})">↻ Reschedule</button>
+                   <button class="btn btn-sm btn-danger mt-2" onclick="updateAppointmentStatus('${item.id}', 'cancelled', ${isMedicalAid})">✗ Cancel</button>`)
+            : (item.status === 'pending' || item.status === 'PENDING_PRACTITIONER_ACCEPTANCE' || item.status === 'PENDING_CONFIRMATION'
+                ? `<button class="btn btn-sm btn-warning mt-2 me-1" onclick="updateAppointmentStatus('${item.id}', 'rescheduled', ${isMedicalAid})">↻ Reschedule</button>
+                   <button class="btn btn-sm btn-danger mt-2" onclick="updateAppointmentStatus('${item.id}', 'cancelled', ${isMedicalAid})">✗ Cancel</button>`
+                : item.status === 'confirmed'
+                    ? `<button class="btn btn-sm btn-warning mt-2 me-1" onclick="updateAppointmentStatus('${item.id}', 'rescheduled', ${isMedicalAid})">↻ Reschedule</button>
+                       <button class="btn btn-sm btn-danger mt-2" onclick="updateAppointmentStatus('${item.id}', 'cancelled', ${isMedicalAid})">✗ Cancel</button>`
+                    : '');
         
         // Get unread count for this appointment
         const unreadCount = unreadCounts[item.id] || 0;
@@ -204,6 +278,7 @@ async function loadAppointments(userId, limit = null) {
                 ${item.reason_for_visit && userRole === 'practitioner' ? `<div class="small mt-1"><strong>Reason:</strong> ${item.reason_for_visit}</div>` : ''}
                 ${item.reason_for_visit && userRole === 'patient' ? `<div class="small mt-1"><strong>Reason:</strong> ${item.reason_for_visit}</div>` : ''}
                 <div class="small text-muted">Booking ID: ${item.booking_id}</div>
+                ${paymentInfo}
                 ${aiSuggestionInfo}
                 ${rescheduleInfo}
                 ${cancellationInfo}
@@ -220,6 +295,9 @@ function getStatusBadgeColor(status) {
     const colors = {
         'confirmed': 'success',
         'pending': 'warning',
+        'PENDING_PRACTITIONER_ACCEPTANCE': 'warning',
+        'PENDING_CONFIRMATION': 'info',
+        'PENDING_PAYMENT': 'warning',
         'cancelled': 'danger',
         'completed': 'info',
         'rescheduled': 'secondary'
@@ -227,11 +305,32 @@ function getStatusBadgeColor(status) {
     return colors[status] || 'primary';
 }
 
-async function updateAppointmentStatus(appointmentId, newStatus) {
+async function updateAppointmentStatus(appointmentId, newStatus, isMedicalAid = false) {
     let updateData = { status: newStatus };
     
+    // Handle confirmation (especially for medical aid)
+    if (newStatus === 'confirmed') {
+        let confirmMsg = 'Confirm this appointment?';
+        
+        if (isMedicalAid) {
+            confirmMsg = `Accept this medical aid booking?\n\n⚠️ You will be charged R10 acceptance fee.\n\nYou will need to bill the patient's medical aid separately.`;
+        } else {
+            confirmMsg = `Accept this booking?\n\nThe patient has already paid. You will receive 95% of the consultation fee.`;
+        }
+        
+        if (!confirm(confirmMsg)) {
+            return;
+        }
+        
+        if (isMedicalAid) {
+            // TODO: Integrate Paystack to charge practitioner R10
+            alert('⚠️ Medical aid fee payment (R10) integration coming soon.\n\nFor now, booking is accepted without payment.');
+        }
+        
+        updateData.confirmed_at = new Date().toISOString();
+    }
     // Handle rescheduling - collect new date and time
-    if (newStatus === 'rescheduled') {
+    else if (newStatus === 'rescheduled') {
         const newDate = prompt('Enter new appointment date (YYYY-MM-DD):');
         if (!newDate) return; // User cancelled
         
@@ -317,32 +416,50 @@ function updateDashboardUIForRole() {
             sectionTitle.innerHTML = '📅 Your Appointments';
         }
     }
+    
+    // Also update prescription section title and button visibility
+    updatePrescriptionSectionTitle();
 }
 
 async function loadPrescriptions(userId, limit = null) {
     const container = document.getElementById('prescriptionListDashboard');
     
+    console.log('📋 LOAD PRESCRIPTIONS DEBUG:');
+    console.log('User ID:', userId);
+    console.log('User Role:', userRole);
+    console.log('Practitioner Record:', practitionerRecord);
+    
     let query = authHelpers.supabaseClient.from('prescriptions').select('*');
     
-    // If practitioner, show prescriptions they uploaded
-    // If patient, show prescriptions for them
+    // Filter based on role (requires add_prescription_tracking_columns.sql to be run)
     if (userRole === 'practitioner' && practitionerRecord) {
+        // Practitioners see prescriptions they uploaded
+        console.log('Querying as PRACTITIONER - uploaded_by:', practitionerRecord.user_id);
         query = query.eq('uploaded_by', practitionerRecord.user_id);
     } else {
+        // Patients see prescriptions for them
+        console.log('Querying as PATIENT - patient_id:', userId);
         query = query.eq('patient_id', userId);
     }
     
-    query = query.order('uploaded_at', { ascending: false });
+    // Order by newest first (descending = newest at top)
+    query = query.order('upload_date', { ascending: false });
     
-    // Apply limit if showing latest only
+    // Apply limit if showing latest only (show 1 newest result)
     if (limit || viewState.prescriptions === 'latest') {
         query = query.limit(limit || 1);
     }
     
     const { data, error } = await query;
+    
+    console.log('Prescription Query Result:');
+    console.log('  Data:', data);
+    console.log('  Error:', error);
+    console.log('  Count:', data?.length || 0);
 
     if (error) {
-        container.innerHTML = `<div class="text-danger">${error.message}</div>`;
+        console.warn('Prescription query error (may need to run add_prescription_tracking_columns.sql):', error);
+        container.innerHTML = `<div class="text-muted">No prescriptions found. ${userRole === 'practitioner' ? 'Upload prescriptions for your patients using the button above.' : ''}</div>`;
         return;
     }
 
@@ -367,11 +484,10 @@ async function loadPrescriptions(userId, limit = null) {
 
     container.innerHTML = data.map(rx => {
         const mainInfo = userRole === 'practitioner'
-            ? `<strong>Patient: ${rx.patient_name || 'Unknown'}</strong>
+            ? `<strong>Patient: ${rx.patient_name || 'Patient'}</strong>
                <div class="small text-muted">Doctor: ${rx.doctor_name}</div>
-               ${rx.patient_email ? `<div class="small text-muted">Email: ${rx.patient_email}</div>` : ''}`
+               <div class="small text-muted">${new Date(rx.prescription_date).toLocaleDateString()}</div>`
             : `<strong>Dr. ${rx.doctor_name}</strong>
-               ${rx.uploaded_by ? `<div class="small text-muted">Uploaded by practitioner</div>` : ''}
                <div class="small text-muted">${new Date(rx.prescription_date).toLocaleDateString()}</div>`;
         
         const viewButton = `<button class="btn btn-sm btn-outline-primary mt-2" onclick="viewPrescription('${rx.id}')">👁️ View</button>`;
@@ -396,23 +512,23 @@ async function loadPrescriptions(userId, limit = null) {
 }
 
 function updatePrescriptionSectionTitle() {
-    const prescriptionSection = document.querySelector('#prescriptionListDashboard')?.closest('.card');
-    const sectionTitle = prescriptionSection?.querySelector('.card-header h5');
     const uploadBtn = document.getElementById('uploadPrescriptionBtn');
     
-    if (sectionTitle) {
-        if (userRole === 'practitioner') {
-            sectionTitle.innerHTML = '<i class="fas fa-file-prescription me-2"></i>Patient Prescriptions Uploaded';
-            // Show upload button for practitioners
-            if (uploadBtn) {
-                uploadBtn.style.display = 'inline-block';
-            }
+    console.log('updatePrescriptionSectionTitle - userRole:', userRole, 'uploadBtn:', uploadBtn);
+    
+    if (userRole === 'practitioner') {
+        // Show upload button for practitioners
+        if (uploadBtn) {
+            uploadBtn.style.display = 'inline-block';
+            console.log('✅ Upload button shown for practitioner');
         } else {
-            sectionTitle.innerHTML = '<i class="fas fa-file-prescription me-2"></i>My Prescriptions';
-            // Hide upload button for patients
-            if (uploadBtn) {
-                uploadBtn.style.display = 'none';
-            }
+            console.warn('⚠️ Upload button not found in DOM');
+        }
+    } else {
+        // Hide upload button for patients
+        if (uploadBtn) {
+            uploadBtn.style.display = 'none';
+            console.log('❌ Upload button hidden for patient');
         }
     }
 }
@@ -424,9 +540,9 @@ async function loadDeliveries(userId, limit = null) {
         .from('medication_orders')
         .select('*')
         .eq('user_id', userId)
-        .order('order_date', { ascending: false });
+        .order('order_date', { ascending: true });
     
-    // Apply limit if showing latest only
+    // Apply limit if showing latest only (show 1 newest result)
     if (limit || viewState.deliveries === 'latest') {
         query = query.limit(limit || 1);
     }
@@ -469,9 +585,9 @@ async function loadPractitionerProfile(userId) {
     const feedback = document.getElementById('practitionerFeedback');
     try {
         const { data, error } = await authHelpers.supabaseClient
-            .from('medical_practitioners')
+            .from('practitioners')
             .select('*')
-            .eq('owner_user_id', userId)
+            .eq('user_id', userId)
             .limit(1)
             .maybeSingle();
 
@@ -501,9 +617,9 @@ async function loadPractitionerProfile(userId) {
 }
 
 function fillPractitionerForm(data) {
-    document.getElementById('practitionerName').value = data.name || '';
+    document.getElementById('practitionerName').value = data.full_name || data.name || '';
     document.getElementById('practitionerProfession').value = data.profession || '';
-    document.getElementById('practitionerLicense').value = data.license_number || '';
+    document.getElementById('practitionerLicense').value = data.registration_number || data.license_number || '';
     document.getElementById('practitionerDescription').value = data.service_description || '';
     document.getElementById('practitionerFee').value = data.consultation_fee || '';
     document.getElementById('practitionerCurrency').value = data.currency || '';
@@ -526,10 +642,10 @@ function wirePractitionerForm(userId) {
         feedback.classList.add('text-muted');
 
         const payload = {
-            owner_user_id: userId,
-            name: document.getElementById('practitionerName').value.trim(),
+            user_id: userId,
+            full_name: document.getElementById('practitionerName').value.trim(),
             profession: document.getElementById('practitionerProfession').value.trim(),
-            license_number: document.getElementById('practitionerLicense').value.trim() || null,
+            registration_number: document.getElementById('practitionerLicense').value.trim() || null,
             service_description: document.getElementById('practitionerDescription').value.trim() || null,
             consultation_fee: parseFloat(document.getElementById('practitionerFee').value) || null,
             currency: document.getElementById('practitionerCurrency').value.trim() || null,
@@ -542,7 +658,7 @@ function wirePractitionerForm(userId) {
         try {
             if (practitionerRecord?.id) {
                 const { error } = await authHelpers.supabaseClient
-                    .from('medical_practitioners')
+                    .from('practitioners')
                     .update(payload)
                     .eq('id', practitionerRecord.id);
 
@@ -550,7 +666,7 @@ function wirePractitionerForm(userId) {
             } else {
                 payload.created_at = new Date().toISOString();
                 const { data, error } = await authHelpers.supabaseClient
-                    .from('medical_practitioners')
+                    .from('practitioners')
                     .insert([payload])
                     .select()
                     .single();
@@ -937,7 +1053,7 @@ async function openMessagesModal(appointmentId, practitionerName, patientName, a
     
     // Get current user name
     if (userRole === 'practitioner' && practitionerRecord) {
-        currentUserName = practitionerRecord.name;
+        currentUserName = practitionerRecord.full_name || practitionerRecord.name || 'Practitioner';
     } else {
         currentUserName = patientName; // For patients, use their name from appointment
     }
@@ -1367,7 +1483,9 @@ async function searchPatients() {
 }
 
 function selectPatient(userId, patientName, patientEmail) {
-    selectedPatientForPrescription = { userId, patientName, patientEmail };
+    // Convert empty string to null for UUID fields
+    const cleanUserId = userId && userId.trim() !== '' ? userId : null;
+    selectedPatientForPrescription = { userId: cleanUserId, patientName, patientEmail };
     
     // Highlight selected patient
     document.querySelectorAll('.patient-search-result').forEach(el => {
@@ -1446,30 +1564,36 @@ async function uploadPrescriptionForPatient() {
     reader.onload = async function(e) {
         const fileData = e.target.result;
         
-        const prescriptionData = {
-            id: 'RX-' + Date.now(),
-            file_name: file.name,
-            file_data: fileData,
-            doctor_name: doctorName,
-            issue_date: prescriptionDate,
-            valid_until: expiryDate || null,
-            repeats_allowed: refills,
-            special_instructions: notes,
-            status: 'verified', // Practitioner-uploaded prescriptions are auto-verified
-            patient_id: selectedPatientForPrescription.userId,
-            uploaded_by: currentUserId,
-            issued_by: currentUserId,
-            upload_source: 'practitioner_upload',
-            patient_name: selectedPatientForPrescription.patientName,
-            patient_email: selectedPatientForPrescription.patientEmail,
-            uploaded_at: new Date().toISOString(),
-            prescription_number: `RX-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`.toUpperCase()
-        };
-        
         try {
-            const { error } = await authHelpers.supabaseClient
-                .from('prescriptions')
-                .insert(prescriptionData);
+            // Validate UUIDs and convert empty strings to null
+            const patientId = selectedPatientForPrescription.userId && selectedPatientForPrescription.userId.trim() !== '' 
+                ? selectedPatientForPrescription.userId 
+                : null;
+            const uploadedBy = currentUserId && currentUserId.trim() !== '' 
+                ? currentUserId 
+                : null;
+            
+            console.log('📋 PRESCRIPTION UPLOAD DEBUG:');
+            console.log('Selected Patient:', selectedPatientForPrescription);
+            console.log('Patient ID (will be sent to DB):', patientId);
+            console.log('Uploaded By (practitioner ID):', uploadedBy);
+            console.log('Patient Name:', selectedPatientForPrescription.patientName);
+            console.log('Patient Email:', selectedPatientForPrescription.patientEmail);
+            
+            // Use RPC function to bypass schema cache issues
+            const { data, error } = await authHelpers.supabaseClient.rpc('upload_prescription_for_patient', {
+                p_file_name: file.name,
+                p_file_data: fileData,
+                p_doctor_name: doctorName,
+                p_prescription_date: prescriptionDate,
+                p_prescription_expiry: expiryDate || null,
+                p_refills_allowed: refills,
+                p_notes: notes,
+                p_patient_id: patientId,
+                p_uploaded_by: uploadedBy,
+                p_patient_name: selectedPatientForPrescription.patientName,
+                p_patient_email: selectedPatientForPrescription.patientEmail
+            });
             
             if (error) throw error;
             
@@ -1509,9 +1633,9 @@ async function loadVoiceScribeHistory(limit = null) {
             .from('voice_scribe_sessions')
             .select('*')
             .eq('user_id', currentUserId)
-            .order('created_at', { ascending: false });
+            .order('created_at', { ascending: true });
         
-        // Apply limit if showing latest only
+        // Apply limit if showing latest only (show 1 newest result)
         if (limit || viewState.voiceScribe === 'latest') {
             query = query.limit(limit || 1);
         }
@@ -1845,3 +1969,92 @@ window.toggleAppointmentsView = toggleAppointmentsView;
 window.togglePrescriptionsView = togglePrescriptionsView;
 window.toggleDeliveriesView = toggleDeliveriesView;
 window.toggleVoiceScribeView = toggleVoiceScribeView;
+
+// =====================================================
+// LOCALSTORAGE MIGRATION FUNCTION
+// =====================================================
+
+async function migrateLocalAppointmentsToDatabase() {
+    const localAppointments = JSON.parse(localStorage.getItem('appointments') || '[]');
+    
+    if (localAppointments.length === 0) {
+        alert('No local appointments to migrate.');
+        return;
+    }
+    
+    if (!confirm(`Found ${localAppointments.length} appointment(s) to save to database. Continue?`)) {
+        return;
+    }
+    
+    let successCount = 0;
+    let failCount = 0;
+    const errors = [];
+    
+    for (const appointment of localAppointments) {
+        try {
+            // Validate practitioner_id exists in medical_practitioners table
+            const { data: practitionerExists } = await authHelpers.supabaseClient
+                .from('medical_practitioners')
+                .select('id')
+                .eq('id', appointment.practitioner_id)
+                .single();
+            
+            if (!practitionerExists) {
+                console.warn(`⚠️ Practitioner ${appointment.practitioner_id} not found in database. Skipping appointment ${appointment.booking_id}`);
+                errors.push(`Appointment ${appointment.booking_id}: Practitioner profile not found`);
+                failCount++;
+                continue;
+            }
+            
+            const { error } = await authHelpers.supabaseClient
+                .from('appointments')
+                .insert([appointment]);
+            
+            if (error) {
+                console.error('Failed to migrate appointment:', appointment.booking_id, error);
+                errors.push(`${appointment.booking_id}: ${error.message}`);
+                failCount++;
+            } else {
+                successCount++;
+            }
+        } catch (err) {
+            console.error('Error migrating appointment:', err);
+            errors.push(`${appointment.booking_id}: ${err.message}`);
+            failCount++;
+        }
+    }
+    
+    let message = '';
+    if (successCount > 0) {
+        message += `✅ Successfully saved ${successCount} appointment(s) to database!`;
+        
+        // Clear local storage after successful migration
+        if (failCount === 0) {
+            localStorage.removeItem('appointments');
+            message += '\n\n✨ All appointments migrated! Local storage cleared.';
+        } else {
+            message += `\n\n⚠️ ${failCount} appointment(s) failed to migrate:`;
+            message += '\n' + errors.slice(0, 5).join('\n');
+            if (errors.length > 5) {
+                message += `\n... and ${errors.length - 5} more`;
+            }
+            message += '\n\nFailed appointments remain in localStorage.';
+        }
+        
+        alert(message);
+        
+        // Reload appointments
+        await loadAppointments(currentUserId);
+    } else {
+        message = '❌ Failed to save any appointments to database.\n\nErrors:\n';
+        message += errors.slice(0, 5).join('\n');
+        if (errors.length > 5) {
+            message += `\n... and ${errors.length - 5} more`;
+        }
+        message += '\n\nTip: Make sure all practitioner profiles exist in the database.';
+        alert(message);
+    }
+}
+
+// Make migration function globally accessible
+window.migrateLocalAppointmentsToDatabase = migrateLocalAppointmentsToDatabase;

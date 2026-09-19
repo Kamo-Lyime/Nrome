@@ -1,11 +1,59 @@
-# Practitioner Prescription Upload System - Implementation Guide
+# Practitioner Prescription Upload System - Complete Guide
 
-## Overview
-Practitioners can now upload prescriptions on behalf of patients. These prescriptions appear in the patient's "My Prescriptions" section and can be linked to medication orders.
+## 🚨 **IMPORTANT: Run SQL Scripts First**
+
+### **Run These Scripts in Supabase SQL Editor (IN THIS ORDER):**
+
+1. **[fix_prescription_foreign_keys.sql](fix_prescription_foreign_keys.sql)**
+   - Fixes FK constraints from `user_profiles` → `auth.users`
+   - Prevents "uploaded_by not in user_profiles" errors
+
+2. **[fix_prescriptions_constraints.sql](fix_prescriptions_constraints.sql)**
+   - Drops check constraints
+   - Makes NOT NULL columns nullable
+   - Sets defaults for timestamp columns
+
+3. **[create_prescription_upload_function.sql](create_prescription_upload_function.sql)**
+   - Creates RPC function with all required columns
+   - Auto-generates prescription numbers
+   - Sets `status='verified'` for practitioner uploads
+   - Bypasses PostgREST schema cache issues
 
 ---
 
-## ✨ New Features
+## 📊 **Prescription Status Explained**
+
+### **Status Field (Enum):**
+The `prescriptions.status` column uses these values:
+- **`verified`** ← Practitioner uploads show this (GREEN badge)
+- `pending_verification` (default for patient uploads)
+- `rejected`
+- `expired`
+- `fulfilled`
+- `partially_fulfilled`
+
+### **Why "pending_verification" Was Showing:**
+- The function was NOT setting the `status` column
+- Database used default value: `pending_verification`
+- Now fixed: Explicitly sets `status='verified'` for practitioner uploads
+
+---
+
+## 🗄️ Database Schema
+
+### Auto-Generated Fields:
+| Field | Value | Example |
+|-------|-------|---------|
+| `prescription_number` | `RX-YYYYMMDD-HASH` | `RX-20260627-A3F9B2C1` |
+| `issue_date` | Same as `prescription_date` | `2026-06-27` |
+| `valid_from` | Same as `prescription_date` | `2026-06-27` |
+| `valid_until` | `prescription_expiry` or +30 days | `2026-07-27` |
+| `status` | `verified` | Shows in badge |
+| `verified` | `true` | Boolean flag |
+
+---
+
+## ✨ Features
 
 ### For Practitioners:
 1. **Upload Prescriptions for Patients**

@@ -1,0 +1,48 @@
+-- =====================================================
+-- PRESCRIPTION UPLOAD FIX CHECKLIST
+-- =====================================================
+
+🔥 SIMPLE FIX - JUST DO THIS:
+
+1️⃣ Run FIX_PRESCRIPTION_UPLOAD_NOW.sql in Supabase SQL Editor
+   (This one script fixes everything)
+
+2️⃣ Hard refresh dashboard.html (Ctrl+Shift+R)
+
+3️⃣ Upload prescription - DONE!
+
+-- =====================================================
+-- WHAT THE SCRIPT DOES
+-- =====================================================
+✅ Fixes foreign key constraints (user_profiles → auth.users)
+✅ Makes patient_id and uploaded_by nullable (for manual patient entry)
+✅ Makes other NOT NULL columns nullable
+✅ Drops problematic check constraint
+✅ Creates upload function with status='verified'
+✅ Auto-generates prescription numbers
+
+-- =====================================================
+-- ALTERNATIVE: Run Individual Scripts (if you prefer)
+-- =====================================================
+   - Login as practitioner
+   - Click "Add Prescription" button
+   - Search for patient
+   - Upload prescription file
+   - Should see "verified" status with GREEN badge (not "pending_verification")
+
+-- =====================================================
+-- WHY "pending_verification" WAS SHOWING
+-- =====================================================
+The prescriptions.status column is an enum with default value 'pending_verification'.
+The upload function was NOT explicitly setting the status column.
+Now fixed: status='verified'::prescription_status in the INSERT statement.
+
+-- =====================================================
+-- PRESCRIPTION STATUS VALUES
+-- =====================================================
+- verified           ← Practitioner uploads (GREEN badge)
+- pending_verification  (default for patient uploads)
+- rejected
+- expired
+- fulfilled
+- partially_fulfilled

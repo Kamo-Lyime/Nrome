@@ -167,7 +167,7 @@ function wireRegisterForm() {
             return;
         }
 
-        const { error } = await supabaseClient.auth.signUp({
+        const { data: authData, error } = await supabaseClient.auth.signUp({
             email,
             password,
             options: {
@@ -180,6 +180,38 @@ function wireRegisterForm() {
             feedback.classList.remove('text-success');
             feedback.classList.add('text-danger');
             return;
+        }
+
+        // If user signed up as practitioner, create a practitioner profile automatically
+        if (role === 'practitioner' && authData?.user?.id) {
+            try {
+                feedback.textContent = 'Creating practitioner profile...';
+                
+                const practitionerProfile = {
+                    owner_user_id: authData.user.id,
+                    name: fullName,
+                    profession: 'Medical Practitioner', // Default, user can update later
+                    phone_number: authData.user.phone || '', // Use auth phone or empty string
+                    email_address: email,
+                    verified: false,
+                    rating: 0,
+                    total_patients: 0,
+                    created_at: new Date().toISOString()
+                };
+
+                const { error: profileError } = await supabaseClient
+                    .from('medical_practitioners')
+                    .insert([practitionerProfile]);
+
+                if (profileError) {
+                    console.error('Failed to create practitioner profile:', profileError);
+                    feedback.textContent = 'Account created but profile setup incomplete. Please complete your profile on the dashboard.';
+                } else {
+                    console.log('✅ Practitioner profile created successfully');
+                }
+            } catch (profileErr) {
+                console.error('Error creating practitioner profile:', profileErr);
+            }
         }
 
         feedback.textContent = 'Account created. Redirecting to dashboard...';

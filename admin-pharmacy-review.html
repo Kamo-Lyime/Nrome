@@ -78,89 +78,189 @@
 		<!-- Header -->
 		<div class="d-flex justify-content-between align-items-center mb-4">
 			<div>
-				<h2><i class="fas fa-hospital text-primary me-2"></i>Pharmacy Review Dashboard</h2>
-				<p class="text-muted mb-0">Review and manage pharmacy applications</p>
+				<h2><i class="fas fa-hospital text-primary me-2"></i>Verification Dashboard</h2>
+				<p class="text-muted mb-0">Review and manage pharmacy & practitioner applications</p>
 			</div>
 			<div>
-				<button class="btn btn-outline-primary" onclick="loadPharmacies()">
-					<i class="fas fa-sync-alt me-1"></i>Refresh
+				<button class="btn btn-outline-primary" onclick="loadAll()">
+					<i class="fas fa-sync-alt me-1"></i>Refresh All
 				</button>
 			</div>
 		</div>
 
-		<!-- Stats Cards -->
-		<div class="row g-3 mb-4">
-			<div class="col-md-3">
-				<div class="card border-warning">
-					<div class="card-body">
-						<h6 class="text-muted mb-2"><i class="fas fa-clock me-1"></i>Pending Review</h6>
-						<h3 class="mb-0" id="pendingCount">-</h3>
-					</div>
-				</div>
-			</div>
-			<div class="col-md-3">
-				<div class="card border-success">
-					<div class="card-body">
-						<h6 class="text-muted mb-2"><i class="fas fa-check-circle me-1"></i>Approved</h6>
-						<h3 class="mb-0" id="approvedCount">-</h3>
-					</div>
-				</div>
-			</div>
-			<div class="col-md-3">
-				<div class="card border-danger">
-					<div class="card-body">
-						<h6 class="text-muted mb-2"><i class="fas fa-times-circle me-1"></i>Rejected</h6>
-						<h3 class="mb-0" id="rejectedCount">-</h3>
-					</div>
-				</div>
-			</div>
-			<div class="col-md-3">
-				<div class="card border-primary">
-					<div class="card-body">
-						<h6 class="text-muted mb-2"><i class="fas fa-hospital me-1"></i>Active</h6>
-						<h3 class="mb-0" id="activeCount">-</h3>
-					</div>
-				</div>
-			</div>
-		</div>
-
-		<!-- Tabs for filtering -->
-		<ul class="nav nav-tabs mb-3" id="pharmacyTabs" role="tablist">
+		<!-- Main Tabs: Pharmacies vs Practitioners -->
+		<ul class="nav nav-pills mb-4" id="mainTabs" role="tablist">
 			<li class="nav-item" role="presentation">
-				<button class="nav-link active" id="pending-tab" data-bs-toggle="tab" data-bs-target="#pending" type="button">
-					<i class="fas fa-clock me-1"></i>Pending Review
+				<button class="nav-link active" id="pharmacies-main-tab" data-bs-toggle="pill" data-bs-target="#pharmaciesSection" type="button">
+					<i class="fas fa-hospital me-2"></i>Pharmacies
 				</button>
 			</li>
 			<li class="nav-item" role="presentation">
-				<button class="nav-link" id="approved-tab" data-bs-toggle="tab" data-bs-target="#approved" type="button">
-					<i class="fas fa-check-circle me-1"></i>Approved
-				</button>
-			</li>
-			<li class="nav-item" role="presentation">
-				<button class="nav-link" id="rejected-tab" data-bs-toggle="tab" data-bs-target="#rejected" type="button">
-					<i class="fas fa-times-circle me-1"></i>Rejected
+				<button class="nav-link" id="practitioners-main-tab" data-bs-toggle="pill" data-bs-target="#practitionersSection" type="button">
+					<i class="fas fa-user-md me-2"></i>Practitioners
 				</button>
 			</li>
 		</ul>
 
-		<!-- Tab Content -->
-		<div class="tab-content" id="pharmacyTabContent">
-			<!-- Pending Tab -->
-			<div class="tab-pane fade show active" id="pending" role="tabpanel">
-				<div id="pendingList" class="row g-3"></div>
+		<!-- Main Content: Pharmacies & Practitioners Sections -->
+		<div class="tab-content" id="mainTabContent">
+			<!-- ============================================ -->
+			<!-- PHARMACIES SECTION -->
+			<!-- ============================================ -->
+			<div class="tab-pane fade show active" id="pharmaciesSection" role="tabpanel">
+				<!-- Stats Cards - Pharmacies -->
+				<div class="row g-3 mb-4">
+					<div class="col-md-3">
+						<div class="card border-warning">
+							<div class="card-body">
+								<h6 class="text-muted mb-2"><i class="fas fa-clock me-1"></i>Pending Review</h6>
+								<h3 class="mb-0" id="pharmacyPendingCount">-</h3>
+							</div>
+						</div>
+					</div>
+					<div class="col-md-3">
+						<div class="card border-success">
+							<div class="card-body">
+								<h6 class="text-muted mb-2"><i class="fas fa-check-circle me-1"></i>Approved</h6>
+								<h3 class="mb-0" id="pharmacyApprovedCount">-</h3>
+							</div>
+						</div>
+					</div>
+					<div class="col-md-3">
+						<div class="card border-danger">
+							<div class="card-body">
+								<h6 class="text-muted mb-2"><i class="fas fa-times-circle me-1"></i>Rejected</h6>
+								<h3 class="mb-0" id="pharmacyRejectedCount">-</h3>
+							</div>
+						</div>
+					</div>
+					<div class="col-md-3">
+						<div class="card border-primary">
+							<div class="card-body">
+								<h6 class="text-muted mb-2"><i class="fas fa-hospital me-1"></i>Active</h6>
+								<h3 class="mb-0" id="pharmacyActiveCount">-</h3>
+							</div>
+						</div>
+					</div>
+				</div>
+
+				<!-- Tabs for filtering pharmacies -->
+				<ul class="nav nav-tabs mb-3" id="pharmacyTabs" role="tablist">
+					<li class="nav-item" role="presentation">
+						<button class="nav-link active" id="pharm-pending-tab" data-bs-toggle="tab" data-bs-target="#pharmPending" type="button">
+							<i class="fas fa-clock me-1"></i>Pending Review
+						</button>
+					</li>
+					<li class="nav-item" role="presentation">
+						<button class="nav-link" id="pharm-approved-tab" data-bs-toggle="tab" data-bs-target="#pharmApproved" type="button">
+							<i class="fas fa-check-circle me-1"></i>Approved
+						</button>
+					</li>
+					<li class="nav-item" role="presentation">
+						<button class="nav-link" id="pharm-rejected-tab" data-bs-toggle="tab" data-bs-target="#pharmRejected" type="button">
+							<i class="fas fa-times-circle me-1"></i>Rejected
+						</button>
+					</li>
+				</ul>
+
+				<!-- Pharmacy Tab Content -->
+				<div class="tab-content" id="pharmacyTabContent">
+					<div class="tab-pane fade show active" id="pharmPending" role="tabpanel">
+						<div id="pharmacyPendingList" class="row g-3"></div>
+					</div>
+					<div class="tab-pane fade" id="pharmApproved" role="tabpanel">
+						<div id="pharmacyApprovedList" class="row g-3"></div>
+					</div>
+					<div class="tab-pane fade" id="pharmRejected" role="tabpanel">
+						<div id="pharmacyRejectedList" class="row g-3"></div>
+					</div>
+				</div>
 			</div>
-			<!-- Approved Tab -->
-			<div class="tab-pane fade" id="approved" role="tabpanel">
-				<div id="approvedList" class="row g-3"></div>
-			</div>
-			<!-- Rejected Tab -->
-			<div class="tab-pane fade" id="rejected" role="tabpanel">
-				<div id="rejectedList" class="row g-3"></div>
+
+			<!-- ============================================ -->
+			<!-- PRACTITIONERS SECTION -->
+			<!-- ============================================ -->
+			<div class="tab-pane fade" id="practitionersSection" role="tabpanel">
+				<!-- Stats Cards - Practitioners -->
+				<div class="row g-3 mb-4">
+					<div class="col-md-3">
+						<div class="card border-warning">
+							<div class="card-body">
+								<h6 class="text-muted mb-2"><i class="fas fa-clock me-1"></i>Pending Review</h6>
+								<h3 class="mb-0" id="practPendingCount">-</h3>
+							</div>
+						</div>
+					</div>
+					<div class="col-md-3">
+						<div class="card border-success">
+							<div class="card-body">
+								<h6 class="text-muted mb-2"><i class="fas fa-check-circle me-1"></i>Verified</h6>
+								<h3 class="mb-0" id="practVerifiedCount">-</h3>
+							</div>
+						</div>
+					</div>
+					<div class="col-md-3">
+						<div class="card border-danger">
+							<div class="card-body">
+								<h6 class="text-muted mb-2"><i class="fas fa-times-circle me-1"></i>Rejected</h6>
+								<h3 class="mb-0" id="practRejectedCount">-</h3>
+							</div>
+						</div>
+					</div>
+					<div class="col-md-3">
+						<div class="card border-info">
+							<div class="card-body">
+								<h6 class="text-muted mb-2"><i class="fas fa-exclamation-circle me-1"></i>Expired</h6>
+								<h3 class="mb-0" id="practExpiredCount">-</h3>
+							</div>
+						</div>
+					</div>
+				</div>
+
+				<!-- Tabs for filtering practitioners -->
+				<ul class="nav nav-tabs mb-3" id="practitionerTabs" role="tablist">
+					<li class="nav-item" role="presentation">
+						<button class="nav-link active" id="pract-pending-tab" data-bs-toggle="tab" data-bs-target="#practPending" type="button">
+							<i class="fas fa-clock me-1"></i>Pending Review
+						</button>
+					</li>
+					<li class="nav-item" role="presentation">
+						<button class="nav-link" id="pract-verified-tab" data-bs-toggle="tab" data-bs-target="#practVerified" type="button">
+							<i class="fas fa-check-circle me-1"></i>Verified
+						</button>
+					</li>
+					<li class="nav-item" role="presentation">
+						<button class="nav-link" id="pract-rejected-tab" data-bs-toggle="tab" data-bs-target="#practRejected" type="button">
+							<i class="fas fa-times-circle me-1"></i>Rejected
+						</button>
+					</li>
+					<li class="nav-item" role="presentation">
+						<button class="nav-link" id="pract-expired-tab" data-bs-toggle="tab" data-bs-target="#practExpired" type="button">
+							<i class="fas fa-exclamation-circle me-1"></i>Expired
+						</button>
+					</li>
+				</ul>
+
+				<!-- Practitioner Tab Content -->
+				<div class="tab-content" id="practitionerTabContent">
+					<div class="tab-pane fade show active" id="practPending" role="tabpanel">
+						<div id="practPendingList" class="row g-3"></div>
+					</div>
+					<div class="tab-pane fade" id="practVerified" role="tabpanel">
+						<div id="practVerifiedList" class="row g-3"></div>
+					</div>
+					<div class="tab-pane fade" id="practRejected" role="tabpanel">
+						<div id="practRejectedList" class="row g-3"></div>
+					</div>
+					<div class="tab-pane fade" id="practExpired" role="tabpanel">
+						<div id="practExpiredList" class="row g-3"></div>
+					</div>
+				</div>
 			</div>
 		</div>
 	</div>
 
-	<!-- Review Modal -->
+	<!-- Pharmacy Review Modal -->
 	<div class="modal fade" id="reviewModal" tabindex="-1">
 		<div class="modal-dialog modal-xl">
 			<div class="modal-content">
@@ -172,6 +272,23 @@
 				</div>
 				<div class="modal-body">
 					<div id="reviewContent"></div>
+				</div>
+			</div>
+		</div>
+	</div>
+
+	<!-- Practitioner Review Modal -->
+	<div class="modal fade" id="practReviewModal" tabindex="-1">
+		<div class="modal-dialog modal-xl">
+			<div class="modal-content">
+				<div class="modal-header bg-primary text-white">
+					<h5 class="modal-title">
+						<i class="fas fa-user-md me-2"></i>Practitioner Verification Review
+					</h5>
+					<button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+				</div>
+				<div class="modal-body">
+					<div id="practReviewContent"></div>
 				</div>
 			</div>
 		</div>
@@ -202,7 +319,7 @@
 	<script src="js/auth.js"></script>
 	<script>
 		let currentSession = null;
-		let reviewModal, documentModal;
+		let reviewModal, practReviewModal, documentModal;
 
 		async function initPage() {
 			// Require authentication
@@ -225,16 +342,21 @@
 
 			// Initialize modals
 			reviewModal = new bootstrap.Modal(document.getElementById('reviewModal'));
+			practReviewModal = new bootstrap.Modal(document.getElementById('practReviewModal'));
 			documentModal = new bootstrap.Modal(document.getElementById('documentModal'));
 
-			// Load pharmacies
-			await loadPharmacies();
+			// Load both pharmacies and practitioners
+			await loadAll();
 
 			// Set up sign out button
 			document.querySelector('[data-auth="signout"]').addEventListener('click', async () => {
 				await window.supabaseClient.auth.signOut();
 				window.location.href = 'index.html';
 			});
+		}
+
+		async function loadAll() {
+			await Promise.all([loadPharmacies(), loadPractitioners()]);
 		}
 
 		async function loadPharmacies() {
@@ -304,15 +426,15 @@
 				});
 
 				// Update counts
-				document.getElementById('pendingCount').textContent = pending.length;
-				document.getElementById('approvedCount').textContent = approved.length;
-				document.getElementById('rejectedCount').textContent = rejected.length;
-				document.getElementById('activeCount').textContent = activeCount;
+				document.getElementById('pharmacyPendingCount').textContent = pending.length;
+				document.getElementById('pharmacyApprovedCount').textContent = approved.length;
+				document.getElementById('pharmacyRejectedCount').textContent = rejected.length;
+				document.getElementById('pharmacyActiveCount').textContent = activeCount;
 
 				// Render lists
-				renderPharmacyList('pendingList', pending);
-				renderPharmacyList('approvedList', approved);
-				renderPharmacyList('rejectedList', rejected);
+				renderPharmacyList('pharmacyPendingList', pending);
+				renderPharmacyList('pharmacyApprovedList', approved);
+				renderPharmacyList('pharmacyRejectedList', rejected);
 
 			} catch (error) {
 				console.error('Error loading pharmacies:', error);
@@ -500,11 +622,42 @@
 
 		async function viewDocument(url, title) {
 			try {
-				// Get public URL from Supabase Storage
-				const { data: { publicUrl } } = window.supabaseClient.storage
-					.from('pharmacy-documents')
-					.getPublicUrl(url.replace('pharmacy-documents/', ''));
+				let publicUrl = url;
+				
+				console.log('Viewing document:', url);
+				
+				// If URL is already a full URL (starts with http), use it directly
+				if (url.startsWith('http')) {
+					publicUrl = url;
+				} else {
+					// Extract bucket and file path from URL
+					let bucket = 'verification-documents';
+					let filePath = url;
+					
+					// Detect bucket from path
+					if (url.includes('practitioner-profiles/') || url.includes('practitioner-profiles\\')) {
+						bucket = 'practitioner-profiles';
+						filePath = url.replace(/.*practitioner-profiles[\/\\]/, '');
+					} else if (url.includes('verification-documents/') || url.includes('verification-documents\\')) {
+						bucket = 'verification-documents';
+						filePath = url.replace(/.*verification-documents[\/\\]/, '');
+					} else if (url.includes('pharmacy-documents/') || url.includes('pharmacy-documents\\')) {
+						bucket = 'pharmacy-documents';
+						filePath = url.replace(/.*pharmacy-documents[\/\\]/, '');
+					}
+					
+					console.log('Detected bucket:', bucket, 'File path:', filePath);
+					
+					// Get public URL from Supabase Storage
+					const { data } = window.supabaseClient.storage
+						.from(bucket)
+						.getPublicUrl(filePath);
+					
+					publicUrl = data.publicUrl;
+				}
 
+				console.log('Final public URL:', publicUrl);
+				
 				document.getElementById('documentModalTitle').textContent = title;
 				document.getElementById('downloadDocBtn').href = publicUrl;
 				
@@ -512,10 +665,10 @@
 				const ext = url.split('.').pop().toLowerCase();
 				let viewer = '';
 				
-				if (['jpg', 'jpeg', 'png', 'gif'].includes(ext)) {
-					viewer = `<img src="${publicUrl}" class="document-preview" alt="${title}">`;
+				if (['jpg', 'jpeg', 'png', 'gif', 'webp'].includes(ext)) {
+					viewer = `<img src="${publicUrl}" class="document-preview" alt="${title}" onerror="this.parentElement.innerHTML='<div class=\\'alert alert-danger\\'>Failed to load image. URL: ${publicUrl}</div>'">`;
 				} else if (ext === 'pdf') {
-					viewer = `<iframe src="${publicUrl}" style="width: 100%; height: 500px; border: none;"></iframe>`;
+					viewer = `<iframe src="${publicUrl}" style="width: 100%; height: 500px; border: none;" onerror="alert('Failed to load PDF')"></iframe>`;
 				} else {
 					viewer = `<div class="alert alert-info">
 						<i class="fas fa-file me-2"></i>
@@ -528,7 +681,15 @@
 
 			} catch (error) {
 				console.error('Error viewing document:', error);
-				alert('Failed to load document: ' + error.message);
+				document.getElementById('documentViewer').innerHTML = `
+					<div class="alert alert-danger">
+						<h5>Error Loading Document</h5>
+						<p><strong>Error:</strong> ${error.message}</p>
+						<p><strong>URL:</strong> ${url}</p>
+						<p><strong>Suggestion:</strong> Check if the storage buckets exist in Supabase Dashboard → Storage</p>
+					</div>
+				`;
+				documentModal.show();
 			}
 		}
 
@@ -643,6 +804,545 @@
 			} catch (error) {
 				console.error('Error deactivating pharmacy:', error);
 				alert('Failed to deactivate pharmacy: ' + error.message);
+			}
+		}
+
+		// ============================================
+		// PRACTITIONERS FUNCTIONS
+		// ============================================
+
+		async function loadPractitioners() {
+			try {
+				// Fetch all practitioners with their verification data
+				const { data: practitioners, error } = await window.supabaseClient
+					.from('practitioners')
+					.select(`
+						*,
+						verification_requests (
+							id,
+							status,
+							submitted_at,
+							reviewed_at,
+							reviewed_by,
+							review_notes,
+							ai_confidence_score,
+							ai_discrepancies
+						),
+						trust_scores (
+							total_score,
+							name_verified_score,
+							documents_complete_score,
+							id_verified_score,
+							registration_verified_score,
+							practice_number_verified_score
+						)
+					`)
+					.order('created_at', { ascending: false });
+
+				if (error) throw error;
+
+				// Categorize practitioners
+				const pending = [];
+				const verified = [];
+				const rejected = [];
+				const expired = [];
+
+				practitioners.forEach(practitioner => {
+					const status = practitioner.verification_status;
+
+					if (status === 'pending_review' || status === 'under_review' || status === 'pending_documents') {
+						pending.push(practitioner);
+					} else if (status === 'verified') {
+						verified.push(practitioner);
+					} else if (status === 'rejected') {
+						rejected.push(practitioner);
+					} else if (status === 'expired') {
+						expired.push(practitioner);
+					}
+				});
+
+				// Update counts
+				document.getElementById('practPendingCount').textContent = pending.length;
+				document.getElementById('practVerifiedCount').textContent = verified.length;
+				document.getElementById('practRejectedCount').textContent = rejected.length;
+				document.getElementById('practExpiredCount').textContent = expired.length;
+
+				// Render lists
+				renderPractitionerList('practPendingList', pending);
+				renderPractitionerList('practVerifiedList', verified);
+				renderPractitionerList('practRejectedList', rejected);
+				renderPractitionerList('practExpiredList', expired);
+
+			} catch (error) {
+				console.error('Error loading practitioners:', error);
+				alert('Failed to load practitioners: ' + error.message);
+			}
+		}
+
+		function renderPractitionerList(containerId, items) {
+			const container = document.getElementById(containerId);
+			
+			if (items.length === 0) {
+				container.innerHTML = '<div class="col-12"><div class="alert alert-info">No practitioners in this category</div></div>';
+				return;
+			}
+
+			container.innerHTML = items.map(practitioner => {
+				const statusColor = {
+					pending_review: 'warning',
+					under_review: 'info',
+					verified: 'success',
+					rejected: 'danger',
+					expired: 'secondary',
+					draft: 'light',
+					pending_documents: 'warning'
+				}[practitioner.verification_status || 'draft'];
+
+				const trustScore = practitioner.trust_scores?.[0]?.total_score || 0;
+				const verificationRequest = practitioner.verification_requests?.[0];
+
+				return `
+					<div class="col-md-6 col-lg-4">
+						<div class="card pharmacy-card h-100">
+							<div class="card-body">
+								<div class="d-flex justify-content-between align-items-start mb-2">
+									<h5 class="card-title mb-0">${practitioner.full_name}</h5>
+									<span class="badge bg-${statusColor} status-badge">
+										${(practitioner.verification_status || 'draft').replace('_', ' ').toUpperCase()}
+									</span>
+								</div>
+								<p class="text-muted small mb-2">
+									<i class="fas fa-user-md me-1"></i><strong>${practitioner.profession}</strong>
+								</p>
+								<p class="text-muted small mb-2">
+									<i class="fas fa-certificate me-1"></i>Reg: ${practitioner.registration_number}
+								</p>
+								${practitioner.specialty ? `
+									<p class="text-muted small mb-2">
+										<i class="fas fa-stethoscope me-1"></i>${practitioner.specialty}
+									</p>
+								` : ''}
+								${practitioner.practice_name ? `
+									<p class="text-muted small mb-2">
+										<i class="fas fa-clinic-medical me-1"></i>${practitioner.practice_name}
+									</p>
+								` : ''}
+								<p class="text-muted small mb-2">
+									<i class="fas fa-shield-alt me-1"></i>Trust Score: 
+									<strong class="text-${trustScore >= 80 ? 'success' : trustScore >= 50 ? 'warning' : 'danger'}">
+										${trustScore}/100
+									</strong>
+								</p>
+								<p class="text-muted small mb-3">
+									<i class="fas fa-clock me-1"></i>Applied: ${new Date(practitioner.created_at).toLocaleDateString()}
+								</p>
+								${verificationRequest?.ai_confidence_score ? `
+									<div class="alert alert-info alert-sm p-2 mb-2">
+										<small><i class="fas fa-robot me-1"></i>AI Confidence: ${verificationRequest.ai_confidence_score}%</small>
+									</div>
+								` : ''}
+								<button class="btn btn-primary btn-sm w-100" onclick="reviewPractitioner('${practitioner.id}')">
+									<i class="fas fa-eye me-1"></i>Review Application
+								</button>
+							</div>
+						</div>
+					</div>
+				`;
+			}).join('');
+		}
+
+		async function reviewPractitioner(practitionerId) {
+			try {
+				// Fetch full practitioner details
+				const { data: practitioner, error: practError } = await window.supabaseClient
+					.from('practitioners')
+					.select(`
+						*,
+						verification_requests (*),
+						trust_scores (*)
+					`)
+					.eq('id', practitionerId)
+					.single();
+
+				if (practError) throw practError;
+
+				// Fetch documents separately (using correct table name)
+				const { data: documents } = await window.supabaseClient
+					.from('practitioner_documents')
+					.select('*')
+					.eq('practitioner_id', practitionerId);
+
+				// Fetch AI extractions for documents
+				const { data: aiExtractions } = await window.supabaseClient
+					.from('ai_document_extractions')
+					.select('*')
+					.eq('practitioner_id', practitionerId);
+
+				// Fetch audit history
+				const { data: auditLogs } = await window.supabaseClient
+					.from('verification_audit')
+					.select('*')
+					.eq('practitioner_id', practitionerId)
+					.order('created_at', { ascending: false });
+
+				const verificationRequest = practitioner.verification_requests?.[0];
+				const trustScore = practitioner.trust_scores?.[0];
+
+				// Build review content
+				const content = `
+					<div class="row">
+						<div class="col-md-6">
+							${practitioner.profile_image_url ? `
+								<div class="text-center mb-3">
+									<img src="${practitioner.profile_image_url}" 
+										 alt="Profile Picture" 
+										 class="rounded-circle" 
+										 style="width: 120px; height: 120px; object-fit: cover; border: 3px solid #007bff; cursor: pointer;"
+										 onclick="viewDocument('${practitioner.profile_image_url}', 'Profile Picture')">
+									<p class="text-muted small mt-2">Click to enlarge</p>
+								</div>
+							` : ''}
+							<h6 class="text-primary"><i class="fas fa-user-md me-2"></i>Practitioner Information</h6>
+							<table class="table table-sm">
+								<tr><th>Full Name:</th><td>${practitioner.full_name}</td></tr>
+								<tr><th>Profession:</th><td>${practitioner.profession}</td></tr>
+								<tr><th>Registration Number:</th><td><strong>${practitioner.registration_number}</strong></td></tr>
+								<tr><th>Practice Number:</th><td>${practitioner.practice_number || 'N/A'}</td></tr>
+								<tr><th>Specialty:</th><td>${practitioner.specialty || 'N/A'}</td></tr>
+								<tr><th>Practice Name:</th><td>${practitioner.practice_name || 'N/A'}</td></tr>
+								${practitioner.consultation_fee ? `<tr><th>Consultation Fee:</th><td>${practitioner.currency || 'ZAR'} ${practitioner.consultation_fee}</td></tr>` : ''}
+								${practitioner.availability ? `<tr><th>Availability:</th><td>${practitioner.availability}</td></tr>` : ''}
+								<tr><th>Medical Scheme Billing:</th><td>${practitioner.medical_scheme_billing_supported ? 'Yes' : 'No'}</td></tr>
+								<tr><th>Address:</th><td>${practitioner.address}</td></tr>
+								<tr><th>Submitted:</th><td>${practitioner.submitted_at ? new Date(practitioner.submitted_at).toLocaleString() : 'Not yet'}</td></tr>
+							</table>
+
+							<h6 class="text-primary mt-3"><i class="fas fa-shield-alt me-2"></i>Trust Score Breakdown</h6>
+							${trustScore ? `
+								<table class="table table-sm">
+									<tr><th>Name Verified:</th><td>${trustScore.name_verified_score}/10</td></tr>
+									<tr><th>All Documents:</th><td>${trustScore.documents_complete_score}/10</td></tr>
+									<tr><th>ID Document:</th><td>${trustScore.id_verified_score}/20</td></tr>
+									<tr><th>Registration:</th><td>${trustScore.registration_verified_score}/40</td></tr>
+									<tr><th>Practice Number:</th><td>${trustScore.practice_number_verified_score}/20</td></tr>
+									<tr><th><strong>Total Score:</strong></th><td><strong class="text-${trustScore.total_score >= 80 ? 'success' : trustScore.total_score >= 50 ? 'warning' : 'danger'}">${trustScore.total_score}/100</strong></td></tr>
+								</table>
+							` : '<p class="text-muted">Trust score not calculated yet</p>'}
+
+							${verificationRequest?.ai_confidence_score ? `
+								<h6 class="text-primary mt-3"><i class="fas fa-robot me-2"></i>AI Verification Assistant</h6>
+								<div class="alert alert-info">
+									<p><strong>AI Confidence Score:</strong> ${verificationRequest.ai_confidence_score}%</p>
+									${verificationRequest.ai_discrepancies ? `
+										<p><strong>Detected Issues:</strong></p>
+										<ul class="mb-0">
+											${JSON.parse(verificationRequest.ai_discrepancies).map(issue => `<li>${issue}</li>`).join('')}
+										</ul>
+									` : ''}
+								</div>
+							` : ''}
+						</div>
+
+						<div class="col-md-6">
+							<h6 class="text-primary"><i class="fas fa-file-alt me-2"></i>Submitted Documents</h6>
+							<div class="document-grid">
+								${documents && documents.length > 0 ? documents.map(doc => {
+									const docTypeLabels = {
+										id_document: 'ID Document',
+										registration_certificate: 'Registration Certificate',
+										degree_certificate: 'Degree Certificate',
+										proof_of_address: 'Proof of Address'
+									};
+									return `
+										<div class="doc-card" onclick="viewDocument('${doc.file_url}', '${docTypeLabels[doc.document_type] || doc.document_type}')">
+											<i class="fas fa-file-${doc.mime_type?.includes('pdf') ? 'pdf' : 'image'} fa-3x text-primary mb-2"></i>
+											<p class="mb-0 small">${docTypeLabels[doc.document_type] || doc.document_type}</p>
+											<p class="mb-0 text-muted" style="font-size: 0.7rem;">${doc.file_name}</p>
+										</div>
+									`;
+								}).join('') : '<p class="text-muted">No documents uploaded yet</p>'}
+							</div>
+
+							${aiExtractions && aiExtractions.length > 0 ? `
+								<h6 class="text-primary mt-4"><i class="fas fa-magic me-2"></i>AI Extracted Data</h6>
+								${aiExtractions.map(ai => `
+									<div class="card bg-light mb-2">
+										<div class="card-body p-2">
+											<p class="mb-1 small"><strong>Name:</strong> ${ai.extracted_full_name || 'N/A'}</p>
+											<p class="mb-1 small"><strong>Reg Number:</strong> ${ai.extracted_registration_number || 'N/A'}</p>
+											<p class="mb-1 small"><strong>Profession:</strong> ${ai.extracted_profession || 'N/A'}</p>
+											<p class="mb-1 small"><strong>Match Score:</strong> <span class="badge bg-${ai.overall_match_score >= 80 ? 'success' : ai.overall_match_score >= 60 ? 'warning' : 'danger'}">${ai.overall_match_score}%</span></p>
+										</div>
+									</div>
+								`).join('')}
+							` : ''}
+
+							${auditLogs && auditLogs.length > 0 ? `
+								<h6 class="text-primary mt-3"><i class="fas fa-history me-2"></i>Audit History</h6>
+								<div style="max-height: 200px; overflow-y: auto;">
+									${auditLogs.slice(0, 5).map(log => `
+										<div class="border-start border-3 border-primary ps-2 mb-2">
+											<small class="text-muted">${new Date(log.created_at).toLocaleString()}</small>
+											<p class="mb-0 small"><strong>${log.action}</strong></p>
+											${log.notes ? `<p class="mb-0 small">${log.notes}</p>` : ''}
+										</div>
+									`).join('')}
+								</div>
+							` : ''}
+
+							<div class="mt-4">
+								<h6 class="text-primary"><i class="fas fa-clipboard-check me-2"></i>Review Actions</h6>
+								
+								<div class="mb-3">
+									<label class="form-label">Admin Notes</label>
+									<textarea class="form-control" id="practAdminNotes" rows="3" placeholder="Add review notes...">${verificationRequest?.review_notes || ''}</textarea>
+								</div>
+
+								<div class="d-grid gap-2">
+									${practitioner.verification_status !== 'verified' ? `
+										<button class="btn btn-success" onclick="approvePractitioner('${practitioner.id}', '${verificationRequest?.id}')">
+											<i class="fas fa-check-circle me-2"></i>Verify & Approve Practitioner
+										</button>
+									` : `
+										<button class="btn btn-warning" onclick="expirePractitioner('${practitioner.id}')">
+											<i class="fas fa-exclamation-circle me-2"></i>Mark as Expired
+										</button>
+									`}
+									
+									<button class="btn btn-info" onclick="requestMoreInfo('${practitioner.id}', '${verificationRequest?.id}')">
+										<i class="fas fa-question-circle me-2"></i>Request More Information
+									</button>
+									
+									${practitioner.verification_status !== 'rejected' ? `
+										<button class="btn btn-danger" onclick="rejectPractitioner('${practitioner.id}', '${verificationRequest?.id}')">
+											<i class="fas fa-times-circle me-2"></i>Reject Application
+										</button>
+									` : ''}
+
+									<button class="btn btn-secondary" onclick="calculateTrustScore('${practitioner.id}')">
+										<i class="fas fa-calculator me-2"></i>Recalculate Trust Score
+									</button>
+								</div>
+							</div>
+						</div>
+					</div>
+				`;
+
+				document.getElementById('practReviewContent').innerHTML = content;
+				practReviewModal.show();
+
+			} catch (error) {
+				console.error('Error loading practitioner details:', error);
+				alert('Failed to load practitioner details: ' + error.message);
+			}
+		}
+
+		async function approvePractitioner(practitionerId, verificationRequestId) {
+			const notes = document.getElementById('practAdminNotes').value;
+
+			if (!confirm('Are you sure you want to VERIFY and APPROVE this practitioner? They will be visible to patients.')) {
+				return;
+			}
+
+			try {
+				const now = new Date().toISOString();
+				const expiryDate = new Date();
+				expiryDate.setFullYear(expiryDate.getFullYear() + 1); // Expire in 12 months
+
+				// Update practitioner status
+				const { error: practError } = await window.supabaseClient
+					.from('practitioners')
+					.update({
+						verification_status: 'verified',
+						verified_at: now,
+						last_verified_at: now,
+						verification_expires_at: expiryDate.toISOString()
+					})
+					.eq('id', practitionerId);
+
+				if (practError) throw practError;
+
+				// Update verification request if exists
+				if (verificationRequestId && verificationRequestId !== 'undefined') {
+					await window.supabaseClient
+						.from('verification_requests')
+						.update({
+							status: 'approved',
+							reviewed_at: now,
+							reviewed_by: currentSession.user.id,
+							review_notes: notes
+						})
+						.eq('id', verificationRequestId);
+				}
+
+				// Create audit log
+				await window.supabaseClient.rpc('create_audit_log', {
+					p_practitioner_id: practitionerId,
+					p_action: 'practitioner_verified',
+					p_previous_status: 'pending_review',
+					p_new_status: 'verified',
+					p_notes: notes || 'Practitioner verified and approved',
+					p_admin_id: currentSession.user.id
+				});
+
+				// Recalculate trust score
+				await window.supabaseClient.rpc('calculate_trust_score', {
+					p_practitioner_id: practitionerId
+				});
+
+				alert('✅ Practitioner verified successfully! They can now be seen by patients.');
+				practReviewModal.hide();
+				await loadPractitioners();
+
+			} catch (error) {
+				console.error('Error approving practitioner:', error);
+				alert('Failed to approve practitioner: ' + error.message);
+			}
+		}
+
+		async function rejectPractitioner(practitionerId, verificationRequestId) {
+			const notes = document.getElementById('practAdminNotes').value;
+
+			if (!notes.trim()) {
+				alert('Please add notes explaining why this application is being rejected.');
+				return;
+			}
+
+			if (!confirm('Are you sure you want to REJECT this practitioner application?')) {
+				return;
+			}
+
+			try {
+				const now = new Date().toISOString();
+
+				// Update practitioner status
+				const { error: practError } = await window.supabaseClient
+					.from('practitioners')
+					.update({
+						verification_status: 'rejected'
+					})
+					.eq('id', practitionerId);
+
+				if (practError) throw practError;
+
+				// Update verification request
+				if (verificationRequestId && verificationRequestId !== 'undefined') {
+					await window.supabaseClient
+						.from('verification_requests')
+						.update({
+							status: 'rejected',
+							reviewed_at: now,
+							reviewed_by: currentSession.user.id,
+							review_notes: notes,
+							rejection_reason: notes
+						})
+						.eq('id', verificationRequestId);
+				}
+
+				// Create audit log
+				await window.supabaseClient.rpc('create_audit_log', {
+					p_practitioner_id: practitionerId,
+					p_action: 'application_rejected',
+					p_previous_status: 'pending_review',
+					p_new_status: 'rejected',
+					p_notes: notes,
+					p_admin_id: currentSession.user.id
+				});
+
+				alert('Application rejected. Notification sent to practitioner.');
+				practReviewModal.hide();
+				await loadPractitioners();
+
+			} catch (error) {
+				console.error('Error rejecting practitioner:', error);
+				alert('Failed to reject practitioner: ' + error.message);
+			}
+		}
+
+		async function requestMoreInfo(practitionerId, verificationRequestId) {
+			const notes = document.getElementById('practAdminNotes').value;
+
+			if (!notes.trim()) {
+				alert('Please specify what additional information is required.');
+				return;
+			}
+
+			try {
+				const now = new Date().toISOString();
+
+				// Update verification request
+				if (verificationRequestId && verificationRequestId !== 'undefined') {
+					await window.supabaseClient
+						.from('verification_requests')
+						.update({
+							status: 'more_info_required',
+							reviewed_at: now,
+							reviewed_by: currentSession.user.id,
+							additional_info_requested: notes
+						})
+						.eq('id', verificationRequestId);
+				}
+
+				// Create audit log
+				await window.supabaseClient.rpc('create_audit_log', {
+					p_practitioner_id: practitionerId,
+					p_action: 'more_info_requested',
+					p_notes: notes,
+					p_admin_id: currentSession.user.id
+				});
+
+				alert('✉️ Request sent to practitioner for additional information.');
+				practReviewModal.hide();
+				await loadPractitioners();
+
+			} catch (error) {
+				console.error('Error requesting more info:', error);
+				alert('Failed to send request: ' + error.message);
+			}
+		}
+
+		async function expirePractitioner(practitionerId) {
+			if (!confirm('Mark this practitioner as expired? They will need to reverify.')) {
+				return;
+			}
+
+			try {
+				await window.supabaseClient
+					.from('practitioners')
+					.update({ verification_status: 'expired' })
+					.eq('id', practitionerId);
+
+				await window.supabaseClient.rpc('create_audit_log', {
+					p_practitioner_id: practitionerId,
+					p_action: 'verification_expired',
+					p_previous_status: 'verified',
+					p_new_status: 'expired',
+					p_notes: 'Manually marked as expired by admin',
+					p_admin_id: currentSession.user.id
+				});
+
+				alert('Practitioner marked as expired.');
+				practReviewModal.hide();
+				await loadPractitioners();
+			} catch (error) {
+				console.error('Error expiring practitioner:', error);
+				alert('Failed to expire practitioner: ' + error.message);
+			}
+		}
+
+		async function calculateTrustScore(practitionerId) {
+			try {
+				const { data, error } = await window.supabaseClient.rpc('calculate_trust_score', {
+					p_practitioner_id: practitionerId
+				});
+
+				if (error) throw error;
+
+				alert(`Trust score recalculated: ${data}/100`);
+				await reviewPractitioner(practitionerId); // Refresh the modal
+			} catch (error) {
+				console.error('Error calculating trust score:', error);
+				alert('Failed to calculate trust score: ' + error.message);
 			}
 		}
 

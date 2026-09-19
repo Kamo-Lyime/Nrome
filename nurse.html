@@ -28,6 +28,98 @@
         /* Hide landing content when launched as embedded AI only */
         html.embedded-ai-only body { overflow: hidden; background-color: #0b1b2b; }
         html.embedded-ai-only #landingContainer { display: none !important; }
+        
+        /* Practitioner Registration Wizard Styles */
+        .step-indicator {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 2rem;
+        }
+        .step {
+            flex: 1;
+            text-align: center;
+            padding: 1rem;
+            background: #f8f9fa;
+            border-radius: 8px;
+            margin: 0 0.5rem;
+            position: relative;
+        }
+        .step.active {
+            background: #007bff;
+            color: white;
+        }
+        .step.completed {
+            background: #28a745;
+            color: white;
+        }
+        .document-upload-area {
+            border: 2px dashed #dee2e6;
+            border-radius: 8px;
+            padding: 2rem;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+        .document-upload-area:hover {
+            border-color: #007bff;
+            background-color: #f8f9fa;
+        }
+        .document-upload-area.dragover {
+            border-color: #28a745;
+            background-color: #d4edda;
+        }
+        .uploaded-file {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 0.75rem;
+            background: #e9ecef;
+            border-radius: 6px;
+            margin-top: 0.5rem;
+        }
+        .verification-badge {
+            display: inline-block;
+            padding: 0.5rem 1rem;
+            background: #28a745;
+            color: white;
+            border-radius: 20px;
+            font-size: 0.9rem;
+        }
+        /* Profile Picture Full Size Modal */
+        .fullsize-modal {
+            display: none;
+            position: fixed;
+            z-index: 9999;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.9);
+            overflow: auto;
+        }
+        .fullsize-modal-content {
+            margin: auto;
+            display: block;
+            max-width: 90%;
+            max-height: 90%;
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+        }
+        .fullsize-close {
+            position: absolute;
+            top: 20px;
+            right: 35px;
+            color: #f1f1f1;
+            font-size: 40px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: 0.3s;
+        }
+        .fullsize-close:hover {
+            color: #bbb;
+        }
     </style>
     <script>
         // Apply embedded/non-embedded mode early to prevent flashes
@@ -63,7 +155,7 @@
             <div class="row mt-4">
                 <div class="col-md-3">
                     <div class="ai-feature-card text-center p-3">
-                        <div class="ai-icon mb-2"> </div>
+                        <div class="ai-icon mb-2">📅</div>
                         
                         <h5>AI Appointment Booking</h5>
                         <p class="small">Smart scheduling with practitioners</p>
@@ -112,7 +204,7 @@
         </div>
 
          <!-- Medication Delivery Button -->
-        <div class="text-center mb-4">
+        <div class="text-center mb-4 d-none">
             <a href="medication.html" class="btn btn-outline-info btn-lg">
                 <i class="fas fa-pills me-2"></i>
                 Order Medication Home Delivery
@@ -121,7 +213,7 @@
 
         <!-- Registration Form Buttons -->
         <div class="text-center mb-3">
-            <button class="btn btn-outline-primary btn-lg" type="button" id="openFormBtn" onclick="openRegistrationForm()">
+            <button class="btn btn-outline-primary btn-lg" type="button" id="openFormBtn" onclick="openRegistrationForm()" style="display: none;">
                 <i class="fas fa-plus-circle me-2"></i>
                 Register Your Medical Practice
             </button>
@@ -134,121 +226,294 @@
         <!-- Collapsible Registration Form -->
         <div class="collapse" id="registrationForm">
             <div class="card mt-3">
-            <div class="card-header bg-primary text-white">
-                <h4 class="mb-0">Register Your Medical Practice</h4>
-                <small>Join Africa's leading medical practitioners directory</small>
+                <div class="card-header bg-primary text-white">
+                    <h4 class="mb-0">Register Your Medical Practice</h4>
+                    <small>Complete practitioner verification for the Nrome platform</small>
+                </div>
+                <div class="card-body">
+                    <!-- Step Indicator -->
+                    <div class="step-indicator" id="stepIndicator">
+                        <div class="step active" data-step="1">
+                            <i class="fas fa-user-circle fa-2x mb-2"></i>
+                            <div>Profile Information</div>
+                        </div>
+                        <div class="step" data-step="2">
+                            <i class="fas fa-file-upload fa-2x mb-2"></i>
+                            <div>Upload Documents</div>
+                        </div>
+                        <div class="step" data-step="3">
+                            <i class="fas fa-check-circle fa-2x mb-2"></i>
+                            <div>Submit for Review</div>
+                        </div>
+                    </div>
+
+                    <!-- Step 1: Profile Information -->
+                    <div id="step1" class="step-content">
+                        <div class="alert alert-info">
+                            <strong><i class="fas fa-info-circle me-2"></i>Required Information:</strong>
+                            <ul class="mb-0">
+                                <li>Valid HPCSA (Health Professions Council of SA) or SANC (SA Nursing Council) registration</li>
+                                <li>BHF (Board of Healthcare Funders) practice number (if applicable)</li>
+                                <li>Practice address for AI-powered patient matching</li>
+                            </ul>
+                        </div>
+
+                        <form id="profileForm">
+                            <!-- Profile Picture Upload -->
+                            <div class="mb-4">
+                                <label class="form-label"><i class="fas fa-camera me-2"></i>Professional Profile Picture</label>
+                                <input type="file" class="form-control" id="profilePicture" accept="image/*" onchange="previewProfilePicture(event)">
+                                <small class="text-muted">Upload a professional profile picture (max 5MB)</small>
+                                <div id="profilePicturePreview" class="mt-3" style="display: none;">
+                                    <div class="position-relative d-inline-block">
+                                        <img id="profilePictureImg" src="" alt="Profile Preview" class="img-thumbnail" style="max-width: 200px; cursor: pointer;" onclick="viewFullSizeImage()">
+                                        <button type="button" class="btn btn-sm btn-danger position-absolute top-0 end-0 m-1" onclick="removeProfilePicture()">
+                                            <i class="fas fa-times"></i>
+                                        </button>
+                                    </div>
+                                    <div class="mt-2">
+                                        <small class="text-muted"><i class="fas fa-info-circle me-1"></i>Click image to view full size</small>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="row g-3">
+                                <!-- Full Name -->
+                                <div class="col-md-6">
+                                    <label class="form-label">Full Name <span class="text-danger">*</span></label>
+                                    <input type="text" class="form-control" id="fullName" required>
+                                    <div class="form-text">As it appears on your registration certificate</div>
+                                </div>
+
+                                <!-- Profession -->
+                                <div class="col-md-6">
+                                    <label class="form-label">Profession <span class="text-danger">*</span></label>
+                                    <select class="form-select" id="profession" required>
+                                        <option value="">Select profession...</option>
+                                        <option value="Medical Practitioner">Medical Practitioner</option>
+                                        <option value="Specialist Physician">Specialist Physician</option>
+                                        <option value="General Surgeon">General Surgeon</option>
+                                        <option value="Registered Nurse">Registered Nurse</option>
+                                        <option value="Enrolled Nurse">Enrolled Nurse</option>
+                                        <option value="Professional Nurse">Professional Nurse</option>
+                                        <option value="Physiotherapist">Physiotherapist</option>
+                                        <option value="Psychologist">Psychologist</option>
+                                        <option value="Dentist">Dentist</option>
+                                        <option value="Pharmacist">Pharmacist</option>
+                                        <option value="Other">Other</option>
+                                    </select>
+                                </div>
+
+                                <!-- Registration Number -->
+                                <div class="col-md-6">
+                                    <label class="form-label">Registration Number <span class="text-danger">*</span></label>
+                                    <input type="text" class="form-control" id="registrationNumber" required>
+                                    <div class="form-text">HPCSA or SANC registration number</div>
+                                </div>
+
+                                <!-- Practice Number -->
+                                <div class="col-md-6">
+                                    <label class="form-label">Practice Number</label>
+                                    <input type="text" class="form-control" id="practiceNumber">
+                                    <div class="form-text">BHF practice number (optional)</div>
+                                </div>
+
+                                <!-- Specialty -->
+                                <div class="col-md-6">
+                                    <label class="form-label">Specialty</label>
+                                    <input type="text" class="form-control" id="specialty" placeholder="e.g., General Practice, Cardiology">
+                                </div>
+
+                                <!-- Practice Name -->
+                                <div class="col-md-6">
+                                    <label class="form-label">Practice Name</label>
+                                    <input type="text" class="form-control" id="practiceName" placeholder="e.g., Smith Medical Centre">
+                                </div>
+
+                                <!-- Consultation Fee -->
+                                <div class="col-md-6">
+                                    <label class="form-label">Consultation Fee <span class="text-danger">*</span></label>
+                                    <input type="number" class="form-control" id="consultationFee" required placeholder="e.g., 500" min="0" step="0.01">
+                                    <div class="form-text">Fee charged per consultation (required for payment processing)</div>
+                                </div>
+
+                                <!-- Currency -->
+                                <div class="col-md-6">
+                                    <label class="form-label">Currency <span class="text-danger">*</span></label>
+                                    <select class="form-select" id="currency" required>
+                                        <option value="ZAR" selected>South African Rand (ZAR)</option>
+                                        <option value="NGN">Nigerian Naira (NGN)</option>
+                                        <option value="KES">Kenyan Shilling (KES)</option>
+                                        <option value="GHS">Ghanaian Cedi (GHS)</option>
+                                        <option value="USD">US Dollar (USD)</option>
+                                        <option value="EUR">Euro (EUR)</option>
+                                    </select>
+                                </div>
+
+                                <!-- Availability -->
+                                <div class="col-md-6">
+                                    <label class="form-label">Availability <span class="text-danger">*</span></label>
+                                    <input type="text" class="form-control" id="availability" required placeholder="e.g., Mon-Fri 8AM-5PM, Sat 9AM-1PM">
+                                    <div class="form-text">Working days and hours for patient bookings</div>
+                                </div>
+
+                                <!-- Address -->
+                                <div class="col-12">
+                                    <label class="form-label">Practice Address <span class="text-danger">*</span></label>
+                                    <textarea class="form-control" id="address" rows="2" required placeholder="Full physical address of your practice"></textarea>
+                                    <div class="form-text">
+                                        <i class="fas fa-lock me-1"></i>This address is hidden from patients but used by our AI to recommend practitioners based on patient location
+                                    </div>
+                                </div>
+
+                                <!-- Medical Scheme Billing -->
+                                <div class="col-12">
+                                    <label class="form-label">Medical Scheme Billing Supported? <span class="text-danger">*</span></label>
+                                    <div class="form-check">
+                                        <input class="form-check-input" type="radio" name="medicalSchemeBilling" id="billingSupportedYes" value="true" required>
+                                        <label class="form-check-label" for="billingSupportedYes">
+                                            Yes - I submit claims to medical schemes
+                                        </label>
+                                    </div>
+                                    <div class="form-check">
+                                        <input class="form-check-input" type="radio" name="medicalSchemeBilling" id="billingSupportedNo" value="false" required>
+                                        <label class="form-check-label" for="billingSupportedNo">
+                                            No - Cash/Private payments only
+                                        </label>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div id="profileFeedback" class="mt-3"></div>
+
+                            <div class="d-flex justify-content-between mt-4">
+                                <button type="button" class="btn btn-outline-secondary" onclick="closeRegistrationForm()">
+                                    <i class="fas fa-times me-2"></i>Cancel
+                                </button>
+                                <button type="submit" class="btn btn-primary">
+                                    Next: Upload Documents <i class="fas fa-arrow-right ms-2"></i>
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+
+                    <!-- Step 2: Document Upload -->
+                    <div id="step2" class="step-content" style="display: none;">
+                        <div class="alert alert-warning">
+                            <strong><i class="fas fa-exclamation-triangle me-2"></i>Required Documents:</strong>
+                            <p class="mb-0">Please upload clear, legible copies of all required documents. Accepted formats: PDF, JPG, PNG (max 5MB per file)</p>
+                        </div>
+
+                        <!-- ID Document -->
+                        <div class="mb-4">
+                            <h6><i class="fas fa-id-card me-2"></i>1. ID Document <span class="text-danger">*</span></h6>
+                            <div class="document-upload-area" data-doc-type="id_document" onclick="triggerFileUpload('id_document')">
+                                <i class="fas fa-cloud-upload-alt fa-3x text-muted mb-2"></i>
+                                <p class="mb-0">Click to upload or drag and drop</p>
+                                <small class="text-muted">South African ID or Passport</small>
+                            </div>
+                            <input type="file" id="upload_id_document" class="d-none" accept=".pdf,.jpg,.jpeg,.png" onchange="handleFileSelect(event, 'id_document')">
+                            <div id="preview_id_document"></div>
+                        </div>
+
+                        <!-- Registration Certificate -->
+                        <div class="mb-4">
+                            <h6><i class="fas fa-certificate me-2"></i>2. Registration Certificate <span class="text-danger">*</span></h6>
+                            <div class="document-upload-area" data-doc-type="registration_certificate" onclick="triggerFileUpload('registration_certificate')">
+                                <i class="fas fa-cloud-upload-alt fa-3x text-muted mb-2"></i>
+                                <p class="mb-0">Click to upload or drag and drop</p>
+                                <small class="text-muted">HPCSA or SANC registration certificate</small>
+                            </div>
+                            <input type="file" id="upload_registration_certificate" class="d-none" accept=".pdf,.jpg,.jpeg,.png" onchange="handleFileSelect(event, 'registration_certificate')">
+                            <div id="preview_registration_certificate"></div>
+                        </div>
+
+                        <!-- Degree Certificate -->
+                        <div class="mb-4">
+                            <h6><i class="fas fa-graduation-cap me-2"></i>3. Degree Certificate <span class="text-danger">*</span></h6>
+                            <div class="document-upload-area" data-doc-type="degree_certificate" onclick="triggerFileUpload('degree_certificate')">
+                                <i class="fas fa-cloud-upload-alt fa-3x text-muted mb-2"></i>
+                                <p class="mb-0">Click to upload or drag and drop</p>
+                                <small class="text-muted">Medical degree or nursing qualification</small>
+                            </div>
+                            <input type="file" id="upload_degree_certificate" class="d-none" accept=".pdf,.jpg,.jpeg,.png" onchange="handleFileSelect(event, 'degree_certificate')">
+                            <div id="preview_degree_certificate"></div>
+                        </div>
+
+                        <!-- Proof of Address -->
+                        <div class="mb-4">
+                            <h6><i class="fas fa-home me-2"></i>4. Proof of Address <span class="text-danger">*</span></h6>
+                            <div class="document-upload-area" data-doc-type="proof_of_address" onclick="triggerFileUpload('proof_of_address')">
+                                <i class="fas fa-cloud-upload-alt fa-3x text-muted mb-2"></i>
+                                <p class="mb-0">Click to upload or drag and drop</p>
+                                <small class="text-muted">Recent utility bill or bank statement (not older than 3 months)</small>
+                            </div>
+                            <input type="file" id="upload_proof_of_address" class="d-none" accept=".pdf,.jpg,.jpeg,.png" onchange="handleFileSelect(event, 'proof_of_address')">
+                            <div id="preview_proof_of_address"></div>
+                        </div>
+
+                        <div id="uploadFeedback" class="mt-3"></div>
+
+                        <div class="d-flex justify-content-between mt-4">
+                            <button type="button" class="btn btn-outline-secondary" onclick="goToRegistrationStep(1)">
+                                <i class="fas fa-arrow-left me-2"></i>Back
+                            </button>
+                            <button type="button" class="btn btn-primary" onclick="goToRegistrationStep(3)" id="continueToReview">
+                                Next: Review & Submit <i class="fas fa-arrow-right ms-2"></i>
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Step 3: Review & Submit -->
+                    <div id="step3" class="step-content" style="display: none;">
+                        <div class="alert alert-success">
+                            <strong><i class="fas fa-check-circle me-2"></i>Ready to Submit!</strong>
+                            <p class="mb-0">Please review your information before submitting for verification.</p>
+                        </div>
+
+                        <div id="reviewSummary">
+                            <!-- Summary will be populated dynamically -->
+                        </div>
+
+                        <div class="alert alert-info mt-4">
+                            <h6><i class="fas fa-info-circle me-2"></i>What Happens Next?</h6>
+                            <ol class="mb-0">
+                                <li>Your application will be reviewed by our admin team</li>
+                                <li>We'll verify your registration number with HPCSA/SANC</li>
+                                <li>Our AI will analyze your documents for consistency</li>
+                                <li>You'll receive an email notification once verified (typically 2-3 business days)</li>
+                                <li>After verification, you can start receiving patient bookings</li>
+                            </ol>
+                        </div>
+
+                        <div id="submitFeedback" class="mt-3"></div>
+
+                        <div class="d-flex justify-content-between mt-4">
+                            <button type="button" class="btn btn-outline-secondary" onclick="goToRegistrationStep(2)">
+                                <i class="fas fa-arrow-left me-2"></i>Back
+                            </button>
+                            <button type="button" class="btn btn-success btn-lg" onclick="submitPractitionerApplication()" id="submitBtn">
+                                <i class="fas fa-paper-plane me-2"></i>Submit for Verification
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Success Message (hidden initially) -->
+                    <div id="successMessage" class="text-center py-5" style="display: none;">
+                        <i class="fas fa-check-circle text-success fa-4x mb-3"></i>
+                        <h3 class="text-success">Application Submitted Successfully!</h3>
+                        <p class="lead">Your practitioner verification application has been received.</p>
+                        <p class="text-muted">You'll receive an email notification once our team reviews your application.</p>
+                        <div class="alert alert-info mt-4">
+                            <strong>Application Status:</strong> Pending Review<br>
+                            <strong>Submitted:</strong> <span id="submissionDate"></span>
+                        </div>
+                        <button class="btn btn-primary mt-3" onclick="closeRegistrationForm()">
+                            <i class="fas fa-times me-2"></i>Close
+                        </button>
+                    </div>
+                </div>
             </div>
-            <div class="card-body">
-                <form id="serviceForm">
-                    <div class="mb-3">
-                        <label for="profilePicture" class="form-label">Professional Profile Picture</label>
-                        <input type="file" class="form-control" id="profilePicture" accept="image/*">
-                        <small class="text-muted">Upload a professional profile picture</small>
-                    </div>
-                    <div class="row">
-                        <div class="col-md-6">
-                            <div class="mb-3">
-                                <label for="practitionerName" class="form-label">Full Name</label>
-                                <input type="text" class="form-control" id="practitionerName" placeholder="Dr. John Smith" required>
-                            </div>
-                        </div>
-                        <div class="col-md-6">
-                            <div class="mb-3">
-                                <label for="profession" class="form-label">Medical Profession</label>
-                                <select class="form-control" id="profession" required>
-                                    <option value="">Select your profession</option>
-                                    <option value="General Practitioner">General Practitioner</option>
-                                    <option value="Specialist Doctor">Specialist Doctor</option>
-                                    <option value="Registered Nurse">Registered Nurse</option>
-                                    <option value="Dentist">Dentist</option>
-                                    <option value="Pharmacist">Pharmacist</option>
-                                    <option value="Physiotherapist">Physiotherapist</option>
-                                    <option value="Psychologist">Psychologist</option>
-                                    <option value="Optometrist">Optometrist</option>
-                                    <option value="Radiologist">Radiologist</option>
-                                    <option value="Surgeon">Surgeon</option>
-                                    <option value="Midwife">Midwife</option>
-                                    <option value="Other">Other (specify in description)</option>
-                                </select>
-                            </div>
-                        </div>
-                    </div>
-                    <div class="row">
-                        <div class="col-md-6">
-                            <div class="mb-3">
-                                <label for="qualifications" class="form-label">Qualifications & Specializations</label>
-                                <input type="text" class="form-control" id="qualifications" placeholder="e.g., MBBS, MD, PhD, Specialist Cardiology">
-                            </div>
-                        </div>
-                        <div class="col-md-6">
-                            <div class="mb-3">
-                                <label for="licenseNumber" class="form-label">Medical License/Registration Number</label>
-                                <input type="text" class="form-control" id="licenseNumber" placeholder="Enter your medical license number">
-                            </div>
-                        </div>
-                    </div>
-                    <div class="mb-3">
-                        <label for="experience" class="form-label">Years of Experience</label>
-                        <input type="number" class="form-control" id="experience" placeholder="Enter years of practice" min="0">
-                    </div>
-                    <div class="mb-3">
-                        <label for="serviceDescription" class="form-label">Services & Specialties</label>
-                        <textarea class="form-control" id="serviceDescription" rows="4" placeholder="Describe your medical services, specialties, and treatment approaches in detail"></textarea>
-                    </div>
-                    <div class="row">
-                        <div class="col-md-6">
-                            <div class="mb-3">
-                                <label for="servicePrice" class="form-label">Consultation Fee (Local Currency)</label>
-                                <input type="number" class="form-control" id="servicePrice" placeholder="Enter consultation fee">
-                            </div>
-                        </div>
-                        <div class="col-md-6">
-                            <div class="mb-3">
-                                <label for="currency" class="form-label">Currency</label>
-                                <select class="form-control" id="currency">
-                                    <option value="ZAR">South African Rand (ZAR)</option>
-                                    <option value="NGN">Nigerian Naira (NGN)</option>
-                                    <option value="KES">Kenyan Shilling (KES)</option>
-                                    <option value="EGP">Egyptian Pound (EGP)</option>
-                                    <option value="GHS">Ghanaian Cedi (GHS)</option>
-                                    <option value="TZS">Tanzanian Shilling (TZS)</option>
-                                    <option value="UGX">Ugandan Shilling (UGX)</option>
-                                    <option value="ETB">Ethiopian Birr (ETB)</option>
-                                    <option value="MAD">Moroccan Dirham (MAD)</option>
-                                    <option value="USD">US Dollar (USD)</option>
-                                    <option value="Other">Other</option>
-                                </select>
-                            </div>
-                        </div>
-                    </div>
-                    <div class="mb-3">
-                        <label for="servingLocations" class="form-label">Practice Location & Service Areas</label>
-                        <input type="text" class="form-control" id="servingLocations" placeholder="e.g., Lagos, Nigeria | Cape Town, South Africa | Nairobi, Kenya - specify cities/regions you serve">
-                        <small class="text-muted">Include country, state/province, and cities where you practice</small>
-                    </div>
-                    <div class="row">
-                        <div class="col-md-6">
-                            <div class="mb-3">
-                                <label for="availability" class="form-label">Availability & Working Hours</label>
-                                <input type="text" class="form-control" id="availability" placeholder="e.g., Mon-Fri 8AM-5PM, Sat 9AM-1PM">
-                            </div>
-                        </div>
-                        <div class="col-md-6">
-                            <div class="mb-3">
-                                <label for="phoneNumber" class="form-label">Phone Number</label>
-                                <input type="tel" class="form-control" id="phoneNumber" placeholder="e.g., +27 123 456 7890, +234 801 234 5678" required>
-                                <small class="text-muted">Include country code</small>
-                            </div>
-                        </div>
-                    </div>
-                    <div class="mb-3">
-                        <label for="emailAddress" class="form-label">Email Address</label>
-                        <input type="email" class="form-control" id="emailAddress" placeholder="your.email@example.com">
-                    </div>
-                    <button type="submit" class="btn btn-primary btn-lg w-100">Register My Practice</button>
-                </form>
-            </div>
-        </div>
         </div> <!-- End collapsible registration form -->
         
         <div id="serviceList" class="mt-5">
@@ -535,6 +800,79 @@
 
         console.log('System ready! 🎉');
         
+        // Check user role and hide registration button for patients
+        async function checkAndHideRegistrationButton(userId) {
+            console.log('🔍 checkAndHideRegistrationButton called with userId:', userId);
+            if (!userId) {
+                console.warn('No userId provided, hiding button');
+                return;
+            }
+            
+            try {
+                // Get user's role from auth metadata
+                console.log('Fetching user data from auth...');
+                const { data: { user }, error: userError } = await supabaseClient.auth.getUser();
+                
+                if (userError || !user) {
+                    console.warn('Error getting user data:', userError);
+                    return;
+                }
+                
+                const userRole = user.user_metadata?.role || user.raw_user_meta_data?.role || 'patient';
+                console.log('✅ User role determined:', userRole);
+                console.log('User metadata:', user.user_metadata);
+                console.log('Raw user meta data:', user.raw_user_meta_data);
+                
+                const openFormBtn = document.getElementById('openFormBtn');
+                const closeFormBtn = document.getElementById('closeFormBtn');
+                
+                // Hide registration button for patients (they can't register practices)
+                if (userRole === 'patient') {
+                    console.log('🚫 User is a PATIENT, hiding registration button');
+                    if (openFormBtn) openFormBtn.style.display = 'none';
+                    if (closeFormBtn) closeFormBtn.style.display = 'none';
+                    return;
+                }
+                
+                // For practitioners, check if they already registered
+                if (userRole === 'practitioner') {
+                    console.log('👨‍⚕️ User is a PRACTITIONER, checking registration status...');
+                    const { data: practitionerRecord, error: dbError } = await supabaseClient
+                        .from('practitioners')
+                        .select('id, full_name, verification_status')
+                        .eq('user_id', userId)
+                        .maybeSingle();
+                    
+                    console.log('Database query result:', { practitionerRecord, dbError });
+                    
+                    if (practitionerRecord) {
+                        console.log('✅ Practitioner record found:', practitionerRecord.full_name);
+                        console.log('🚫 HIDING registration button (already registered)');
+                        if (openFormBtn) {
+                            openFormBtn.style.display = 'none';
+                            console.log('Button display set to none');
+                        } else {
+                            console.warn('openFormBtn element not found!');
+                        }
+                        if (closeFormBtn) closeFormBtn.style.display = 'none';
+                    } else {
+                        console.log('❌ No practitioner record found');
+                        console.log('✅ SHOWING registration button (not yet registered)');
+                        if (openFormBtn) {
+                            openFormBtn.style.display = 'inline-block';
+                            console.log('Button display set to inline-block');
+                        } else {
+                            console.warn('openFormBtn element not found!');
+                        }
+                    }
+                } else {
+                    console.log('⚠️ Unknown user role:', userRole);
+                }
+            } catch (err) {
+                console.error('❌ Error in checkAndHideRegistrationButton:', err);
+            }
+        }
+        
         // Use document-level event delegation to avoid duplicate listeners
         let formToggleInitialized = false;
         
@@ -553,6 +891,9 @@
             } else {
                 return;
             }
+            
+            // Check if user is already a practitioner and hide registration button if so
+            await checkAndHideRegistrationButton(currentUserId);
             
             console.log('Loading existing practitioners...');
             await loadAndDisplayPractitioners();
@@ -590,6 +931,25 @@
                 openBtn.style.display = 'inline-block';
                 closeBtn.style.display = 'none';
                 console.log('✅ Form closed, buttons switched');
+            }
+            
+            // Reset wizard to step 1
+            goToRegistrationStep(1);
+            
+            // Reset forms
+            document.getElementById('profileForm')?.reset();
+            
+            // Clear uploaded documents
+            Object.keys(uploadedDocuments).forEach(docType => {
+                if (uploadedDocuments[docType]) {
+                    removeDocument(docType);
+                }
+            });
+            
+            // Hide success message if visible
+            const successMsg = document.getElementById('successMessage');
+            if (successMsg) {
+                successMsg.style.display = 'none';
             }
         }
         
@@ -660,21 +1020,26 @@
                         }
                         
                         displayedIds.add(practitioner.id);
+                        
+                        // Debug medical aid flag
+                        console.log(`Practitioner ${practitioner.full_name}: medical_scheme_billing_supported =`, practitioner.medical_scheme_billing_supported);
+                        
                         createServiceListing(
                             practitioner.profile_image_url || 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMTUwIiBoZWlnaHQ9IjE1MCIgdmlld0JveD0iMCAwIDE1MCAxNTAiIGZpbGw9Im5vbmUiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+CjxyZWN0IHdpZHRoPSIxNTAiIGhlaWdodD0iMTUwIiBmaWxsPSIjZjBmMGYwIi8+Cjx0ZXh0IHg9Ijc1IiB5PSI4MCIgdGV4dC1hbmNob3I9Im1pZGRsZSIgZmlsbD0iIzk5OSIgZm9udC1mYW1pbHk9IkFyaWFsIiBmb250LXNpemU9IjE0Ij5Qcm9maWxlIFBob3RvPC90ZXh0Pgo8L3N2Zz4K',
-                            practitioner.name,
+                            practitioner.full_name || practitioner.name,
                             practitioner.profession,
-                            practitioner.qualifications,
-                            practitioner.license_number,
+                            practitioner.specialty || practitioner.qualifications || 'General Practice',
+                            practitioner.registration_number || practitioner.license_number,
                             practitioner.experience_years,
-                            practitioner.service_description,
+                            practitioner.service_description || practitioner.practice_name || null,
                             practitioner.consultation_fee,
-                            practitioner.currency,
+                            practitioner.currency || 'ZAR',
                             practitioner.serving_locations,
                             practitioner.availability,
-                            practitioner.phone_number,
-                            practitioner.email_address,
-                            practitioner.id
+                            null,
+                            null,
+                            practitioner.id,
+                            practitioner.medical_scheme_billing_supported || false
                         );
                     });
                     console.log('✅ Practitioners loaded and displayed successfully. Displayed:', displayedIds.size);
@@ -693,7 +1058,7 @@
         
         // Database Tables Schema
         const DB_TABLES = {
-            practitioners: 'medical_practitioners',
+            practitioners: 'practitioners',
             appointments: 'appointments',
             patients: 'patients',
             chat_sessions: 'ai_chat_sessions',
@@ -744,81 +1109,499 @@
         // Make function globally accessible
         window.toggleRegistrationButton = toggleRegistrationButton;
         
-        document.getElementById('serviceForm').addEventListener('submit', async function(event) {
+        // ===== PRACTITIONER VERIFICATION WIZARD LOGIC =====
+        
+        // Global variables to track registration progress
+        let currentStep = 1;
+        let practitionerProfileData = {};
+        let uploadedDocuments = {
+            id_document: null,
+            registration_certificate: null,
+            degree_certificate: null,
+            proof_of_address: null
+        };
+        let profilePictureFile = null;
+        let profilePicturePreviewUrl = null;
+        
+        // Profile Picture Preview Functions
+        function previewProfilePicture(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+            
+            // Validate file size (5MB max)
+            if (file.size > 5 * 1024 * 1024) {
+                showErrorAlert('Profile picture must be less than 5MB.');
+                event.target.value = '';
+                return;
+            }
+            
+            // Validate file type
+            if (!file.type.match('image.*')) {
+                showErrorAlert('Please upload an image file (JPG, PNG, etc.).');
+                event.target.value = '';
+                return;
+            }
+            
+            profilePictureFile = file;
+            
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                profilePicturePreviewUrl = e.target.result;
+                document.getElementById('profilePictureImg').src = e.target.result;
+                document.getElementById('profilePicturePreview').style.display = 'block';
+            };
+            reader.readAsDataURL(file);
+        }
+        
+        function removeProfilePicture() {
+            profilePictureFile = null;
+            profilePicturePreviewUrl = null;
+            document.getElementById('profilePicture').value = '';
+            document.getElementById('profilePicturePreview').style.display = 'none';
+        }
+        
+        function viewFullSizeImage() {
+            const modal = document.getElementById('fullSizeModal');
+            const img = document.getElementById('fullSizeImg');
+            img.src = profilePicturePreviewUrl;
+            modal.style.display = 'block';
+        }
+        
+        function closeFullSizeImage() {
+            document.getElementById('fullSizeModal').style.display = 'none';
+        }
+        
+        // Make functions globally accessible
+        window.previewProfilePicture = previewProfilePicture;
+        window.removeProfilePicture = removeProfilePicture;
+        window.viewFullSizeImage = viewFullSizeImage;
+        window.closeFullSizeImage = closeFullSizeImage;
+        
+        // Step navigation
+        function goToRegistrationStep(stepNumber) {
+            console.log('Navigating to step:', stepNumber);
+            
+            // Validate before moving forward
+            if (stepNumber > currentStep) {
+                if (currentStep === 1 && !validateProfileForm()) {
+                    return;
+                }
+                if (currentStep === 2 && !validateDocuments()) {
+                    showErrorAlert('Please upload all required documents before continuing.');
+                    return;
+                }
+            }
+            
+            // Hide all steps
+            document.querySelectorAll('.step-content').forEach(step => {
+                step.style.display = 'none';
+            });
+            
+            // Show requested step
+            document.getElementById(`step${stepNumber}`).style.display = 'block';
+            
+            // Update step indicator
+            document.querySelectorAll('.step').forEach((step, index) => {
+                step.classList.remove('active', 'completed');
+                if (index + 1 < stepNumber) {
+                    step.classList.add('completed');
+                } else if (index + 1 === stepNumber) {
+                    step.classList.add('active');
+                }
+            });
+            
+            currentStep = stepNumber;
+            
+            // If moving to step 3, populate review summary
+            if (stepNumber === 3) {
+                populateReviewSummary();
+            }
+        }
+        
+        // Make function globally accessible
+        window.goToRegistrationStep = goToRegistrationStep;
+        
+        // Step 1: Profile Form Submission
+        document.getElementById('profileForm').addEventListener('submit', async function(event) {
             event.preventDefault();
             
-            // Show loading state
-            const submitBtn = event.target.querySelector('button[type="submit"]');
-            const originalText = submitBtn.innerHTML;
-            submitBtn.innerHTML = '⏳ Registering Practice...';
-            submitBtn.disabled = true;
+            if (!validateProfileForm()) {
+                return;
+            }
+            
+            // Capture profile data
+            practitionerProfileData = {
+                full_name: document.getElementById('fullName').value,
+                profession: document.getElementById('profession').value,
+                registration_number: document.getElementById('registrationNumber').value,
+                practice_number: document.getElementById('practiceNumber').value || null,
+                specialty: document.getElementById('specialty').value || null,
+                practice_name: document.getElementById('practiceName').value || null,
+                consultation_fee: parseFloat(document.getElementById('consultationFee').value),
+                currency: document.getElementById('currency').value,
+                availability: document.getElementById('availability').value,
+                address: document.getElementById('address').value,
+                medical_scheme_billing_supported: document.querySelector('input[name="medicalSchemeBilling"]:checked').value === 'true',
+                profile_picture_file: profilePictureFile,
+                profile_picture_preview: profilePicturePreviewUrl
+            };
+            
+            console.log('Profile data captured:', practitionerProfileData);
+            showSuccessAlert('Profile information saved! Please upload your documents.');
+            goToRegistrationStep(2);
+        });
+        
+        // Profile form validation
+        function validateProfileForm() {
+            const requiredFields = [
+                'fullName', 'profession', 'registrationNumber', 
+                'consultationFee', 'currency', 'availability', 'address'
+            ];
+            const medicalScheme = document.querySelector('input[name="medicalSchemeBilling"]:checked');
+            
+            for (const fieldId of requiredFields) {
+                const field = document.getElementById(fieldId);
+                if (!field.value.trim()) {
+                    field.classList.add('is-invalid');
+                    showErrorAlert(`Please fill in: ${field.previousElementSibling.textContent}`);
+                    field.focus();
+                    return false;
+                }
+                field.classList.remove('is-invalid');
+            }
+            
+            if (!medicalScheme) {
+                showErrorAlert('Please indicate if you support medical scheme billing.');
+                return false;
+            }
+            
+            // Validate consultation fee is a positive number
+            const fee = parseFloat(document.getElementById('consultationFee').value);
+            if (isNaN(fee) || fee <= 0) {
+                showErrorAlert('Consultation fee must be a positive number.');
+                document.getElementById('consultationFee').focus();
+                return false;
+            }
+            
+            return true;
+        }
+        
+        // Document upload handlers
+        function triggerFileUpload(docType) {
+            document.getElementById(`upload_${docType}`).click();
+        }
+        
+        // Make function globally accessible
+        window.triggerFileUpload = triggerFileUpload;
+        
+        function handleFileSelect(event, docType) {
+            const file = event.target.files[0];
+            if (!file) return;
+            
+            // Validate file size (5MB max)
+            if (file.size > 5 * 1024 * 1024) {
+                showErrorAlert('File size must be less than 5MB.');
+                event.target.value = '';
+                return;
+            }
+            
+            // Validate file type
+            const allowedTypes = ['application/pdf', 'image/jpeg', 'image/jpg', 'image/png'];
+            if (!allowedTypes.includes(file.type)) {
+                showErrorAlert('Please upload PDF, JPG, or PNG files only.');
+                event.target.value = '';
+                return;
+            }
+            
+            // Store file reference
+            uploadedDocuments[docType] = file;
+            
+            // Show preview
+            const previewDiv = document.getElementById(`preview_${docType}`);
+            previewDiv.innerHTML = `
+                <div class="uploaded-file">
+                    <div>
+                        <i class="fas fa-file-${file.type.includes('pdf') ? 'pdf' : 'image'} me-2"></i>
+                        <strong>${file.name}</strong>
+                        <span class="text-muted ms-2">(${(file.size / 1024).toFixed(1)} KB)</span>
+                    </div>
+                    <button type="button" class="btn btn-sm btn-danger" onclick="removeDocument('${docType}')">
+                        <i class="fas fa-trash"></i>
+                    </button>
+                </div>
+            `;
+            
+            // Update upload area appearance
+            document.querySelector(`[data-doc-type="${docType}"]`).style.borderColor = '#28a745';
+            document.querySelector(`[data-doc-type="${docType}"]`).style.backgroundColor = '#d4edda';
+            
+            console.log(`Document uploaded: ${docType}`, file.name);
+        }
+        
+        // Make function globally accessible
+        window.handleFileSelect = handleFileSelect;
+        
+        function removeDocument(docType) {
+            uploadedDocuments[docType] = null;
+            document.getElementById(`upload_${docType}`).value = '';
+            document.getElementById(`preview_${docType}`).innerHTML = '';
+            
+            // Reset upload area appearance
+            document.querySelector(`[data-doc-type="${docType}"]`).style.borderColor = '#dee2e6';
+            document.querySelector(`[data-doc-type="${docType}"]`).style.backgroundColor = '';
+            
+            console.log(`Document removed: ${docType}`);
+        }
+        
+        // Make function globally accessible
+        window.removeDocument = removeDocument;
+        
+        // Add drag and drop support
+        document.addEventListener('DOMContentLoaded', function() {
+            const uploadAreas = document.querySelectorAll('.document-upload-area');
+            
+            uploadAreas.forEach(area => {
+                area.addEventListener('dragover', (e) => {
+                    e.preventDefault();
+                    area.classList.add('dragover');
+                });
+                
+                area.addEventListener('dragleave', () => {
+                    area.classList.remove('dragover');
+                });
+                
+                area.addEventListener('drop', (e) => {
+                    e.preventDefault();
+                    area.classList.remove('dragover');
+                    
+                    const docType = area.dataset.docType;
+                    const file = e.dataTransfer.files[0];
+                    
+                    if (file) {
+                        const input = document.getElementById(`upload_${docType}`);
+                        const dataTransfer = new DataTransfer();
+                        dataTransfer.items.add(file);
+                        input.files = dataTransfer.files;
+                        handleFileSelect({ target: input }, docType);
+                    }
+                });
+            });
+        });
+        
+        // Validate all documents uploaded
+        function validateDocuments() {
+            const requiredDocs = ['id_document', 'registration_certificate', 'degree_certificate', 'proof_of_address'];
+            return requiredDocs.every(doc => uploadedDocuments[doc] !== null);
+        }
+        
+        // Populate review summary
+        function populateReviewSummary() {
+            const summary = document.getElementById('reviewSummary');
+            
+            const docCount = Object.values(uploadedDocuments).filter(d => d !== null).length;
+            
+            summary.innerHTML = `
+                <div class="card mb-3">
+                    <div class="card-header bg-light">
+                        <h5 class="mb-0"><i class="fas fa-user-md me-2"></i>Profile Information</h5>
+                    </div>
+                    <div class="card-body">
+                        ${profilePicturePreviewUrl ? `
+                        <div class="mb-3 text-center">
+                            <img src="${profilePicturePreviewUrl}" alt="Profile" class="img-thumbnail" style="max-width: 150px;">
+                            <div class="mt-2"><small class="text-muted">Profile Picture</small></div>
+                        </div>
+                        ` : ''}
+                        <div class="row">
+                            <div class="col-md-6">
+                                <p><strong>Full Name:</strong><br>${practitionerProfileData.full_name}</p>
+                                <p><strong>Profession:</strong><br>${practitionerProfileData.profession}</p>
+                                <p><strong>Registration Number:</strong><br>${practitionerProfileData.registration_number}</p>
+                                ${practitionerProfileData.practice_number ? `<p><strong>Practice Number:</strong><br>${practitionerProfileData.practice_number}</p>` : ''}
+                                ${practitionerProfileData.specialty ? `<p><strong>Specialty:</strong><br>${practitionerProfileData.specialty}</p>` : ''}
+                            </div>
+                            <div class="col-md-6">
+                                ${practitionerProfileData.practice_name ? `<p><strong>Practice Name:</strong><br>${practitionerProfileData.practice_name}</p>` : ''}
+                                <p><strong>Consultation Fee:</strong><br>${practitionerProfileData.currency} ${practitionerProfileData.consultation_fee}</p>
+                                <p><strong>Availability:</strong><br>${practitionerProfileData.availability}</p>
+                                <p><strong>Medical Scheme Billing:</strong><br>${practitionerProfileData.medical_scheme_billing_supported ? 'Yes' : 'No'}</p>
+                            </div>
+                        </div>
+                        <p><strong>Practice Address:</strong><br>${practitionerProfileData.address}</p>
+                    </div>
+                </div>
+                
+                <div class="card">
+                    <div class="card-header bg-light">
+                        <h5 class="mb-0"><i class="fas fa-file-upload me-2"></i>Uploaded Documents</h5>
+                    </div>
+                    <div class="card-body">
+                        <p class="text-success"><i class="fas fa-check-circle me-2"></i><strong>${docCount} documents uploaded</strong></p>
+                        <ul class="list-unstyled">
+                            ${uploadedDocuments.id_document ? `<li><i class="fas fa-check text-success me-2"></i>ID Document: ${uploadedDocuments.id_document.name}</li>` : ''}
+                            ${uploadedDocuments.registration_certificate ? `<li><i class="fas fa-check text-success me-2"></i>Registration Certificate: ${uploadedDocuments.registration_certificate.name}</li>` : ''}
+                            ${uploadedDocuments.degree_certificate ? `<li><i class="fas fa-check text-success me-2"></i>Degree Certificate: ${uploadedDocuments.degree_certificate.name}</li>` : ''}
+                            ${uploadedDocuments.proof_of_address ? `<li><i class="fas fa-check text-success me-2"></i>Proof of Address: ${uploadedDocuments.proof_of_address.name}</li>` : ''}
+                        </ul>
+                    </div>
+                </div>
+            `;
+        }
+        
+        // Final submission
+        async function submitPractitionerApplication() {
+            const submitBtn = document.getElementById('submitBtn');
+            const originalHTML = submitBtn.innerHTML;
             
             try {
-                var profilePictureFile = document.getElementById('profilePicture').files[0];
-                var practitionerName = document.getElementById('practitionerName').value;
-                var profession = document.getElementById('profession').value;
-                var qualifications = document.getElementById('qualifications').value;
-                var licenseNumber = document.getElementById('licenseNumber').value;
-                var experience = document.getElementById('experience').value;
-                var serviceDescription = document.getElementById('serviceDescription').value;
-                var servicePrice = document.getElementById('servicePrice').value;
-                var currency = document.getElementById('currency').value;
-                var servingLocations = document.getElementById('servingLocations').value;
-                var availability = document.getElementById('availability').value;
-                var phoneNumber = document.getElementById('phoneNumber').value;
-                var emailAddress = document.getElementById('emailAddress').value;
-
-                // Upload profile picture to Supabase Storage
-                let profileImageUrl = 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMTUwIiBoZWlnaHQ9IjE1MCIgdmlld0JveD0iMCAwIDE1MCAxNTAiIGZpbGw9Im5vbmUiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+CjxyZWN0IHdpZHRoPSIxNTAiIGhlaWdodD0iMTUwIiBmaWxsPSIjZjBmMGYwIi8+Cjx0ZXh0IHg9Ijc1IiB5PSI4MCIgdGV4dC1hbmNob3I9Im1pZGRsZSIgZmlsbD0iIzk5OSIgZm9udC1mYW1pbHk9IkFyaWFsIiBmb250LXNpemU9IjE0Ij5Qcm9maWxlIFBob3RvPC90ZXh0Pgo8L3N2Zz4K';
+                submitBtn.disabled = true;
+                submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i>Submitting Application...';
+                
+                if (!supabaseClient) {
+                    throw new Error('Supabase client not configured. Please check your config.js file.');
+                }
+                
+                // 1. Upload profile picture to Supabase Storage (if provided)
+                let profileImageUrl = null;
                 if (profilePictureFile) {
-                    profileImageUrl = await uploadProfilePicture(profilePictureFile, practitionerName);
+                    const fileName = `${currentUserId}/profile_${Date.now()}_${profilePictureFile.name}`;
+                    
+                    const { data: uploadData, error: uploadError } = await supabaseClient.storage
+                        .from('practitioner-profiles')
+                        .upload(fileName, profilePictureFile);
+                    
+                    if (uploadError) {
+                        console.error('Error uploading profile picture:', uploadError);
+                        // Continue without profile picture if upload fails
+                        profileImageUrl = profilePicturePreviewUrl; // Use base64 as fallback
+                    } else {
+                        // Get public URL
+                        const { data: urlData } = supabaseClient.storage
+                            .from('practitioner-profiles')
+                            .getPublicUrl(fileName);
+                        
+                        profileImageUrl = urlData.publicUrl;
+                    }
                 }
-
-                // Save practitioner to database
+                
+                // 2. Upload documents to Supabase Storage
+                const documentUrls = {};
+                for (const [docType, file] of Object.entries(uploadedDocuments)) {
+                    if (file) {
+                        const fileName = `${currentUserId}/${docType}_${Date.now()}_${file.name}`;
+                        
+                        const { data: uploadData, error: uploadError } = await supabaseClient.storage
+                            .from('verification-documents')
+                            .upload(fileName, file);
+                        
+                        if (uploadError) {
+                            console.error(`Error uploading ${docType}:`, uploadError);
+                            throw new Error(`Failed to upload ${docType.replace('_', ' ')}`);
+                        }
+                        
+                        // Get public URL
+                        const { data: urlData } = supabaseClient.storage
+                            .from('verification-documents')
+                            .getPublicUrl(fileName);
+                        
+                        documentUrls[docType] = urlData.publicUrl;
+                    }
+                }
+                
+                // 3. Create practitioner record
                 const practitionerData = {
-                    owner_user_id: currentUserId,
-                    name: practitionerName,
-                    profession: profession,
-                    qualifications: qualifications,
-                    license_number: licenseNumber,
-                    experience_years: parseInt(experience) || 0,
-                    service_description: serviceDescription,
-                    consultation_fee: parseFloat(servicePrice) || 0,
-                    currency: currency,
-                    serving_locations: servingLocations,
-                    availability: availability,
-                    phone_number: phoneNumber,
-                    email_address: emailAddress,
+                    user_id: currentUserId,
+                    full_name: practitionerProfileData.full_name,
+                    profession: practitionerProfileData.profession,
+                    registration_number: practitionerProfileData.registration_number,
+                    practice_number: practitionerProfileData.practice_number,
+                    specialty: practitionerProfileData.specialty,
+                    practice_name: practitionerProfileData.practice_name,
+                    consultation_fee: practitionerProfileData.consultation_fee,
+                    currency: practitionerProfileData.currency,
+                    availability: practitionerProfileData.availability,
+                    address: practitionerProfileData.address,
+                    medical_scheme_billing_supported: practitionerProfileData.medical_scheme_billing_supported,
                     profile_image_url: profileImageUrl,
-                    created_at: new Date().toISOString(),
-                    verified: false,
-                    rating: 0,
-                    total_patients: 0
+                    verification_status: 'pending_review',
+                    submitted_at: new Date().toISOString()
                 };
-
-                const savedPractitioner = await savePractitioner(practitionerData);
-                if (savedPractitioner) {
-                    // Reload all practitioners to display the new one (prevents duplicates)
-                    await loadAndDisplayPractitioners();
-                    
-                    // Show success message
-                    showSuccessAlert('✅ Practice registered successfully! Your profile is now live.');
-                    
-                    // Close registration form after successful registration
-                    closeRegistrationForm();
-                } else {
-                    throw new Error('Failed to save practitioner data');
+                
+                const { data: practitioner, error: practitionerError } = await supabaseClient
+                    .from(DB_TABLES.practitioners)
+                    .insert([practitionerData])
+                    .select()
+                    .single();
+                
+                if (practitionerError) {
+                    console.error('Error creating practitioner:', practitionerError);
+                    throw new Error('Failed to create practitioner record');
                 }
-
-                document.getElementById('serviceForm').reset();
+                
+                // 4. Create document records
+                for (const [docType, url] of Object.entries(documentUrls)) {
+                    const documentData = {
+                        practitioner_id: practitioner.id,
+                        document_type: docType,
+                        file_url: url,
+                        file_name: uploadedDocuments[docType].name,
+                        file_size: uploadedDocuments[docType].size,
+                        uploaded_at: new Date().toISOString()
+                    };
+                    
+                    const { error: docError } = await supabaseClient
+                        .from('practitioner_documents')
+                        .insert([documentData]);
+                    
+                    if (docError) {
+                        console.error('Error saving document record:', docError);
+                    }
+                }
+                
+                // 5. Create verification request
+                const verificationData = {
+                    practitioner_id: practitioner.id,
+                    status: 'pending_review',
+                    submitted_at: new Date().toISOString()
+                };
+                
+                const { error: verificationError } = await supabaseClient
+                    .from('verification_requests')
+                    .insert([verificationData]);
+                
+                if (verificationError) {
+                    console.error('Error creating verification request:', verificationError);
+                }
+                
+                // 6. Show success message
+                document.querySelectorAll('.step-content').forEach(step => step.style.display = 'none');
+                document.getElementById('successMessage').style.display = 'block';
+                document.getElementById('submissionDate').textContent = new Date().toLocaleString();
+                
+                // Reset form state
+                currentStep = 1;
+                practitionerProfileData = {};
+                uploadedDocuments = {
+                    id_document: null,
+                    registration_certificate: null,
+                    degree_certificate: null,
+                    proof_of_address: null
+                };
+                profilePictureFile = null;
+                profilePicturePreviewUrl = null;
+                
+                console.log('✅ Practitioner application submitted successfully');
+                
             } catch (error) {
-                console.error('Registration error:', error);
-                showErrorAlert('❌ Registration failed. Please try again.');
-            } finally {
-                submitBtn.innerHTML = originalText;
+                console.error('Submission error:', error);
+                showErrorAlert('❌ Failed to submit application: ' + error.message);
                 submitBtn.disabled = false;
+                submitBtn.innerHTML = originalHTML;
             }
-        });
+        }
+        
+        // Make function globally accessible
+        window.submitPractitionerApplication = submitPractitionerApplication;
 
         // Supabase Database Functions
         async function uploadProfilePicture(file, practitionerName) {
@@ -891,10 +1674,35 @@
                 const { data, error } = await supabaseClient
                     .from(DB_TABLES.practitioners)
                     .select('*')
+                    .eq('verification_status', 'verified')
+                    .not('submitted_at', 'is', null)  // Must have submitted registration form
                     .order('created_at', { ascending: false });
                 
                 if (error) throw error;
-                return data || [];
+                
+                const practitioners = data || [];
+                
+                // Filter for completed registrations only
+                const completedPractitioners = practitioners.filter(p => {
+                    // Must have submitted via registration form (has submitted_at timestamp)
+                    if (!p.submitted_at) {
+                        return false;
+                    }
+                    
+                    // Must have all required registration fields
+                    const hasRequiredFields = (
+                        p.full_name && 
+                        p.profession && 
+                        p.registration_number && 
+                        p.address
+                    );
+                    
+                    return hasRequiredFields;
+                });
+                
+                console.log(`Total verified: ${practitioners.length}, Completed registration form: ${completedPractitioners.length}, Showing to all users`);
+                
+                return completedPractitioners;
             } catch (error) {
                 console.error('Load practitioners error:', error);
                 return [];
@@ -1024,18 +1832,29 @@
             setTimeout(() => alertDiv.remove(), 5000);
         }
         
-        function createServiceListing(imageUrl, practitionerName, profession, qualifications, licenseNumber, experience, serviceDescription, servicePrice, currency, servingLocations, availability, phoneNumber, emailAddress, practitionerId) {
+        function createServiceListing(imageUrl, practitionerName, profession, qualifications, licenseNumber, experience, serviceDescription, servicePrice, currency, servingLocations, availability, phoneNumber, emailAddress, practitionerId, acceptsMedicalAid) {
             // Debug logging for template literal issues
             if (!imageUrl || imageUrl.includes('${')) {
                 console.warn('Image URL contains template literal, fixing:', imageUrl);
                 imageUrl = 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMTUwIiBoZWlnaHQ9IjE1MCIgdmlld0JveD0iMCAwIDE1MCAxNTAiIGZpbGw9Im5vbmUiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+CjxyZWN0IHdpZHRoPSIxNTAiIGhlaWdodD0iMTUwIiBmaWxsPSIjZjBmMGYwIi8+Cjx0ZXh0IHg9Ijc1IiB5PSI4MCIgdGV4dC1hbmNob3I9Im1pZGRsZSIgZmlsbD0iIzk5OSIgZm9udC1mYW1pbHk9IkFyaWFsIiBmb250LXNpemU9IjE0Ij5Qcm9maWxlIFBob3RvPC90ZXh0Pgo8L3N2Zz4K';
             }
             
+            // Debug medical aid badge
+            console.log(`Creating card for ${practitionerName}, acceptsMedicalAid =`, acceptsMedicalAid, typeof acceptsMedicalAid);
+            
             var serviceList = document.getElementById('serviceList');
             var serviceId = practitionerId || 'service_' + Date.now(); // Use database ID if available
             var newService = document.createElement('div');
             newService.className = 'card mt-3 practitioner-profile-card';
             newService.setAttribute('data-practitioner-id', serviceId);
+            
+            // Build medical aid badge HTML
+            const medicalAidBadge = acceptsMedicalAid === true || acceptsMedicalAid === 'true' 
+                ? `<p class="mb-2"><span class="badge bg-info text-white"><i class="fas fa-check-circle me-1"></i>Accepts Medical Aid</span></p>` 
+                : '';
+            
+            console.log(`Medical Aid Badge HTML:`, medicalAidBadge);
+            
             newService.innerHTML = `
                 <div class="card-body">
                     <div class="row">
@@ -1051,15 +1870,14 @@
                         <div class="col-md-9">
                             <h5 class="card-title text-primary">${practitionerName}</h5>
                             <h6 class="text-muted mb-3">${profession}</h6>
-                            ${qualifications ? `<p class="mb-2"><strong>Qualifications:</strong> ${qualifications}</p>` : ''}
+                            ${qualifications && qualifications !== 'null' ? `<p class="mb-2"><strong>Specialty:</strong> ${qualifications}</p>` : ''}
                             ${licenseNumber ? `<p class="mb-2"><strong>License Number:</strong> ${licenseNumber}</p>` : ''}
                             ${experience ? `<p class="mb-2"><strong>Experience:</strong> ${experience} years</p>` : ''}
-                            <p class="card-text">${serviceDescription}</p>
+                            ${medicalAidBadge}
+                            ${serviceDescription && serviceDescription !== 'null' ? `<p class="card-text">${serviceDescription}</p>` : ''}
                             <div class="row">
                                 <div class="col-md-6">
-                                    ${servicePrice ? `<p class="mb-2"><strong>Consultation Fee:</strong> <span class="text-success">${servicePrice} ${currency}</span></p>` : ''}
-                                    <p class="mb-2"><strong>Phone:</strong> <a href="tel:${phoneNumber}" class="text-decoration-none">${phoneNumber}</a></p>
-                                    ${emailAddress ? `<p class="mb-2"><strong>Email:</strong> <a href="mailto:${emailAddress}" class="text-decoration-none">${emailAddress}</a></p>` : ''}
+                                    ${servicePrice ? `<p class="mb-2"><strong>Consultation Fee:</strong> <span class="text-success">${currency} ${servicePrice}</span></p>` : ''}
                                 </div>
                                 <div class="col-md-6">
                                     ${servingLocations ? `<p class="mb-2"><strong>Practice Locations:</strong> ${servingLocations}</p>` : ''}
@@ -1067,10 +1885,7 @@
                                 </div>
                             </div>
                             <div class="mt-3">
-                                <button class="btn btn-primary btn-sm me-2" onclick="contactPractitioner('${phoneNumber}', '${practitionerName}')">📞 Call Now</button>
-                                ${emailAddress ? `<button class="btn btn-outline-primary btn-sm me-2" onclick="emailPractitioner('${emailAddress}', '${practitionerName}')">✉️ Send Email</button>` : ''}
-                                <button class="btn btn-success btn-sm me-2" onclick="bookAppointment('${practitionerName}', '${profession}', '${phoneNumber}', '${emailAddress}', '${serviceId}')">📅 Book Appointment</button>
-                                <button class="btn btn-outline-info btn-sm">👁️ View Full Profile</button>
+                                <button class="btn btn-success btn-sm" onclick="bookAppointment('${practitionerName}', '${profession}', '${phoneNumber}', '${emailAddress}', '${serviceId}')">📅 Book Appointment with AI</button>
                             </div>
                         </div>
                     </div>
@@ -1203,7 +2018,7 @@
             if (selectedPractitionerId === '') {
                 infoDiv.style.display = 'none';
                 if (feeInfoDiv) {
-                    feeInfoDiv.innerHTML = `💳 Secure payment via Paystack<br>✅ 80% to practitioner, 20% platform fee`;
+                    feeInfoDiv.innerHTML = `💳 Secure payment via Paystack<br>✅ 95% to practitioner, 5% platform fee`;
                 }
                 return;
             }
@@ -1248,11 +2063,12 @@
                 }
                 paystackFee = Math.round(paystackFee);
                 
-                const totalAmountToPay = consultationFee + paystackFee;
+                // NEW PRICING (5% platform fee) - deducted from consultation, not added to patient
+                const platformAmount = Math.round(consultationFee * 0.05);
+                const practitionerAmount = Math.round(consultationFee * 0.95);
                 
-                // Calculate split (based on consultation fee only)
-                const practitionerAmount = Math.round(consultationFee * 0.8);
-                const platformAmount = Math.round(consultationFee * 0.2);
+                // Patient pays: Consultation + Processing only (platform fee is deducted from practitioner's share)
+                const totalAmountToPay = consultationFee + paystackFee;
                 
                 infoDiv.innerHTML = `
                     <div class="d-flex align-items-center">
@@ -1268,16 +2084,54 @@
                 `;
                 infoDiv.style.display = 'block';
                 
-                // Update payment fee info
+                // Update payment fee info (show standard consultation by default)
                 if (feeInfoDiv) {
                     feeInfoDiv.innerHTML = `
                         💳 Consultation Fee: <strong>${consultationFee} ${currency}</strong><br>
-                        ✅ Practitioner gets ${practitionerAmount} ${currency} (80%) • Platform fee ${platformAmount} ${currency} (20%)
+                        💹 Processing Fee: <strong>${paystackFee} ${currency}</strong><br>
+                        ━━━━━━━━━━━━━━━━━━━━━━━━━━━━<br>
+                        💵 <strong>Total You Pay: ${totalAmountToPay} ${currency}</strong><br><br>
+                        <small class="text-muted">From consultation fee:<br>
+                        ✅ Practitioner receives: ${practitionerAmount} ${currency} (95%)<br>
+                        🏢 Platform fee: ${platformAmount} ${currency} (5%)</small>
                     `;
                 }
                 
+                // Re-apply medical aid settings if checkbox is checked
+                updatePaymentInfo();
+                
                 // Trigger AI suggestions
                 getAIRecommendations();
+            }
+        }
+        
+        function updatePaymentInfo() {
+            const isMedicalAid = document.getElementById('isMedicalAid')?.checked || false;
+            const feeInfoDiv = document.getElementById('paymentFeeInfo');
+            const bookBtn = document.getElementById('bookAppointmentBtn');
+            
+            if (feeInfoDiv) {
+                if (isMedicalAid) {
+                    feeInfoDiv.innerHTML = `
+                        🏥 <strong>MEDICAL AID/INSURANCE BOOKING</strong><br>
+                        <span class="badge bg-success mt-1">NO PAYMENT REQUIRED FROM PATIENT</span><br>
+                        <small class="text-muted">Practitioner pays R10 to accept • Medical aid billed separately</small>
+                    `;
+                } else {
+                    feeInfoDiv.innerHTML = `
+                        💳 Secure payment via Paystack<br>
+                        ✅ 95% to practitioner, 5% platform fee
+                    `;
+                }
+            }
+            
+            // Update button text
+            if (bookBtn) {
+                if (isMedicalAid) {
+                    bookBtn.innerHTML = '<i class="fas fa-paper-plane me-2"></i>Submit Booking (No Payment)';
+                } else {
+                    bookBtn.innerHTML = '<i class="fas fa-credit-card me-2"></i>Confirm Booking & Pay';
+                }
             }
         }
 
@@ -1705,14 +2559,15 @@ Keep your response concise (3-4 sentences) and actionable.`;
             const date = document.getElementById('appointmentDate').value;
             const reason = document.getElementById('appointmentReason').value;
             const appointmentType = document.getElementById('appointmentType').value;
+            const isMedicalAid = document.getElementById('isMedicalAid')?.checked || false;
             
             if (!patientName || !patientPhone || !practitioner || !date || !selectedTimeSlot) {
-                alert('Please fill in all required fields and select a time slot.');
+                showValidationError('Please fill in all required fields and select a time slot.');
                 return;
             }
             
             if (!practitionerId || practitionerId === '') {
-                alert('Please select a practitioner from the dropdown.');
+                showValidationError('Please select a practitioner from the dropdown.');
                 return;
             }
             
@@ -1740,7 +2595,9 @@ Keep your response concise (3-4 sentences) and actionable.`;
                 status: 'pending',
                 created_at: new Date().toISOString(),
                 user_id: userId,
-                ai_scheduling_suggestion: hasAISuggestion ? aiSuggestionText : null
+                ai_scheduling_suggestion: hasAISuggestion ? aiSuggestionText : null,
+                is_medical_aid: isMedicalAid,
+                medical_aid_note: isMedicalAid ? 'R10 processing fee applies to practitioner' : null
             };
             
             try {
@@ -1832,19 +2689,20 @@ Keep your response concise (3-4 sentences) and actionable.`;
                 
                 paystackFee = Math.round(paystackFee); // Round to nearest unit
                 
-                // Total amount patient pays (consultation fee + Paystack fee)
+                // NEW PRICING STRUCTURE (5% platform fee) - deducted from consultation, not added to patient
+                const platformFeePercentage = 0.05; // 5% platform fee (down from 20%)
+                const platformAmount = Math.round(consultationFee * platformFeePercentage);
+                const practitionerAmount = Math.round(consultationFee * 0.95);
+                
+                // Patient pays: Consultation + Processing ONLY (platform fee comes from practitioner's share)
                 const totalAmountToPay = consultationFee + paystackFee;
                 
-                // Calculate 80/20 split (based on consultation fee only, NOT affected by Paystack fee)
-                const practitionerAmount = Math.round(consultationFee * 0.8);
-                const platformAmount = Math.round(consultationFee * 0.2);
-                
-                console.log('💰 Payment breakdown:', {
+                console.log('💰 NEW Payment breakdown (5% platform fee):', {
                     consultationFee: consultationFee,
                     paystackFee: paystackFee,
-                    totalCharged: totalAmountToPay,
-                    practitioner: practitionerAmount + ' (80% of consultation)',
-                    platform: platformAmount + ' (20% of consultation)',
+                    totalPatientPays: totalAmountToPay + ' (consultation + processing)',
+                    practitionerReceives: practitionerAmount + ' (95% of consultation)',
+                    platformReceives: platformAmount + ' (5% of consultation, deducted from practitioner share)',
                     currency: currency
                 });
                 
@@ -1859,58 +2717,146 @@ Keep your response concise (3-4 sentences) and actionable.`;
                 appointmentData._practitioner_phone = practitionerPhone;
                 appointmentData._practitioner_email = practitionerEmail;
                 
-                // Show payment confirmation with dynamic amounts
-                const confirmPayment = confirm(
-                    `💳 PAYMENT REQUIRED\\n\\n` +
-                    `TOTAL AMOUNT: ${totalAmountToPay} ${currency}\\n` +
-                    `\\nBreakdown:\\n` +
-                    `• Consultation Fee: ${consultationFee} ${currency}\\n` +
-                    `• Processing Fee: ${paystackFee} ${currency}\\n` +
-                    `  - Practitioner receives: ${practitionerAmount} ${currency} (80%)\\n` +
-                    `  - Platform fee: ${platformAmount} ${currency} (20%)\\n\\n` +
-                    `ℹ️ The total amount includes secure payment processing and platform service fees.\\n\\n` +
-                    `Appointment Details:\\n` +
-                    `Practitioner: ${appointmentData.practitioner_name}\\n` +
-                    `Date: ${new Date(date).toLocaleDateString()} at ${selectedTimeSlot.time}\\n` +
-                    `Patient: ${patientName}\\n\\n` +
-                    `Cancellation Policy:\\n` +
-                    `- Cancel ≥24h before: Full refund (${totalAmountToPay} ${currency})\\n` +
-                    `- Cancel <24h before: No refund\\n` +
-                    `- No-show: No refund\\n\\n` +
-                    `Click OK to proceed to secure payment via Paystack.`
-                );
+                // ========================================
+                // TWO PAYMENT METHODS:
+                // A) Standard: Patient pays now (5%/95% split)
+                // B) Medical Aid: No patient payment, practitioner pays R10 to accept
+                // ========================================
                 
-                if (!confirmPayment) {
-                    document.getElementById('bookAppointmentBtn').disabled = false;
-                    document.getElementById('bookAppointmentBtn').innerHTML = '<i class="fas fa-calendar-check me-2"></i>Confirm Booking';
-                    return;
-                }
-                
-                // Save appointment as PENDING_PAYMENT first
-                const savedAppointment = await saveAppointmentWithPayment(appointmentData);
-                
-                if (!savedAppointment) {
-                    throw new Error('Failed to create appointment record');
-                }
-                
-                // Initialize Paystack payment
-                if (typeof PaystackIntegration === 'undefined') {
-                    console.error('Paystack integration not loaded');
-                    alert('⚠️ Payment system not available. Please refresh the page and try again.');
-                    document.getElementById('bookAppointmentBtn').disabled = false;
-                    document.getElementById('bookAppointmentBtn').innerHTML = '<i class="fas fa-calendar-check me-2"></i>Confirm Booking';
-                    return;
-                }
-                
-                const paystackHandler = new PaystackIntegration();
-                const amountInKobo = totalAmountToPay * 100; // Convert total amount to kobo (includes consultation + Paystack fee)
-                const paymentReference = `PAY_${bookingId}_${Date.now()}`;
-                
-                // Initiate Paystack payment
-                paystackHandler.initiatePayment(
-                    {
-                        amount: amountInKobo,
-                        email: patientEmail,
+                if (appointmentData.is_medical_aid) {
+                    // OPTION B: MEDICAL AID/INSURANCE - NO PATIENT PAYMENT
+                    // Show professional modal instead of basic confirm()
+                    document.getElementById('medAidPractitionerName').textContent = appointmentData.practitioner_name;
+                    document.getElementById('medAidDateTime').textContent = `${new Date(date).toLocaleDateString()} at ${selectedTimeSlot.time}`;
+                    document.getElementById('medAidPatientName').textContent = patientName;
+                    
+                    const medicalAidModal = new bootstrap.Modal(document.getElementById('medicalAidConfirmModal'));
+                    medicalAidModal.show();
+                    
+                    // Handle modal confirmation
+                    const confirmMedicalAidBtn = document.getElementById('confirmMedicalAidBtn');
+                    const medicalAidConfirmHandler = async () => {
+                        confirmMedicalAidBtn.removeEventListener('click', medicalAidConfirmHandler);
+                        medicalAidModal.hide();
+                        
+                        // Continue with booking process
+                        await processMedicalAidBooking();
+                    };
+                    
+                    confirmMedicalAidBtn.addEventListener('click', medicalAidConfirmHandler);
+                    
+                    // Handle modal cancel/close
+                    const medicalAidModalElement = document.getElementById('medicalAidConfirmModal');
+                    medicalAidModalElement.addEventListener('hidden.bs.modal', function resetButton(event) {
+                        if (event.target === medicalAidModalElement) {
+                            document.getElementById('bookAppointmentBtn').disabled = false;
+                            document.getElementById('bookAppointmentBtn').innerHTML = '<i class="fas fa-calendar-check me-2"></i>Confirm Booking';
+                            medicalAidModalElement.removeEventListener('hidden.bs.modal', resetButton);
+                        }
+                    }, { once: true });
+                    
+                    return; // Stop here, continue in modal handler
+                    
+                    async function processMedicalAidBooking() {
+                    
+                    // Save medical aid appointment WITHOUT payment
+                    appointmentData.status = 'PENDING_PRACTITIONER_ACCEPTANCE';
+                    appointmentData.payment_required = false;
+                    appointmentData.medical_aid_fee_required = true;
+                    
+                    const savedAppointment = await saveAppointmentWithPayment(appointmentData);
+                    
+                    if (!savedAppointment) {
+                        throw new Error('Failed to create appointment record');
+                    }
+                    
+                    // Success message - NO PAYMENT - Show professional modal
+                    document.getElementById('medAidSuccessBookingId').textContent = bookingId;
+                    document.getElementById('medAidSuccessPatientName').textContent = patientName;
+                    document.getElementById('medAidSuccessPractitionerName').textContent = appointmentData.practitioner_name;
+                    document.getElementById('medAidSuccessDateTime').textContent = `${new Date(date).toLocaleDateString()} at ${selectedTimeSlot.time}`;
+                    document.getElementById('medAidSuccessReason').textContent = reason || 'General consultation';
+                    
+                    const medicalAidSuccessModal = new bootstrap.Modal(document.getElementById('medicalAidSuccessModal'));
+                    medicalAidSuccessModal.show();
+                    
+                    // Handle close button
+                    document.getElementById('closeMedicalAidSuccessBtn').addEventListener('click', function() {
+                        medicalAidSuccessModal.hide();
+                        closeAppointmentBooking();
+                        setTimeout(() => location.reload(), 500);
+                    }, { once: true });
+                    
+                    } // End processMedicalAidBooking
+                    
+                } else {
+                    // OPTION A: STANDARD CONSULTATION - PATIENT PAYS NOW (5%/95% SPLIT)
+                    // Show professional modal instead of basic confirm()
+                    document.getElementById('stdTotalAmount').textContent = `${totalAmountToPay} ${currency}`;
+                    document.getElementById('stdConsultationFee').textContent = `${consultationFee} ${currency}`;
+                    document.getElementById('stdProcessingFee').textContent = `${paystackFee} ${currency}`;
+                    document.getElementById('stdTotalBreakdown').textContent = `${totalAmountToPay} ${currency}`;
+                    document.getElementById('stdPractitionerAmount').textContent = `${practitionerAmount} ${currency} (95%)`;
+                    document.getElementById('stdPlatformAmount').textContent = `${platformAmount} ${currency} (5%)`;
+                    document.getElementById('stdPractitionerName').textContent = appointmentData.practitioner_name;
+                    document.getElementById('stdDateTime').textContent = `${new Date(date).toLocaleDateString()} at ${selectedTimeSlot.time}`;
+                    document.getElementById('stdPatientName').textContent = patientName;
+                    document.getElementById('stdRefundAmount').textContent = `${totalAmountToPay} ${currency}`;
+                    
+                    const standardPaymentModal = new bootstrap.Modal(document.getElementById('standardPaymentConfirmModal'));
+                    standardPaymentModal.show();
+                    
+                    // Handle modal confirmation
+                    const confirmStandardPaymentBtn = document.getElementById('confirmStandardPaymentBtn');
+                    const standardPaymentConfirmHandler = async () => {
+                        confirmStandardPaymentBtn.removeEventListener('click', standardPaymentConfirmHandler);
+                        standardPaymentModal.hide();
+                        
+                        // Continue with payment process
+                        await processStandardPayment();
+                    };
+                    
+                    confirmStandardPaymentBtn.addEventListener('click', standardPaymentConfirmHandler);
+                    
+                    // Handle modal cancel/close
+                    const standardPaymentModalElement = document.getElementById('standardPaymentConfirmModal');
+                    standardPaymentModalElement.addEventListener('hidden.bs.modal', function resetButton(event) {
+                        if (event.target === standardPaymentModalElement) {
+                            document.getElementById('bookAppointmentBtn').disabled = false;
+                            document.getElementById('bookAppointmentBtn').innerHTML = '<i class="fas fa-calendar-check me-2"></i>Confirm Booking';
+                            standardPaymentModalElement.removeEventListener('hidden.bs.modal', resetButton);
+                        }
+                    }, { once: true });
+                    
+                    return; // Stop here, continue in modal handler
+                    
+                    async function processStandardPayment() {
+                    
+                    // Save appointment as PENDING_PAYMENT first
+                    const savedAppointment = await saveAppointmentWithPayment(appointmentData);
+                    
+                    if (!savedAppointment) {
+                        throw new Error('Failed to create appointment record');
+                    }
+                    
+                    // Initialize Paystack payment
+                    if (typeof PaystackIntegration === 'undefined') {
+                        console.error('Paystack integration not loaded');
+                        alert('⚠️ Payment system not available. Please refresh the page and try again.');
+                        document.getElementById('bookAppointmentBtn').disabled = false;
+                        document.getElementById('bookAppointmentBtn').innerHTML = '<i class="fas fa-calendar-check me-2"></i>Confirm Booking';
+                        return;
+                    }
+                    
+                    const paystackHandler = new PaystackIntegration();
+                    const amountInKobo = totalAmountToPay * 100; // Convert total amount to kobo
+                    const paymentReference = `PAY_${bookingId}_${Date.now()}`;
+                    
+                    // Initiate Paystack payment
+                    paystackHandler.initiatePayment(
+                        {
+                            amount: amountInKobo,
+                            email: patientEmail,
                         reference: paymentReference,
                         id: savedAppointment.id || bookingId,
                         patient_name: patientName,
@@ -1936,38 +2882,29 @@ Keep your response concise (3-4 sentences) and actionable.`;
                                 amountInKobo
                             );
                             
-                            let confirmationMessage = 
-                                `✅ PAYMENT SUCCESSFUL! Appointment Booked!\\n\\n` +
-                                `Booking ID: ${bookingId}\\n` +
-                                `Payment Reference: ${response.reference}\\n` +
-                                `Total Paid: ${totalAmountToPay} ${currency}\\n\\n` +
-                                `Payment Breakdown:\\n` +
-                                `• Consultation Fee: ${consultationFee} ${currency}\\n` +
-                                `  - Practitioner receives: ${practitionerAmount} ${currency} (80%)\\n` +
-                                `  - Platform fee: ${platformAmount} ${currency} (20%)\\n` +
-                                `• Processing Fee: ${paystackFee} ${currency}\\n\\n` +
-                                `ℹ️ The total amount includes secure payment processing and platform service fees.\\n\\n` +
-                                `Patient: ${patientName}\\n` +
-                                `Practitioner: ${appointmentData.practitioner_name}\\n` +
-                                `Date: ${new Date(date).toLocaleDateString()} at ${selectedTimeSlot.time}\\n\\n` +
-                                `Reason: ${reason || 'General consultation'}\\n\\n`;
+                            // Show professional success modal instead of alert
+                            document.getElementById('stdSuccessBookingId').textContent = bookingId;
+                            document.getElementById('stdSuccessPaymentRef').textContent = response.reference;
+                            document.getElementById('stdSuccessTotalPaid').textContent = `${totalAmountToPay} ${currency}`;
+                            document.getElementById('stdSuccessConsultationFee').textContent = `${consultationFee} ${currency}`;
+                            document.getElementById('stdSuccessProcessingFee').textContent = `${paystackFee} ${currency}`;
+                            document.getElementById('stdSuccessTotalBreakdown').textContent = `${totalAmountToPay} ${currency}`;
+                            document.getElementById('stdSuccessPractitionerAmount').textContent = `${practitionerAmount} ${currency} (95%)`;
+                            document.getElementById('stdSuccessPlatformAmount').textContent = `${platformAmount} ${currency} (5%)`;
+                            document.getElementById('stdSuccessPatientName').textContent = patientName;
+                            document.getElementById('stdSuccessPractitionerName').textContent = appointmentData.practitioner_name;
+                            document.getElementById('stdSuccessDateTime').textContent = `${new Date(date).toLocaleDateString()} at ${selectedTimeSlot.time}`;
+                            document.getElementById('stdSuccessReason').textContent = reason || 'General consultation';
                             
-                            if (hasAISuggestion) {
-                                let cleanSuggestion = aiSuggestionText.replace(/🤖 AI Scheduling Recommendations?:?\s*/gi, '').trim();
-                                confirmationMessage += `🤖 AI Recommendation:\\n${cleanSuggestion}\\n\\n`;
-                            }
+                            const paymentSuccessModal = new bootstrap.Modal(document.getElementById('paymentSuccessModal'));
+                            paymentSuccessModal.show();
                             
-                            confirmationMessage += 
-                                `Status: ⏳ Awaiting Practitioner Confirmation\\n` +
-                                `The practitioner has 24 hours to confirm.\\n` +
-                                `If not confirmed, you'll receive automatic refund of ${totalAmountToPay} ${currency}.\\n\\n` +
-                                `Manage this appointment in your dashboard.`;
-                            
-                            alert(confirmationMessage);
-                            closeAppointmentBooking();
-                            
-                            // Refresh to show new appointment
-                            setTimeout(() => location.reload(), 1000);
+                            // Handle close button
+                            document.getElementById('closePaymentSuccessBtn').addEventListener('click', function() {
+                                paymentSuccessModal.hide();
+                                closeAppointmentBooking();
+                                setTimeout(() => location.reload(), 500);
+                            }, { once: true });
                             
                         } catch (updateError) {
                             console.error('Failed to update appointment after payment:', updateError);
@@ -1986,6 +2923,9 @@ Keep your response concise (3-4 sentences) and actionable.`;
                         document.getElementById('bookAppointmentBtn').innerHTML = '<i class="fas fa-calendar-check me-2"></i>Confirm Booking';
                     }
                 );
+                
+                    } // End processStandardPayment
+                } // End of standard payment (else block)
                 
             } catch (error) {
                 console.error('Booking error:', error);
@@ -2068,7 +3008,13 @@ Keep your response concise (3-4 sentences) and actionable.`;
                     .single();
                 
                 if (error) {
-                    console.warn('Database insert failed, using localStorage:', error);
+                    console.error('❌ DATABASE INSERT FAILED - Full Error Details:');
+                    console.error('Error Code:', error.code);
+                    console.error('Error Message:', error.message);
+                    console.error('Error Details:', error.details);
+                    console.error('Error Hint:', error.hint);
+                    console.error('Full Error Object:', JSON.stringify(error, null, 2));
+                    console.warn('Using localStorage fallback...');
                     return saveAppointmentToLocalStorage(appointmentData);
                 }
                 
@@ -3653,6 +4599,26 @@ Keep your response concise and professional. Focus on the medical assessment.`;
                                 <label class="form-label">Reason for Visit:</label>
                                 <textarea id="appointmentReason" class="form-control" rows="3" placeholder="Briefly describe your symptoms or reason for the appointment..."></textarea>
                             </div>
+                            
+                            <div class="mb-3">
+                                <div class="card bg-light border-info">
+                                    <div class="card-body p-3">
+                                        <div class="form-check">
+                                            <input class="form-check-input" type="checkbox" id="isMedicalAid" onchange="updatePaymentInfo()">
+                                            <label class="form-check-label" for="isMedicalAid">
+                                                <strong>🏥 This is a Medical Aid/Insurance Booking</strong>
+                                            </label>
+                                        </div>
+                                        <small class="text-muted d-block mt-2">
+                                            ℹ️ <strong>Different payment method:</strong><br>
+                                            • <strong>You</strong> (patient) do NOT pay anything now<br>
+                                            • <strong>Practitioner</strong> pays R10 to accept booking<br>
+                                            • Medical aid/insurance is billed separately<br>
+                                            • No upfront payment required from you
+                                        </small>
+                                    </div>
+                                </div>
+                            </div>
                         </div>
                         
                         <!-- Right Panel: AI Scheduling -->
@@ -3685,7 +4651,7 @@ Keep your response concise and professional. Focus on the medical assessment.`;
                                 </button>
                                 <small class="text-muted text-center" id="paymentFeeInfo">
                                     💳 Secure payment via Paystack<br>
-                                    ✅ 80% to practitioner, 20% platform fee
+                                    ✅ 95% to practitioner, 5% platform fee
                                 </small>
                                 <button class="btn btn-outline-primary" onclick="getAIRecommendations()">
                                     🤖 Get AI Scheduling Recommendations
@@ -3843,10 +4809,35 @@ Keep your response concise and professional. Focus on the medical assessment.`;
                 const { data, error } = await supabaseClient
                     .from(DB_TABLES.practitioners)
                     .select('*')
+                    .eq('verification_status', 'verified')
+                    .not('submitted_at', 'is', null)  // Must have submitted registration form
                     .order('created_at', { ascending: false });
                 
                 if (error) throw error;
-                return data || [];
+                
+                const practitioners = data || [];
+                
+                // Filter for completed registrations only
+                const completedPractitioners = practitioners.filter(p => {
+                    // Must have submitted via registration form (has submitted_at timestamp)
+                    if (!p.submitted_at) {
+                        return false;
+                    }
+                    
+                    // Must have all required registration fields
+                    const hasRequiredFields = (
+                        p.full_name && 
+                        p.profession && 
+                        p.registration_number && 
+                        p.address
+                    );
+                    
+                    return hasRequiredFields;
+                });
+                
+                console.log(`Total verified: ${practitioners.length}, Completed registration form: ${completedPractitioners.length}, Showing to all users`);
+                
+                return completedPractitioners;
             } catch (error) {
                 console.error('Load practitioners error:', error);
                 return [];
@@ -3893,9 +4884,7 @@ Keep your response concise and professional. Focus on the medical assessment.`;
                             <p class="card-text">${serviceDescription}</p>
                             <div class="row">
                                 <div class="col-md-6">
-                                    ${servicePrice ? `<p class="mb-2"><strong>Consultation Fee:</strong> <span class="text-success">${servicePrice} ${currency}</span></p>` : ''}
-                                    <p class="mb-2"><strong>Phone:</strong> <a href="tel:${phoneNumber}" class="text-decoration-none">${phoneNumber}</a></p>
-                                    ${emailAddress ? `<p class="mb-2"><strong>Email:</strong> <a href="mailto:${emailAddress}" class="text-decoration-none">${emailAddress}</a></p>` : ''}
+                                    ${servicePrice ? `<p class="mb-2"><strong>Consultation Fee:</strong> <span class="text-success">${currency} ${servicePrice}</span></p>` : ''}
                                 </div>
                                 <div class="col-md-6">
                                     ${servingLocations ? `<p class="mb-2"><strong>Practice Locations:</strong> ${servingLocations}</p>` : ''}
@@ -3903,10 +4892,7 @@ Keep your response concise and professional. Focus on the medical assessment.`;
                                 </div>
                             </div>
                             <div class="mt-3">
-                                <button class="btn btn-primary btn-sm me-2" onclick="contactPractitioner('${phoneNumber}', '${practitionerName}')">📞 Call Now</button>
-                                ${emailAddress ? `<button class="btn btn-outline-primary btn-sm me-2" onclick="emailPractitioner('${emailAddress}', '${practitionerName}')">✉️ Send Email</button>` : ''}
-                                <button class="btn btn-success btn-sm me-2" onclick="bookAppointment('${practitionerName}', '${profession}', '${phoneNumber}', '${emailAddress}')">📅 Book Appointment</button>
-                                <button class="btn btn-outline-info btn-sm">👁️ View Full Profile</button>
+                                <button class="btn btn-success btn-sm" onclick="bookAppointment('${practitionerName}', '${profession}', '${phoneNumber}', '${emailAddress}')">📅 Book Appointment with AI</button>
                             </div>
                         </div>
                     </div>
@@ -4018,8 +5004,10 @@ Keep your response concise and professional. Focus on the medical assessment.`;
                     const paystackFee = apt.paystack_fee || Math.min(Math.round(fee * 0.015) + 1, 50);
                     const totalAmount = apt.total_amount || (fee + paystackFee);
                     const curr = apt.currency || 'ZAR';
-                    const practitionerAmount = Math.round(fee * 0.8);
-                    const platformAmount = Math.round(fee * 0.2);
+                    
+                    // NEW PRICING (5% platform fee)
+                    const platformAmount = Math.round(fee * 0.05);
+                    const practitionerAmount = Math.round(fee * 0.95);
                     
                     // Show reschedule info if status is rescheduled
                     const rescheduleInfo = (apt.status === 'rescheduled' || apt.status === 'RESCHEDULED') && apt.rescheduled_date
@@ -4125,6 +5113,7 @@ Keep your response concise and professional. Focus on the medical assessment.`;
             const classes = {
                 'PENDING_PAYMENT': 'warning',
                 'PENDING_CONFIRMATION': 'info',
+                'PENDING_PRACTITIONER_ACCEPTANCE': 'warning',
                 'CONFIRMED': 'success',
                 'COMPLETED': 'secondary',
                 'CANCELLED': 'danger',
@@ -4142,7 +5131,7 @@ Keep your response concise and professional. Focus on the medical assessment.`;
         }
         
         function canCancelAppointment(apt) {
-            const validStatuses = ['PENDING_PAYMENT', 'PENDING_CONFIRMATION', 'CONFIRMED', 'pending', 'confirmed', 'success'];
+            const validStatuses = ['PENDING_PAYMENT', 'PENDING_CONFIRMATION', 'PENDING_PRACTITIONER_ACCEPTANCE', 'CONFIRMED', 'pending', 'confirmed', 'success'];
             if (!validStatuses.includes(apt.status)) return false;
             
             const appointmentDateTime = new Date(apt.appointment_date + ' ' + apt.appointment_time);
@@ -4191,6 +5180,428 @@ Keep your response concise and professional. Focus on the medical assessment.`;
         window.viewAppointmentDetails = viewAppointmentDetails;
         window.initiateCancelAppointment = initiateCancelAppointment;
         window.openRescheduleModal = openRescheduleModal;
+        
+        // Validation error modal helper function
+        function showValidationError(message) {
+            document.getElementById('validationErrorMessage').textContent = message;
+            const validationModal = new bootstrap.Modal(document.getElementById('validationErrorModal'));
+            validationModal.show();
+        }
+        window.showValidationError = showValidationError;
     </script>
+
+    <!-- Full Size Image Modal -->
+    <div id="fullSizeModal" class="fullsize-modal" onclick="closeFullSizeImage()">
+        <span class="fullsize-close" onclick="closeFullSizeImage()">&times;</span>
+        <img class="fullsize-modal-content" id="fullSizeImg">
+    </div>
+
+    <!-- Medical Aid Confirmation Modal -->
+    <div class="modal fade" id="medicalAidConfirmModal" tabindex="-1" aria-labelledby="medicalAidConfirmModalLabel" aria-hidden="true" data-bs-backdrop="static" data-bs-keyboard="false">
+        <div class="modal-dialog modal-dialog-centered modal-lg">
+            <div class="modal-content border-0 shadow-lg">
+                <div class="modal-header bg-success text-white">
+                    <h5 class="modal-title" id="medicalAidConfirmModalLabel">
+                        <i class="fas fa-hospital me-2"></i>🏥 MEDICAL AID/INSURANCE BOOKING
+                    </h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body p-4">
+                    <div class="alert alert-success border-0 mb-4" role="alert">
+                        <h4 class="alert-heading text-center mb-0">
+                            <i class="fas fa-check-circle me-2"></i>NO PAYMENT REQUIRED FROM YOU
+                        </h4>
+                    </div>
+                    
+                    <p class="lead mb-4">This is a medical aid/insurance booking. <strong>You do NOT need to pay now.</strong></p>
+                    
+                    <div class="card bg-light border-0 mb-4">
+                        <div class="card-body">
+                            <h6 class="card-title fw-bold mb-3"><i class="fas fa-info-circle me-2 text-primary"></i>How it works:</h6>
+                            <ol class="mb-0 ps-3">
+                                <li class="mb-2">Your appointment will be sent to the practitioner</li>
+                                <li class="mb-2">Practitioner pays R10 fee to accept</li>
+                                <li class="mb-2">Practitioner bills your medical aid directly</li>
+                                <li>Your medical aid processes the claim</li>
+                            </ol>
+                        </div>
+                    </div>
+                    
+                    <div class="card border-primary mb-4">
+                        <div class="card-header bg-primary text-white">
+                            <h6 class="mb-0"><i class="fas fa-calendar-check me-2"></i>Appointment Details</h6>
+                        </div>
+                        <div class="card-body">
+                            <table class="table table-borderless mb-0">
+                                <tbody>
+                                    <tr>
+                                        <td class="fw-bold" style="width: 40%;">Practitioner:</td>
+                                        <td id="medAidPractitionerName"></td>
+                                    </tr>
+                                    <tr>
+                                        <td class="fw-bold">Date & Time:</td>
+                                        <td id="medAidDateTime"></td>
+                                    </tr>
+                                    <tr>
+                                        <td class="fw-bold">Patient:</td>
+                                        <td id="medAidPatientName"></td>
+                                    </tr>
+                                    <tr>
+                                        <td class="fw-bold">Type:</td>
+                                        <td><span class="badge bg-success">Medical Aid/Insurance</span></td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                    
+                    <div class="alert alert-warning border-0" role="alert">
+                        <h6 class="alert-heading"><i class="fas fa-exclamation-triangle me-2"></i>Important Note:</h6>
+                        <ul class="mb-0 ps-3">
+                            <li>Practitioner must accept within 24 hours</li>
+                            <li>Cancellation: Free anytime before practitioner accepts</li>
+                        </ul>
+                    </div>
+                </div>
+                <div class="modal-footer border-0 bg-light">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                        <i class="fas fa-times me-2"></i>Cancel
+                    </button>
+                    <button type="button" class="btn btn-success" id="confirmMedicalAidBtn">
+                        <i class="fas fa-paper-plane me-2"></i>Submit Booking (No Payment)
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Standard Payment Confirmation Modal -->
+    <div class="modal fade" id="standardPaymentConfirmModal" tabindex="-1" aria-labelledby="standardPaymentConfirmModalLabel" aria-hidden="true" data-bs-backdrop="static" data-bs-keyboard="false">
+        <div class="modal-dialog modal-dialog-centered modal-lg">
+            <div class="modal-content border-0 shadow-lg">
+                <div class="modal-header bg-primary text-white">
+                    <h5 class="modal-title" id="standardPaymentConfirmModalLabel">
+                        <i class="fas fa-credit-card me-2"></i>💳 PAYMENT REQUIRED
+                    </h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body p-4">
+                    <div class="alert alert-primary border-0 mb-4 text-center" role="alert">
+                        <h3 class="mb-1">TOTAL YOU PAY</h3>
+                        <h1 class="display-4 fw-bold mb-0" id="stdTotalAmount"></h1>
+                    </div>
+                    
+                    <div class="card bg-light border-0 mb-4">
+                        <div class="card-body">
+                            <h6 class="card-title fw-bold mb-3"><i class="fas fa-receipt me-2 text-success"></i>Payment Breakdown</h6>
+                            <table class="table table-borderless mb-0">
+                                <tbody>
+                                    <tr>
+                                        <td>Consultation Fee:</td>
+                                        <td class="text-end fw-bold" id="stdConsultationFee"></td>
+                                    </tr>
+                                    <tr>
+                                        <td>Processing Fee:</td>
+                                        <td class="text-end fw-bold" id="stdProcessingFee"></td>
+                                    </tr>
+                                    <tr class="border-top">
+                                        <td class="fw-bold fs-5">TOTAL:</td>
+                                        <td class="text-end fw-bold fs-5" id="stdTotalBreakdown"></td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                    
+                    <div class="card border-success mb-4">
+                        <div class="card-header bg-light">
+                            <h6 class="mb-0"><i class="fas fa-money-bill-wave me-2 text-success"></i>From consultation fee distribution:</h6>
+                        </div>
+                        <div class="card-body">
+                            <table class="table table-sm table-borderless mb-0">
+                                <tbody>
+                                    <tr>
+                                        <td><i class="fas fa-check-circle text-success me-2"></i>Practitioner receives:</td>
+                                        <td class="text-end fw-bold text-success" id="stdPractitionerAmount"></td>
+                                    </tr>
+                                    <tr>
+                                        <td><i class="fas fa-building text-primary me-2"></i>Platform fee:</td>
+                                        <td class="text-end fw-bold text-primary" id="stdPlatformAmount"></td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                    
+                    <div class="card border-primary mb-4">
+                        <div class="card-header bg-primary text-white">
+                            <h6 class="mb-0"><i class="fas fa-calendar-check me-2"></i>Appointment Details</h6>
+                        </div>
+                        <div class="card-body">
+                            <table class="table table-borderless table-sm mb-0">
+                                <tbody>
+                                    <tr>
+                                        <td class="fw-bold" style="width: 40%;">Practitioner:</td>
+                                        <td id="stdPractitionerName"></td>
+                                    </tr>
+                                    <tr>
+                                        <td class="fw-bold">Date & Time:</td>
+                                        <td id="stdDateTime"></td>
+                                    </tr>
+                                    <tr>
+                                        <td class="fw-bold">Patient:</td>
+                                        <td id="stdPatientName"></td>
+                                    </tr>
+                                    <tr>
+                                        <td class="fw-bold">Type:</td>
+                                        <td><span class="badge bg-primary">Standard Consultation</span></td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                    
+                    <div class="alert alert-info border-0" role="alert">
+                        <h6 class="alert-heading"><i class="fas fa-undo me-2"></i>Cancellation Policy:</h6>
+                        <ul class="mb-0 ps-3 small">
+                            <li>Cancel ≥24h before: Full refund (<span id="stdRefundAmount"></span>)</li>
+                            <li>Cancel &lt;24h before: No refund</li>
+                            <li>No-show: No refund</li>
+                        </ul>
+                    </div>
+                </div>
+                <div class="modal-footer border-0 bg-light">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                        <i class="fas fa-times me-2"></i>Cancel
+                    </button>
+                    <button type="button" class="btn btn-primary btn-lg" id="confirmStandardPaymentBtn">
+                        <i class="fas fa-lock me-2"></i>Proceed to Secure Payment
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Medical Aid Success Modal -->
+    <div class="modal fade" id="medicalAidSuccessModal" tabindex="-1" aria-labelledby="medicalAidSuccessModalLabel" aria-hidden="true" data-bs-backdrop="static" data-bs-keyboard="false">
+        <div class="modal-dialog modal-dialog-centered modal-lg">
+            <div class="modal-content border-0 shadow-lg">
+                <div class="modal-header bg-success text-white">
+                    <h5 class="modal-title" id="medicalAidSuccessModalLabel">
+                        <i class="fas fa-check-circle me-2"></i>✅ MEDICAL AID BOOKING SUBMITTED!
+                    </h5>
+                </div>
+                <div class="modal-body p-4">
+                    <div class="text-center mb-4">
+                        <div class="display-1 text-success mb-3">
+                            <i class="fas fa-check-circle"></i>
+                        </div>
+                        <h4 class="text-success">Booking Submitted Successfully!</h4>
+                        <p class="text-muted">Booking ID: <strong id="medAidSuccessBookingId"></strong></p>
+                        <p class="text-muted">Status: <span class="badge bg-warning text-dark" id="medAidSuccessStatus">Awaiting Practitioner Acceptance</span></p>
+                    </div>
+                    
+                    <div class="alert alert-success border-0 mb-4" role="alert">
+                        <h5 class="alert-heading text-center mb-0">
+                            <i class="fas fa-hospital me-2"></i>NO PAYMENT REQUIRED FROM YOU
+                        </h5>
+                    </div>
+                    
+                    <div class="card bg-light border-0 mb-4">
+                        <div class="card-body">
+                            <h6 class="card-title fw-bold mb-3"><i class="fas fa-forward me-2 text-primary"></i>What happens next:</h6>
+                            <ol class="mb-0 ps-3">
+                                <li class="mb-2">Practitioner reviews your booking</li>
+                                <li class="mb-2">Practitioner pays R10 to accept</li>
+                                <li class="mb-2">Appointment confirmed</li>
+                                <li>Practitioner bills your medical aid</li>
+                            </ol>
+                        </div>
+                    </div>
+                    
+                    <div class="card border-primary mb-4">
+                        <div class="card-header bg-primary text-white">
+                            <h6 class="mb-0"><i class="fas fa-calendar-check me-2"></i>Appointment Details</h6>
+                        </div>
+                        <div class="card-body">
+                            <table class="table table-borderless mb-0">
+                                <tbody>
+                                    <tr>
+                                        <td class="fw-bold" style="width: 40%;">Patient:</td>
+                                        <td id="medAidSuccessPatientName"></td>
+                                    </tr>
+                                    <tr>
+                                        <td class="fw-bold">Practitioner:</td>
+                                        <td id="medAidSuccessPractitionerName"></td>
+                                    </tr>
+                                    <tr>
+                                        <td class="fw-bold">Date & Time:</td>
+                                        <td id="medAidSuccessDateTime"></td>
+                                    </tr>
+                                    <tr>
+                                        <td class="fw-bold">Type:</td>
+                                        <td><span class="badge bg-success">Medical Aid/Insurance</span></td>
+                                    </tr>
+                                    <tr>
+                                        <td class="fw-bold">Reason:</td>
+                                        <td id="medAidSuccessReason"></td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                    
+                    <div class="alert alert-info border-0" role="alert">
+                        <p class="mb-2"><i class="fas fa-info-circle me-2"></i><strong>You can cancel anytime before practitioner accepts.</strong></p>
+                        <p class="mb-0"><i class="fas fa-tachometer-alt me-2"></i>Check your dashboard for updates.</p>
+                    </div>
+                </div>
+                <div class="modal-footer border-0 bg-light">
+                    <button type="button" class="btn btn-success" id="closeMedicalAidSuccessBtn">
+                        <i class="fas fa-check me-2"></i>Got It!
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Validation Error Modal -->
+    <div class="modal fade" id="validationErrorModal" tabindex="-1" aria-labelledby="validationErrorModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content border-0 shadow-lg">
+                <div class="modal-header bg-warning text-dark border-0">
+                    <h5 class="modal-title" id="validationErrorModalLabel">
+                        <i class="fas fa-exclamation-triangle me-2"></i>Missing Information
+                    </h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body p-4">
+                    <div class="text-center mb-3">
+                        <div class="display-3 text-warning mb-2">
+                            <i class="fas fa-exclamation-circle"></i>
+                        </div>
+                    </div>
+                    <p class="text-center fs-5 mb-0" id="validationErrorMessage"></p>
+                </div>
+                <div class="modal-footer border-0 bg-light">
+                    <button type="button" class="btn btn-primary" data-bs-dismiss="modal">
+                        <i class="fas fa-check me-2"></i>OK, Got It
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Standard Payment Success Modal -->
+    <div class="modal fade" id="paymentSuccessModal" tabindex="-1" aria-labelledby="paymentSuccessModalLabel" aria-hidden="true" data-bs-backdrop="static" data-bs-keyboard="false">
+        <div class="modal-dialog modal-dialog-centered modal-lg">
+            <div class="modal-content border-0 shadow-lg">
+                <div class="modal-header bg-success text-white">
+                    <h5 class="modal-title" id="paymentSuccessModalLabel">
+                        <i class="fas fa-check-circle me-2"></i>✅ PAYMENT SUCCESSFUL! Appointment Booked!
+                    </h5>
+                </div>
+                <div class="modal-body p-4">
+                    <div class="text-center mb-4">
+                        <div class="display-1 text-success mb-3">
+                            <i class="fas fa-check-circle"></i>
+                        </div>
+                        <h4 class="text-success">Payment Confirmed!</h4>
+                        <p class="text-muted">Booking ID: <strong id="stdSuccessBookingId"></strong></p>
+                        <p class="text-muted">Payment Reference: <strong id="stdSuccessPaymentRef"></strong></p>
+                    </div>
+                    
+                    <div class="alert alert-success border-0 mb-4 text-center" role="alert">
+                        <h5 class="mb-1">TOTAL PAID</h5>
+                        <h2 class="display-5 fw-bold mb-0" id="stdSuccessTotalPaid"></h2>
+                    </div>
+                    
+                    <div class="card bg-light border-0 mb-4">
+                        <div class="card-body">
+                            <h6 class="card-title fw-bold mb-3"><i class="fas fa-receipt me-2 text-success"></i>Payment Breakdown</h6>
+                            <table class="table table-borderless mb-0">
+                                <tbody>
+                                    <tr>
+                                        <td>Consultation Fee:</td>
+                                        <td class="text-end fw-bold" id="stdSuccessConsultationFee"></td>
+                                    </tr>
+                                    <tr>
+                                        <td>Processing Fee:</td>
+                                        <td class="text-end fw-bold" id="stdSuccessProcessingFee"></td>
+                                    </tr>
+                                    <tr class="border-top">
+                                        <td class="fw-bold fs-5">YOU PAID:</td>
+                                        <td class="text-end fw-bold fs-5 text-success" id="stdSuccessTotalBreakdown"></td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                    
+                    <div class="card border-success mb-4">
+                        <div class="card-header bg-light">
+                            <h6 class="mb-0"><i class="fas fa-money-bill-wave me-2 text-success"></i>From consultation fee distribution:</h6>
+                        </div>
+                        <div class="card-body">
+                            <table class="table table-sm table-borderless mb-0">
+                                <tbody>
+                                    <tr>
+                                        <td><i class="fas fa-check-circle text-success me-2"></i>Practitioner receives:</td>
+                                        <td class="text-end fw-bold text-success" id="stdSuccessPractitionerAmount"></td>
+                                    </tr>
+                                    <tr>
+                                        <td><i class="fas fa-building text-primary me-2"></i>Platform fee:</td>
+                                        <td class="text-end fw-bold text-primary" id="stdSuccessPlatformAmount"></td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                    
+                    <div class="card border-primary mb-4">
+                        <div class="card-header bg-primary text-white">
+                            <h6 class="mb-0"><i class="fas fa-calendar-check me-2"></i>Appointment Details</h6>
+                        </div>
+                        <div class="card-body">
+                            <table class="table table-borderless mb-0">
+                                <tbody>
+                                    <tr>
+                                        <td class="fw-bold" style="width: 40%;">Patient:</td>
+                                        <td id="stdSuccessPatientName"></td>
+                                    </tr>
+                                    <tr>
+                                        <td class="fw-bold">Practitioner:</td>
+                                        <td id="stdSuccessPractitionerName"></td>
+                                    </tr>
+                                    <tr>
+                                        <td class="fw-bold">Date & Time:</td>
+                                        <td id="stdSuccessDateTime"></td>
+                                    </tr>
+                                    <tr>
+                                        <td class="fw-bold">Type:</td>
+                                        <td><span class="badge bg-primary">Standard Consultation</span></td>
+                                    </tr>
+                                    <tr>
+                                        <td class="fw-bold">Reason:</td>
+                                        <td id="stdSuccessReason"></td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                    
+                    <div class="alert alert-info border-0" role="alert">
+                        <p class="mb-0"><i class="fas fa-envelope me-2"></i>A confirmation has been sent to your email and the practitioner.</p>
+                    </div>
+                </div>
+                <div class="modal-footer border-0 bg-light">
+                    <button type="button" class="btn btn-success" id="closePaymentSuccessBtn">
+                        <i class="fas fa-check me-2"></i>Done
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
 </body>
 </html>
